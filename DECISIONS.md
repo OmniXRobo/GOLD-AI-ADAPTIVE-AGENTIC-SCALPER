@@ -9,4 +9,4 @@
 | 5 | 2026-10-22 | Fill on next tick after decision | Removes same-tick look-ahead |
 | 6 | 2026-10-22 | Real execution needs config flag + owner grant (password + phrase, expiry, account + lot scope) + allowlist + no emergency stop | Defence in depth; no single setting enables real money |
 | 7 | 2026-10-22 | SQLite default, PostgreSQL supported via URL | Runs immediately on a Windows VPS; PostgreSQL recommended for production |
-| 8 | 2026-10-22 | No GitHub repo attached in this session: work kept in a local git repo and exported as a git bundle to the project files folder | Persist work between sessions without an attached remote |
+| 8 | 2026-10-22 | Code hosted at github.com/OmniXRobo/GOLD-AI-ADAPTIVE-AGENTIC-SCALPER (public); git bundle kept in project files as a backup | Owner created the repo; the bundle survives without GitHub access |

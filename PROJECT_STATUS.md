@@ -10,9 +10,8 @@
 - Execution adapter exists and is tested with a fake MT5 module; it is intentionally not wired into the service.
 
 ## Where the code lives
-- Local git repo in the session container (`/home/claude/gold-ai-scalper`), plus a full git bundle copied to the
-  project files folder: `gold-ai-scalper/gold-ai-scalper.bundle` (clone with `git clone <bundle> gold-ai-scalper`).
-  No GitHub remote is attached yet.
+- GitHub: https://github.com/OmniXRobo/GOLD-AI-ADAPTIVE-AGENTIC-SCALPER (branch `main`, public).
+- Backup copy: git bundle in the project files folder `gold-ai-scalper/gold-ai-scalper.bundle`.
 
 ## Next task
 First `todo` in TASK_QUEUE.json: **T-SUPERVISOR-WIRE**. Owner-blocked tasks with priority 1:
