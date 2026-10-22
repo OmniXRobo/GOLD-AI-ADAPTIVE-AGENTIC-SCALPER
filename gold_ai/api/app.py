@@ -25,6 +25,7 @@ from ..domain import MemoryDomain, SymbolSpec
 from ..engines.backtest import run_backtest
 from ..engines.metrics import compute_metrics, json_safe
 from ..engines.walkforward import WalkForwardConfig, run_walkforward
+from ..market.technical import summary as technical_summary
 from ..memory.store import MemoryStore
 from ..security.auth import AuthService, Permission, User
 
@@ -175,6 +176,15 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
                 "features": st.features,
                 "last_tick": None if lt is None else {"time": lt.time.isoformat(), "bid": lt.bid, "ask": lt.ask,
                                                       "spread": lt.spread}}
+
+    @app.get("/api/analysis/technical")
+    def technical_analysis(tf: str = Query("H1", pattern="^(M1|M5|M15|M30|H1|H4|D1)$"),
+                           u: User = Depends(current_user)):
+        if not s.virtual_engines:
+            raise HTTPException(503, "no live market engine running")
+        eng = next(iter(s.virtual_engines.values()))
+        bars = list(eng.loop.market.mtf.bars.get(tf, []))
+        return {"broker": eng.spec.broker, "symbol": eng.spec.symbol, **technical_summary(bars, tf)}
 
     # -- memory ----------------------------------------------------------------
     @app.get("/api/trades/{domain}")

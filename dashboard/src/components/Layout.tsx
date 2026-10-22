@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { api } from "../api";
 import { fmtNum, fmtTime, useApi } from "../lib";
 import { useAuth, useLive } from "../state";
-import { NAV_GROUPS, MOBILE_TABS, navLabel } from "../nav";
+import { MAIN_NAV, NAV_GROUPS, MOBILE_TABS, navLabel } from "../nav";
 import { useTheme } from "../theme";
 import { Icon } from "./icons";
 import { ConfirmDialog } from "./ui";
@@ -110,6 +110,11 @@ export default function Layout() {
   const [drawer, setDrawer] = useState(false);
   const loc = useLocation();
   useEffect(() => setDrawer(false), [loc.pathname]);
+  const inAdvanced = !MAIN_NAV.some((i) => i.path === loc.pathname);
+  const [advancedOpen, setAdvancedOpen] = useState(inAdvanced);
+  useEffect(() => {
+    if (inAdvanced) setAdvancedOpen(true);
+  }, [inAdvanced]);
 
   return (
     <div className="app">
@@ -124,17 +129,31 @@ export default function Layout() {
               Gold AI <small>Adaptive Agentic Scalper</small>
             </span>
           </div>
-          {NAV_GROUPS.map((g) => (
-            <div key={g.title} className="nav-group">
-              <div className="nav-group-title">{g.title}</div>
-              {g.items.map((i) => (
-                <NavLink key={i.path} to={i.path} end={i.path === "/"} className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
-                  <Icon name={i.icon} />
-                  <span>{i.label}</span>
-                </NavLink>
-              ))}
-            </div>
-          ))}
+          <div className="nav-group">
+            {MAIN_NAV.map((i) => (
+              <NavLink key={i.path} to={i.path} end={i.path === "/"} className={({ isActive }) => `nav-link nav-main ${isActive ? "active" : ""}`}>
+                <Icon name={i.icon} />
+                <span>{i.label}</span>
+              </NavLink>
+            ))}
+          </div>
+          <details className="nav-advanced" open={advancedOpen} onToggle={(e) => setAdvancedOpen((e.target as HTMLDetailsElement).open)}>
+            <summary>
+              <Icon name="chevron" size={14} className="nav-chevron" />
+              Advanced
+            </summary>
+            {NAV_GROUPS.map((g) => (
+              <div key={g.title} className="nav-group">
+                <div className="nav-group-title">{g.title}</div>
+                {g.items.map((i) => (
+                  <NavLink key={i.path} to={i.path} end className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
+                    <Icon name={i.icon} />
+                    <span>{i.label}</span>
+                  </NavLink>
+                ))}
+              </div>
+            ))}
+          </details>
           <div className="sidebar-foot">
             {role && <span className="pill pill-neutral">{role}</span>}
             <button className="btn btn-small btn-ghost" onClick={logout}>

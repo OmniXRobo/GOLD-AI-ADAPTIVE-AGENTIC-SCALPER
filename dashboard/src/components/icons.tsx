@@ -1,5 +1,8 @@
 /** Small stroke icon set (24px grid) used by the navigation and header. */
 const PATHS: Record<string, string> = {
+  home: "M3 10.5L12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",
+  practice: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM12 18a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4z",
+  chevron: "M9 6l6 6-6 6",
   overview: "M3 13h8V3H3zM13 21h8V11h-8zM3 21h8v-6H3zM13 3v6h8V3z",
   brokers: "M4 7h16M4 12h16M4 17h10M18 15l2 2-2 2",
   market: "M3 17l5-6 4 4 8-9M14 6h6v6",

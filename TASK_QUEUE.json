@@ -281,6 +281,44 @@
       "status": "todo",
       "priority": 2,
       "notes": "Tailscale done 2026-10-22; app reaches the dashboard. Signal alert on the phone still to confirm."
+    },
+    {
+      "id": "T-UI-SIMPLE",
+      "phase": 7,
+      "title": "Simplified cream/gold UI: Home, Autopilot, Analysis (technical/fundamental/calendar), Practice; old pages under Advanced",
+      "status": "done",
+      "priority": 2
+    },
+    {
+      "id": "T-TECH-SUMMARY",
+      "phase": 3,
+      "title": "/api/analysis/technical: RSI, MACD, Stochastic, MA50/200, Bollinger, pressure from engine candles (display only)",
+      "status": "done",
+      "priority": 3
+    },
+    {
+      "id": "T-RISK-PROFIT-CAP",
+      "phase": 5,
+      "title": "Risk engine: daily profit cap and per-session caps (see docs/STRATEGY_IDEAS.md)",
+      "status": "todo",
+      "priority": 3,
+      "blocked_on": "owner approval"
+    },
+    {
+      "id": "T-TECH-FEATURES",
+      "phase": 4,
+      "title": "Indicator features as model inputs behind a new model version; keep only if walk-forward on real ticks improves",
+      "status": "todo",
+      "priority": 3,
+      "blocked_on": "owner approval"
+    },
+    {
+      "id": "T-ENTRY-ZONE-TP2",
+      "phase": 4,
+      "title": "Entry zone (limit fill) and TP1/TP2 partial exits in simulator, compare walk-forward",
+      "status": "todo",
+      "priority": 4,
+      "blocked_on": "owner approval"
     }
   ]
 }

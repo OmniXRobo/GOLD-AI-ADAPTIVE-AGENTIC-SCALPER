@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 export type ThemePref = "dark" | "light" | "auto";
-const KEY = "gold_ai_theme";
+const KEY = "gold_ai_theme_v2"; // v2: cream light theme became the default
 
 function read(): ThemePref {
   try {
@@ -10,16 +10,18 @@ function read(): ThemePref {
   } catch {
     /* storage blocked */
   }
-  return "dark";
+  return "light";
 }
 
 export function applyTheme(p: ThemePref = read()): void {
   const root = document.documentElement;
   if (p === "auto") root.removeAttribute("data-theme");
   else root.setAttribute("data-theme", p);
+  const dark = p === "dark" || (p === "auto" && window.matchMedia?.("(prefers-color-scheme: dark)").matches);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", dark ? "#0b0d12" : "#f3ede2");
 }
 
-const ORDER: ThemePref[] = ["dark", "light", "auto"];
+const ORDER: ThemePref[] = ["light", "dark", "auto"];
 
 export function useTheme(): [ThemePref, () => void] {
   const [pref, setPref] = useState<ThemePref>(read);

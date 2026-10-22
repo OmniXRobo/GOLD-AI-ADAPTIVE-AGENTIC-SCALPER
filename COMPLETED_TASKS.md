@@ -54,3 +54,14 @@ All items below have code + passing tests unless noted.
 - Fixed: `POST /api/signals/{id}/action` read its JSON body as a query parameter, so dashboard Approve/Reject always
   failed with 422. Fixed: the static dashboard route could resolve paths outside the build folder.
 
+## Session 2c — 2026-10-22 (simplified UI inspired by a reference app, cloud)
+- T-UI-SIMPLE: cream/gold light theme is the default (dark still selectable). Main navigation is Home, Autopilot,
+  Analysis, Practice, Signals; every earlier page is kept under "Advanced" (Overview moved to /overview).
+- Home: live price card, latest signal cards (entry, SL, TP), Memory C results only once trades have closed.
+- Analysis: Technical (new `/api/analysis/technical`), Fundamental (US data surprise bias, event risk, Fed events
+  from the real calendar; yields/odds marked as not connected), Calendar (actual/forecast/previous).
+- Practice: browser-only paper trading on the live price, separate from all AI memories.
+- Fixed: Signals table read `time`/`lots`/`explanation`, but the backend sends `timestamp`/`suggested_lots`/`reason`.
+- Android app 1.1.0 (cream colours), same signing key as 1.0.0. docs/STRATEGY_IDEAS.md records the reference
+  app's techniques and how they could fit, as owner-approved follow-up tasks.
+

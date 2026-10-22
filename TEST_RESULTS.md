@@ -1,6 +1,15 @@
 # Test results
 
 
+
+## 2026-10-22 — session 2c (cloud container)
+- `python -m pytest -q` → **172 passed, 1 skipped** (adds tests/test_technical.py: RSI reference value from
+  Wilder's example, insufficient-bar handling, trend direction, endpoint 503/422).
+- Dashboard `tsc --noEmit` and build OK. New screens checked in Chromium at 390×844 and 1440×900 against a local
+  preview server fed with synthetic placeholder values (layout check only; nothing from it is recorded anywhere).
+- Android 1.1.0 (versionCode 2): built, aligned, `apksigner verify` OK, same signer certificate as 1.0.0.
+  Not yet run on a device.
+
 ## 2026-10-22 — session 2b (cloud container, Linux, Python 3.13)
 - `python -m pytest -q` → **165 passed, 1 skipped** (new: device-token scope/revocation, signal action JSON body,
   static file containment).

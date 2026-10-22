@@ -4,11 +4,20 @@ export interface NavItem {
   icon: string;
 }
 
+/** Everyday screens. Everything else lives under "Advanced" (kept, just out of the way). */
+export const MAIN_NAV: NavItem[] = [
+  { path: "/", label: "Home", icon: "home" },
+  { path: "/autopilot", label: "Autopilot", icon: "agent" },
+  { path: "/analysis", label: "Analysis", icon: "performance" },
+  { path: "/practice", label: "Practice", icon: "practice" },
+  { path: "/signals", label: "Signals", icon: "signals" },
+];
+
 export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
   {
     title: "Monitor",
     items: [
-      { path: "/", label: "Overview", icon: "overview" },
+      { path: "/overview", label: "Overview", icon: "overview" },
       { path: "/brokers", label: "Broker Connections", icon: "brokers" },
       { path: "/market", label: "Gold Live Market", icon: "market" },
       { path: "/agent", label: "AI Agent Status", icon: "agent" },
@@ -57,14 +66,15 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 ];
 
 export const MOBILE_TABS: (NavItem & { short: string })[] = [
-  { path: "/", label: "Overview", short: "Overview", icon: "overview" },
-  { path: "/market", label: "Gold Live Market", short: "Market", icon: "market" },
-  { path: "/signals", label: "Signals and Notifications", short: "Signals", icon: "signals" },
-  { path: "/virtual", label: "Live Virtual Trading", short: "Virtual", icon: "virtual" },
+  { path: "/", label: "Home", short: "Home", icon: "home" },
+  { path: "/autopilot", label: "Autopilot", short: "Autopilot", icon: "agent" },
+  { path: "/analysis", label: "Analysis", short: "Analysis", icon: "performance" },
+  { path: "/practice", label: "Practice", short: "Practice", icon: "practice" },
 ];
 
 /** Page title for the current path, used by the header. */
 export function navLabel(pathname: string): string {
+  for (const i of MAIN_NAV) if (i.path === pathname) return i.label;
   for (const g of NAV_GROUPS) for (const i of g.items) if (i.path === pathname) return i.label;
   return "";
 }
