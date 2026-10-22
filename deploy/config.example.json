@@ -1,0 +1,23 @@
+{
+  "env": "production",
+  "database_url": "sqlite:///./data/gold_ai.db",
+  "secret_key": "REPLACE-with-64-random-characters",
+  "real_trading_enabled": false,
+  "demo_execution_enabled": false,
+  "account_allowlist": [],
+  "risk": {
+    "max_open_positions": 1,
+    "max_lots_per_trade": 0.10,
+    "risk_per_trade_pct": 0.5,
+    "max_daily_loss_pct": 2.0,
+    "max_drawdown_pct": 10.0,
+    "max_spread_points": 60,
+    "min_risk_reward": 1.2,
+    "min_confidence": 0.55
+  },
+  "telegram_bot_token": null,
+  "telegram_chat_id": null,
+  "whatsapp_token": null,
+  "whatsapp_phone_id": null,
+  "whatsapp_recipient": null
+}

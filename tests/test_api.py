@@ -1,0 +1,97 @@
+import pytest
+from fastapi.testclient import TestClient
+
+from gold_ai.api.app import AppState, create_app
+from gold_ai.domain import MemoryDomain
+
+
+@pytest.fixture
+def client(settings, store):
+    st = AppState(settings, store)
+    st.auth.create_user("owner", "owner-pass-123", "owner")
+    st.auth.create_user("viewer", "viewer-pass-12", "viewer")
+    return TestClient(create_app(st)), st
+
+
+def login(c, u, p):
+    r = c.post("/api/auth/login", json={"username": u, "password": p})
+    assert r.status_code == 200
+    return {"Authorization": f"Bearer {r.json()['token']}"}
+
+
+def test_requires_auth(client):
+    c, _ = client
+    assert c.get("/api/health").status_code == 200
+    assert c.get("/api/overview").status_code == 401
+    assert c.post("/api/auth/login", json={"username": "owner", "password": "nope-nope-1"}).status_code == 401
+
+
+def test_overview_and_defaults(client):
+    c, _ = client
+    h = login(c, "owner", "owner-pass-123")
+    o = c.get("/api/overview", headers=h).json()
+    assert o["real_trading_enabled"] is False
+    assert o["memory_counts"] == {"historical": 0, "forward": 0, "virtual": 0, "real": 0}
+    a = c.get("/api/authorization", headers=h).json()
+    assert a["grant"] is None and a["real_trading_enabled"] is False
+    s = c.get("/api/settings", headers=h).json()
+    assert s["secret_key"] == "***"
+
+
+def test_synthetic_backtest_is_labeled_and_stored(client):
+    c, st = client
+    h = login(c, "owner", "owner-pass-123")
+    r = c.post("/api/backtest", headers=h, json={"source": "synthetic", "synthetic_ticks": 20000,
+                                                 "params": {"exploration_rate": 0.5, "min_samples": 10**9}})
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert j["data_source"] == "synthetic" and "synthetic random data" in j["synthetic_warning"]
+    t = c.get("/api/trades/historical", headers=h).json()
+    assert t["simulated"] is True and t["label"].startswith("SIMULATED")
+    assert t["metrics"]["total_trades"] == j["metrics"]["total_trades"] == st.store.count_trades(
+        MemoryDomain.HISTORICAL)
+    assert c.get("/api/trades/real", headers=h).json()["label"] == "ACTUAL BROKER FILLS"
+    assert c.get("/api/runs?domain=historical", headers=h).json()[0]["data_source"] == "synthetic"
+
+
+def test_db_backtest_without_data_is_refused(client):
+    c, _ = client
+    h = login(c, "owner", "owner-pass-123")
+    r = c.post("/api/backtest", headers=h, json={"source": "db", "broker": "exness", "symbol": "XAUUSDm"})
+    assert r.status_code == 400
+
+
+def test_viewer_cannot_mutate(client):
+    c, _ = client
+    h = login(c, "viewer", "viewer-pass-12")
+    assert c.post("/api/backtest", headers=h, json={"source": "synthetic"}).status_code == 403
+    assert c.post("/api/emergency-stop", headers=h, json={"active": True}).status_code == 403
+    assert c.post("/api/authorization/grant", headers=h, json={"password": "x", "phrase": "x", "accounts": ["1"],
+                                                               "max_lots": 1, "hours": 1}).status_code == 403
+
+
+def test_emergency_stop_and_grant_refusal(client):
+    c, st = client
+    h = login(c, "owner", "owner-pass-123")
+    assert c.post("/api/emergency-stop", headers=h, json={"active": True, "reason": "t"}).json()["emergency_stop"]
+    assert c.get("/api/overview", headers=h).json()["emergency_stop"] is True
+    r = c.post("/api/authorization/grant", headers=h, json={"password": "owner-pass-123", "phrase": "wrong",
+                                                            "accounts": ["1"], "max_lots": 0.1, "hours": 1})
+    assert r.status_code == 403
+    acts = [a["action"] for a in c.get("/api/audit", headers=h).json()]
+    assert "emergency_stop" in acts
+
+
+def test_unconfigured_optional_service(client):
+    c, _ = client
+    h = login(c, "owner", "owner-pass-123")
+    assert c.get("/api/news", headers=h).status_code == 503
+
+
+def test_websocket_requires_token(client):
+    c, _ = client
+    h = login(c, "owner", "owner-pass-123")
+    tok = h["Authorization"].split()[1]
+    with c.websocket_connect(f"/ws/live?token={tok}") as ws:
+        msg = ws.receive_json()
+        assert msg["type"] == "status" and msg["real_trading_enabled"] is False
