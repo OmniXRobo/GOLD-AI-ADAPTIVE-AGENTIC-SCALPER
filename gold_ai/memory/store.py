@@ -263,6 +263,11 @@ class MemoryStore:
         with self.Session() as s:
             return [Tick(_aware(r.time), r.bid, r.ask, r.volume) for r in s.scalars(q)]
 
+    def first_tick_time(self, broker: str, symbol: str) -> datetime | None:
+        with self.Session() as s:
+            t = s.scalar(select(func.min(TickRow.time)).where(TickRow.broker == broker, TickRow.symbol == symbol))
+        return _aware(t) if t else None
+
     def tick_stats(self) -> list[dict]:
         q = select(TickRow.broker, TickRow.symbol, TickRow.source, func.count(), func.min(TickRow.time),
                    func.max(TickRow.time)).group_by(TickRow.broker, TickRow.symbol, TickRow.source)

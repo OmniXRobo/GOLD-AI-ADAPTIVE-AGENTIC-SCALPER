@@ -61,3 +61,14 @@ def test_collector_resumes_from_cursor(store):
     assert c2.collect_once(now=t0 + timedelta(seconds=20)) == 5
     stored = store.load_ticks("exness", "XAUUSDm")
     assert len(stored) == 10 and len({t.time for t in stored}) == 10
+
+
+def test_backfill_stops_at_first_stored_tick(store):
+    from gold_ai.collector import backfill_history
+    t0 = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    ticks = [Tick(t0 + timedelta(minutes=i), 2000 + i, 2000.2 + i) for i in range(60)]
+    store.save_ticks("exness", "XAUUSDm", ticks[40:], source="mt5")          # live collector already has these
+    n = backfill_history(FakeConn(ticks), store, "exness", "XAUUSDm", t0, chunk=timedelta(minutes=7))
+    assert n == 40
+    stored = store.load_ticks("exness", "XAUUSDm")
+    assert len(stored) == 60 and len({t.time for t in stored}) == 60

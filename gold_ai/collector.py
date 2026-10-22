@@ -59,3 +59,24 @@ class TickCollector:
 
     def stop(self) -> None:
         self._stop.set()
+
+
+def backfill_history(connector, store: MemoryStore, broker: str, symbol: str, start: datetime,
+                     end: datetime | None = None, chunk: timedelta = timedelta(hours=6)) -> int:
+    """Copy the broker's stored tick history for [start, end) into storage, read-only.
+
+    `end` defaults to the earliest tick already stored for this broker/symbol, so the live
+    collector's range is never duplicated. The connector converts broker server time to UTC with
+    its current offset; a range spanning a daylight-saving switch is shifted by an hour on one side.
+    """
+    if end is None:
+        end = store.first_tick_time(broker, symbol) or datetime.now(timezone.utc)
+    total, t = 0, start
+    while t < end:
+        stop = min(t + chunk, end)
+        ticks = [x for x in connector.ticks_range(symbol, t, stop) if x.time < stop]
+        if ticks:
+            total += store.save_ticks(broker, symbol, ticks, source="mt5_history")
+        log.info("backfill %s %s .. %s: %d ticks", symbol, t.isoformat(), stop.isoformat(), len(ticks))
+        t = stop
+    return total

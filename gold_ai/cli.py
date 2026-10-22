@@ -15,7 +15,7 @@ import json
 import logging
 import re
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from .agents.decision import StrategyParams
 from .config import load_settings
@@ -78,6 +78,11 @@ def main(argv: list[str] | None = None) -> int:
     isp.add_argument("--broker", required=True)
     isp.add_argument("--commission-per-lot-side", type=float, default=0.0)
 
+    bf = sub.add_parser("backfill-ticks", help="copy the broker's tick history from a logged-in terminal (read-only)")
+    bf.add_argument("--terminal-path", default=None)
+    bf.add_argument("--symbol", default=None, help="override automatic gold symbol discovery")
+    bf.add_argument("--days", type=float, default=5)
+
     for name in ("backtest", "walkforward"):
         p = sub.add_parser(name)
         p.add_argument("--broker", required=True)
@@ -134,6 +139,32 @@ def main(argv: list[str] | None = None) -> int:
                     currency_base=raw["currency_base"], currency_profit=raw["currency_profit"])
         store.kv_set(f"spec:{a.broker}:{raw['symbol']}", spec)
         print(f"stored spec for {a.broker}/{raw['symbol']}")
+        return 0
+
+    if a.cmd == "backfill-ticks":
+        import time as _time
+
+        from .brokers.mt5_connector import MT5ReadOnlyConnector
+        from .collector import backfill_history
+        conn = MT5ReadOnlyConnector(terminal_path=a.terminal_path)
+        if not conn.connect():
+            sys.exit("could not connect to the MT5 terminal")
+        acct = conn.account()
+        symbol = a.symbol or (conn.discover_gold() or [None])[0]
+        if not symbol:
+            sys.exit("no gold symbol validated from broker metadata; pass --symbol")
+        deadline = _time.monotonic() + 60
+        while not conn.server_offset_known and _time.monotonic() < deadline:
+            conn.latest_tick(symbol)            # measures the server-time offset from live ticks
+            _time.sleep(0.25)
+        if not conn.server_offset_known:
+            sys.exit("server time offset unknown (market closed?); try again while quotes are moving")
+        now = datetime.now(timezone.utc)
+        n = backfill_history(conn, store, acct.broker, symbol, now - timedelta(days=a.days))
+        store.audit("cli", "backfill_ticks", {"broker": acct.broker, "symbol": symbol, "days": a.days, "stored": n,
+                                              "server_offset_hours": conn.server_time_info()["offset_hours"]})
+        print(json.dumps({"broker": acct.broker, "symbol": symbol, "stored": n}))
+        conn.shutdown()
         return 0
 
     if a.cmd in ("backtest", "walkforward"):

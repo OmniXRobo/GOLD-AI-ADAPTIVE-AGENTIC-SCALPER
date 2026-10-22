@@ -3,7 +3,8 @@
 # session logged in, which MT5 needs anyway).
 param([string]$TaskName = "GoldAI", [string]$TerminalPath = "", [string]$Symbol = "", [int]$Port = 8000)
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$arg = "-NoProfile -ExecutionPolicy Bypass -File `"$root\deploy\windows\start.ps1`""
+# Hidden window: closing a visible console window kills the service (exit 0xC000013A).
+$arg = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$root\deploy\windows\start.ps1`""
 if ($TerminalPath) { $arg += " -TerminalPath `"$TerminalPath`"" }
 if ($Symbol) { $arg += " -Symbol $Symbol" }
 $arg += " -Port $Port"

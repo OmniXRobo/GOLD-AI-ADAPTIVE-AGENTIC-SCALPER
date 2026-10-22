@@ -9,6 +9,7 @@ No execution adapter is started here: real/demo execution stays off.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
@@ -28,7 +29,7 @@ from .brokers.mock_feed import synthetic_spec
 from .config import Settings
 from .domain import SymbolSpec
 from .memory.store import MemoryStore
-from .news import NewsAgent
+from .news import CalendarFileSource, NewsAgent
 from .notifications import DashboardChannel, SignalService, channels_from_settings
 from .notifications.service import TOKENS_KEY
 
@@ -42,7 +43,9 @@ def register_services(state: AppState, *, news: NewsAgent | None = None,
                       supervisor: Supervisor | None = None) -> dict:
     """Attach optional service providers to the API. Returns the created service objects."""
     s = state
-    news = news or NewsAgent()
+    news = news or NewsAgent(sources=[
+        CalendarFileSource(os.path.expandvars(p), name=f"calendar_file:{Path(p).name}")
+        for p in s.settings.news_calendar_files])
     institutional = institutional or InstitutionalFlowAgent()
     heartbeats = heartbeats or HeartbeatRegistry()
     dashboard = DashboardChannel()
@@ -244,13 +247,17 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
         engine.signal_hook = lambda p, tick: signals.create(p, tick, engine.spec.broker, engine.spec.symbol)
 
         def news_sync(stop: threading.Event) -> None:
-            while not stop.wait(300):
+            while True:   # refresh at start, then every 5 minutes
                 now = datetime.now(timezone.utc)
                 try:
-                    news.refresh(now - timedelta(days=1), now + timedelta(days=7))
+                    n = news.refresh(now - timedelta(days=1), now + timedelta(days=7))
                     news.sync_risk_engine(engine.loop.risk)
+                    log.info("news refresh: %d events loaded, %d upcoming high-impact in 24 h", n,
+                             sum(e.impact == "high" for e in news.upcoming(now)))
                 except Exception:
                     log.exception("news refresh failed")
+                if stop.wait(300):
+                    return
         supervisor.register("news_sync", news_sync)
 
         def self_healing(stop: threading.Event) -> None:

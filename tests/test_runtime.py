@@ -105,3 +105,28 @@ def test_ws_tokens_redacted_in_logs():
                             ("127.0.0.1:5", "/ws/live?token=eyJabc.def&x=1"), None)
     RedactTokens().filter(rec)
     assert "eyJabc" not in rec.getMessage() and "token=REDACTED&x=1" in rec.getMessage()
+
+
+def test_calendar_file_feeds_news_and_risk_blackout(settings, store, tmp_path):
+    now = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+    cal = tmp_path / "goldai_calendar.csv"
+    cal.write_text("time,title,currency,impact,forecast,previous,actual\n"
+                   f"{(now + timedelta(minutes=5)).strftime('%Y-%m-%dT%H:%M:00Z')},\"Fed Interest Rate Decision\","
+                   "USD,high,,4.0000,\n", encoding="utf-8")
+    settings = settings.model_copy(update={"news_calendar_files": [str(cal)]})
+    fake = TickingFake()
+    app, supervisor = build_runtime(settings, store, use_mt5=True,
+                                    connector_factory=lambda: MT5ReadOnlyConnector(fake))
+    eng = next(iter(app.state.gold.virtual_engines.values()))
+    supervisor.start()
+    try:
+        for _ in range(200):
+            if eng.loop.risk.blocked_by_news(now) is not None:
+                break
+            time.sleep(0.02)
+    finally:
+        supervisor.stop()
+    assert eng.loop.risk.blocked_by_news(now) is not None     # inside the pre-event blackout window
+    news = app.state.gold.extras["news"]()
+    assert [e["title"] for e in news["events"]] == ["Fed Interest Rate Decision"]
+    assert news["blackout_active"] is True

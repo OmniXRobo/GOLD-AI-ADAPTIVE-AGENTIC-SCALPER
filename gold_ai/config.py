@@ -54,6 +54,9 @@ class Settings(BaseModel):
     whatsapp_phone_id: str | None = None
     whatsapp_recipient: str | None = None
     push_webhook_url: str | None = None
+    # Economic-calendar files read by the news agent (e.g. Common\Files\goldai_calendar.csv written by
+    # mql5/GoldAICalendar.mq5). Re-read on every refresh.
+    news_calendar_files: list[str] = Field(default_factory=list)
 
 
 def load_settings(path: str | os.PathLike | None = None) -> Settings:

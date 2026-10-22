@@ -7,7 +7,7 @@
   "account_allowlist": [],
   "risk": {
     "max_open_positions": 1,
-    "max_lots_per_trade": 0.10,
+    "max_lots_per_trade": 0.1,
     "risk_per_trade_pct": 0.5,
     "max_daily_loss_pct": 2.0,
     "max_drawdown_pct": 10.0,
@@ -19,5 +19,8 @@
   "telegram_chat_id": null,
   "whatsapp_token": null,
   "whatsapp_phone_id": null,
-  "whatsapp_recipient": null
+  "whatsapp_recipient": null,
+  "news_calendar_files": [
+    "%APPDATA%\\MetaQuotes\\Terminal\\Common\\Files\\goldai_calendar.csv"
+  ]
 }

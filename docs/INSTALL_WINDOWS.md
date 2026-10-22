@@ -8,7 +8,7 @@
 - Git for Windows.
 - One MetaTrader 5 terminal per broker account, installed to separate folders
   (e.g. `C:\MT5\Exness`, `C:\MT5\Equiti`, `C:\MT5\MultiBank`) using each broker's installer.
-  In each terminal: Tools в†’ Options в†’ Expert Advisors в†’ tick "Allow algorithmic trading" ONLY if you later
+  In each terminal: Tools → Options → Expert Advisors → tick "Allow algorithmic trading" ONLY if you later
   authorize execution; the read-only data path does not need it.
 
 ## 2. Install
@@ -37,13 +37,31 @@ notepad config.local.json     # set secret_key (64 random chars), database_url
   `python -m gold_ai import-ticks <file> --broker exness --symbol XAUUSDm --format csv --tz-offset-hours 2`.
 
 ## 5. Historical data
-Export ticks in MT5 (View в†’ Symbols в†’ Ticks в†’ select range в†’ Request в†’ Export) and import:
+Export ticks in MT5 (View → Symbols → Ticks → select range → Request → Export) and import:
 `python -m gold_ai import-ticks XAUUSD_ticks.csv --broker exness --symbol XAUUSDm --tz-offset-hours 2`
 Then `python -m gold_ai backtest --broker exness --symbol XAUUSDm` / `walkforward ...`.
 
+Or copy the broker's tick history straight from a logged-in terminal (read-only; stops at the first tick
+already stored, so it never duplicates the live collector):
+`python -m gold_ai --config config.local.json backfill-ticks --terminal-path "C:\Program Files\MT5_2\terminal64.exe" --days 5`
+Roughly 0.5-0.6 M XAUUSD ticks per trading day on Equiti; a backtest over ~2 M ticks takes about 10 minutes.
+A fresh model waits without evidence, so a first backtest needs `--params '{"exploration_rate": 0.2}'`
+to take any trades at all (exploration trades are flagged and never sent as signals).
+
+## 5b. Economic calendar (news blackout)
+Compile `mql5\GoldAICalendar.mq5` and attach it to any chart in one terminal (no trading functions). Every
+15 minutes it writes `%APPDATA%\MetaQuotes\Terminal\Common\Files\goldai_calendar.csv` (UTC times, high/medium/low
+impact). List that path under `news_calendar_files` in `config.local.json`; the service re-reads it every
+5 minutes and blocks new virtual entries around high-impact events.
+To attach it without the GUI, start the terminal with a start config containing
+`[StartUp]` / `Expert=GoldAICalendar` / `Symbol=XAUUSD` / `Period=H1` (`terminal64.exe /config:<file>`).
+
 ## 6. Run as a service
 `deploy\windows\register-task.ps1 -TerminalPath "C:\MT5\Exness\terminal64.exe"` registers a per-user scheduled
-task (start at logon, restart every minute on failure). Keep the VPS user logged on (MT5 requires a session).
+task (start at logon, hidden window). `start.ps1` restarts the service 10 s after it exits and logs each exit
+to `logsestarts.log`; Task Scheduler's own restart setting does not react to exit codes. Do not run it in a
+visible console you might close: closing the window ends the service. Add `-Port 8001` etc. per terminal.
+Keep the VPS user logged on (MT5 requires a session).
 Health: `deploy\windows\healthcheck.ps1`. Logs: `logs\`. Diagnostics zip: `deploy\windows\collect-logs.ps1`.
 
 ## 7. Backups
