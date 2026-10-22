@@ -13,6 +13,7 @@ import argparse
 import getpass
 import json
 import logging
+import re
 import sys
 from datetime import datetime, timedelta
 
@@ -36,6 +37,19 @@ def _spec_from_store(store: MemoryStore, broker: str, symbol: str) -> SymbolSpec
                  f"it from the broker, or `import-spec` with the EA's JSON snapshot.")
     d["filling_modes"] = tuple(d.get("filling_modes", ()))
     return SymbolSpec(**d)
+
+
+class RedactTokens(logging.Filter):
+    """Keep session tokens (WebSocket `?token=...`) out of uvicorn's logs."""
+
+    _pat = re.compile(r"(token=)[^&\s\"]+")
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.args, tuple):
+            record.args = tuple(self._pat.sub(r"\1REDACTED", a) if isinstance(a, str) else a for a in record.args)
+        if isinstance(record.msg, str):
+            record.msg = self._pat.sub(r"\1REDACTED", record.msg)
+        return True
 
 
 def _dt(s: str | None) -> datetime | None:
@@ -154,6 +168,8 @@ def main(argv: list[str] | None = None) -> int:
         from .runtime import build_runtime
         app, supervisor = build_runtime(settings, store, use_mt5=a.mt5, terminal_path=a.terminal_path,
                                         symbol=a.symbol, dashboard_dir=a.dashboard)
+        for name in ("uvicorn.error", "uvicorn.access"):
+            logging.getLogger(name).addFilter(RedactTokens())
         supervisor.start()
         try:
             uvicorn.run(app, host=a.host, port=a.port)

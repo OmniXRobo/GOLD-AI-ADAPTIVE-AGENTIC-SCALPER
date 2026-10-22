@@ -27,6 +27,10 @@
   Supervisor and the virtual engine warms up from stored ticks: tests **160 passed, 1 skipped**. After restart the
   engine replayed 82,305 stored Equiti ticks (12:57–14:10 UTC); that is under the 100 minutes needed, so it was not
   ready yet. Still no decision or virtual trade at that point.
+- Service moved to the logon scheduled task `GoldAI-Equiti` (MT5_2, port 8001; restart every minute on failure);
+  `/api/health` OK and the owner signed in to the dashboard. Scheduled self-healing and log token redaction added:
+  tests **162 passed, 1 skipped**. Found that uvicorn logged the dashboard session token in WebSocket URLs; now
+  redacted, and the two existing log files were scrubbed.
 
 
 ## 2026-10-22 — session 1 (Linux cloud container, Python 3.13, Node 22)
@@ -56,7 +60,7 @@
 | test_notifications.py | 13 |
 | test_postgres.py | 1 |
 | test_risk.py | 7 |
-| test_runtime.py | 2 |
+| test_runtime.py | 4 |
 | test_self_healing.py | 11 |
 | test_symbols_and_connector.py | 11 |
 

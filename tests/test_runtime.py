@@ -5,7 +5,8 @@ from fastapi.testclient import TestClient
 
 from gold_ai.brokers.mock_feed import FakeMT5, synthetic_ticks
 from gold_ai.brokers.mt5_connector import MT5ReadOnlyConnector
-from gold_ai.runtime import build_runtime
+from gold_ai.agents.self_healing import SelfHealingAgent
+from gold_ai.runtime import build_runtime, scheduled_self_healing
 
 SYMS = [{"name": "XAUUSDm", "currency_base": "XAU", "currency_profit": "USD", "trade_contract_size": 100.0}]
 
@@ -61,7 +62,7 @@ def test_virtual_engine_warms_up_from_stored_ticks(settings, store):
     eng = next(iter(app.state.gold.virtual_engines.values()))
     assert eng.loop.market.state().ready              # no 100-minute wait after a restart
     assert eng.loop.stats.decisions == 0 and eng.loop.stats.ticks == 0   # warm-up never decides or trades
-    assert set(supervisor.status()) == {"collector", "live_virtual", "news_sync"}
+    assert set(supervisor.status()) == {"collector", "live_virtual", "news_sync", "self_healing"}
     supervisor.start()
     try:
         for _ in range(100):
@@ -72,3 +73,35 @@ def test_virtual_engine_warms_up_from_stored_ticks(settings, store):
     finally:
         supervisor.stop()
     assert fake.order_send_calls == 0
+
+
+def test_scheduled_self_healing_runs_once_per_interval(settings, store):
+    now = datetime.now(timezone.utc)
+    store.save_ticks("exness", "XAUUSDm", synthetic_ticks(2_000, start=now - timedelta(minutes=20),
+                                                          step_seconds=0.5), source="mt5")
+    fake = TickingFake()
+    app, supervisor = build_runtime(settings, store, use_mt5=True,
+                                    connector_factory=lambda: MT5ReadOnlyConnector(fake))
+    eng = next(iter(app.state.gold.virtual_engines.values()))
+    healer = SelfHealingAgent(settings, eng.spec, store)
+    entry = scheduled_self_healing(eng, healer, store, error_counters={"collector": 0}, now=now)
+    assert entry["outcome"] == "no_action" and entry["registered"] == []
+    assert any("insufficient" in d for d in entry["diagnosis"])
+    assert scheduled_self_healing(eng, healer, store, now=now + timedelta(hours=1)) is None   # not due yet
+    assert scheduled_self_healing(eng, healer, store, now=now + timedelta(hours=25)) is not None
+    c = TestClient(app)
+    st = app.state.gold
+    st.auth.create_user("owner", "owner-pass-123", "owner")
+    tok = c.post("/api/auth/login", json={"username": "owner", "password": "owner-pass-123"}).json()["token"]
+    sh = c.get("/api/self-healing", headers={"Authorization": f"Bearer {tok}"}).json()
+    assert sh["current_diagnosis"]["cycle_id"] == sh["history"][-1]["cycle_id"]
+    assert fake.order_send_calls == 0
+
+
+def test_ws_tokens_redacted_in_logs():
+    import logging
+    from gold_ai.cli import RedactTokens
+    rec = logging.LogRecord("uvicorn.error", logging.INFO, "", 0, '%s - "WebSocket %s" [accepted]',
+                            ("127.0.0.1:5", "/ws/live?token=eyJabc.def&x=1"), None)
+    RedactTokens().filter(rec)
+    assert "eyJabc" not in rec.getMessage() and "token=REDACTED&x=1" in rec.getMessage()

@@ -38,3 +38,6 @@ All items below have code + passing tests unless noted.
 - T-SUPERVISOR-WIRE: background workers run under `Supervisor` (restart with backoff, incidents audited).
 - T-VIRTUAL-WARMUP-SEED: `LiveVirtualEngine.warm_up` rebuilds market state from stored ticks after a restart.
 - Dashboard built on the VPS (Node 22) and served by the running service; `register-task.ps1` gained `-Port`.
+- Auto-start: scheduled task `GoldAI-Equiti` (logon, restart on failure) runs the Equiti service.
+- T-SELFHEAL-SCHEDULE: daily self-healing check on Memory C, current diagnosis exposed to the dashboard.
+- Session tokens redacted from uvicorn logs.

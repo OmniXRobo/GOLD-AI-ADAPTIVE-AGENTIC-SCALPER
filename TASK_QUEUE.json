@@ -137,8 +137,9 @@
       "id": "T-SELFHEAL-SCHEDULE",
       "phase": 5,
       "title": "Schedule self-healing cycles on Memory C; expose current diagnosis",
-      "status": "todo",
-      "priority": 2
+      "status": "done",
+      "priority": 2,
+      "notes": "Supervisor worker runs scheduled_self_healing on Memory C (Equiti) every 24 h (first check 1 h after start, last run persisted). Feed checks use the last 10 min; candidates only registered as validated; /api/self-healing current_diagnosis = latest cycle."
     },
     {
       "id": "T-NEWS-FEATURES",
@@ -220,6 +221,21 @@
       "title": "Build dashboard on the VPS (Node 22)",
       "status": "done",
       "priority": 2
+    },
+    {
+      "id": "T-AUTOSTART-EQUITI",
+      "phase": 9,
+      "title": "Logon scheduled task GoldAI-Equiti (MT5_2, port 8001)",
+      "status": "done",
+      "priority": 1,
+      "notes": "Registered with owner's go-ahead 2026-10-22; restarts every minute on failure."
+    },
+    {
+      "id": "T-LOG-TOKEN-REDACT",
+      "phase": 9,
+      "title": "Redact WebSocket session tokens from uvicorn logs",
+      "status": "done",
+      "priority": 1
     }
   ]
 }

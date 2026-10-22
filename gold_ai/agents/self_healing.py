@@ -304,8 +304,11 @@ class SelfHealingAgent:
                   incumbent_version: str | None = None, model: ModelState | None = None, force: bool = False,
                   error_counters: dict[str, int] | None = None, now: datetime | None = None,
                   max_candidates: int = 4, seed: int = 0, data_source: str = "unknown",
-                  actor: str = "self_healing") -> HealingCycleResult:
-        rep = detect_deterioration(baseline_trades, recent_trades, ticks=recent_ticks, now=now,
+                  actor: str = "self_healing", feed_ticks: list[Tick] | None = None) -> HealingCycleResult:
+        # feed_ticks: the window checked for data gaps / staleness (default: recent_ticks). The scheduled
+        # cycle passes only the last minutes so normal daily/weekend market closures are not flagged.
+        rep = detect_deterioration(baseline_trades, recent_trades,
+                                   ticks=recent_ticks if feed_ticks is None else feed_ticks, now=now,
                                    error_counters=error_counters, thresholds=self.thresholds)
         diag = diagnose(rep)
         cycle = HealingCycleResult(f"heal-{uuid.uuid4().hex[:12]}", utcnow(), rep, diag, "no_action",

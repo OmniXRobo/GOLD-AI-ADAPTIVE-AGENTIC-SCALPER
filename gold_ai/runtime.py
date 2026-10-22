@@ -139,7 +139,8 @@ def register_services(state: AppState, *, news: NewsAgent | None = None,
 
     s.extras.update({
         "maturity": maturity,
-        "self_healing": lambda: json_safe_any({"history": healer.history(), "current_diagnosis": None}),
+        "self_healing": lambda: json_safe_any({"history": healer.history(),
+                                               "current_diagnosis": (healer.history() or [None])[-1]}),
         "system_health": system_health,
         "news": news_view,
         "institutional": institutional_view,
@@ -152,6 +153,42 @@ def register_services(state: AppState, *, news: NewsAgent | None = None,
     })
     return {"news": news, "institutional": institutional, "signals": signals, "healer": healer,
             "backups": backups, "health": health, "heartbeats": heartbeats, "dashboard_channel": dashboard}
+
+
+SELF_HEAL_INTERVAL = timedelta(hours=24)
+SELF_HEAL_RECENT_TRADES = 50
+
+
+def scheduled_self_healing(engine, healer: SelfHealingAgent, store: MemoryStore, *,
+                           error_counters: dict[str, int] | None = None, now: datetime | None = None,
+                           interval: timedelta = SELF_HEAL_INTERVAL) -> dict | None:
+    """One scheduled self-healing check on Memory C (live virtual) trades for the engine's broker/symbol.
+
+    Runs at most once per `interval` (last run persisted, so restarts do not repeat it). The last
+    SELF_HEAL_RECENT_TRADES closed virtual trades are compared with the ones before them; candidates are
+    backtested/walk-forwarded on the last 2 days of stored ticks and only registered as "validated" —
+    activation always needs the owner. Returns the recorded history entry, or None when not due.
+    """
+    from .domain import MemoryDomain
+    from .engines.walkforward import WalkForwardConfig
+    now = now or datetime.now(timezone.utc)
+    key = f"self_healing:last_cycle:{engine.spec.broker}:{engine.spec.symbol}"
+    last = store.kv_get(key)
+    if last and now - datetime.fromisoformat(last) < interval:
+        return None
+    trades = [t for t in store.load_trades(MemoryDomain.VIRTUAL, broker=engine.spec.broker)
+              if t.symbol == engine.spec.symbol and t.exit_time is not None]
+    trades.sort(key=lambda t: t.exit_time)
+    recent, baseline = trades[-SELF_HEAL_RECENT_TRADES:], trades[:-SELF_HEAL_RECENT_TRADES][-200:]
+    ticks = store.load_ticks(engine.spec.broker, engine.spec.symbol, now - timedelta(days=2), now)
+    feed = [t for t in ticks if t.time >= now - timedelta(minutes=10)]
+    healer.run_cycle(engine.agent.params, ticks, baseline, recent,
+                     WalkForwardConfig(timedelta(hours=24), timedelta(hours=6), timedelta(hours=6)),
+                     incumbent_version=engine.agent.model.version(), model=engine.agent.model,
+                     error_counters=error_counters, now=now, data_source="mt5_live_demo",
+                     actor="self_healing_scheduler", feed_ticks=feed)
+    store.kv_set(key, now.isoformat())
+    return healer.history()[-1]
 
 
 def _blackout(state: AppState, now: datetime) -> bool:
@@ -215,5 +252,14 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                 except Exception:
                     log.exception("news refresh failed")
         supervisor.register("news_sync", news_sync)
+
+        def self_healing(stop: threading.Event) -> None:
+            # First check an hour after start (feed settled), then every 10 min whether the 24 h interval is due.
+            delay = 3600
+            while not stop.wait(delay):
+                scheduled_self_healing(engine, svc["healer"], store,
+                                       error_counters={"collector": collector.errors})
+                delay = 600
+        supervisor.register("self_healing", self_healing)
     app = create_app(state, dashboard_dir)
     return app, supervisor
