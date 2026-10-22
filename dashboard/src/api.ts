@@ -326,7 +326,36 @@ export interface Signal {
   token?: string;
   action_token?: string;
   domain?: string;
+  /** Fields as the backend's Signal.to_dict sends them. */
+  timestamp?: string;
+  expiry?: string;
+  suggested_lots?: number;
+  risk_reward?: number;
+  reason?: string;
   [k: string]: unknown;
+}
+
+export interface Technical {
+  broker: string;
+  symbol: string;
+  timeframe: string;
+  bars: number;
+  last_close: number | null;
+  last_bar_time: string | null;
+  rsi14: number | null;
+  macd: { macd: number; signal: number; histogram: number } | null;
+  stochastic: { k: number; d: number } | null;
+  bollinger: { upper: number; middle: number; lower: number } | null;
+  ma50: number | null;
+  ma200: number | null;
+  pressure: { buy_pct: number; sell_pct: number; bars: number } | null;
+  votes: Record<string, number>;
+  score: number | null;
+  label: string;
+  support: number | null;
+  resistance: number | null;
+  bars_missing: Record<string, number>;
+  note: string;
 }
 
 export type SignalAction = "approve" | "reject" | "ignore" | "manual";
@@ -334,6 +363,10 @@ export type SignalAction = "approve" | "reject" | "ignore" | "manual";
 export interface NewsEvent {
   time: string;
   title: string;
+  currency?: string | null;
+  forecast?: number | string | null;
+  previous?: number | string | null;
+  actual?: number | string | null;
   category?: string;
   impact?: string;
   uncertainty?: number | string | null;
@@ -499,6 +532,7 @@ export const api = {
   signalAction: (id: string | number, action: SignalAction, token: string) =>
     post<unknown>(`/api/signals/${enc(String(id))}/action`, { action, token }),
   news: () => get<NewsResponse>("/api/news"),
+  technical: (tf: string) => get<Technical>(`/api/analysis/technical?tf=${enc(tf)}`),
   institutional: () => get<Institutional>("/api/institutional"),
   risk: () => get<RiskResponse>("/api/risk"),
   emergencyStop: (active: boolean, reason: string) => post<unknown>("/api/emergency-stop", { active, reason }),

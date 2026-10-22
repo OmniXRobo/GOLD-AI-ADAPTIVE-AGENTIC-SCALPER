@@ -16,6 +16,10 @@ const memories = () => import("./pages/Memories");
 const system = () => import("./pages/System");
 
 const OverviewPage = page(() => import("./pages/Overview"), "default");
+const HomePage = page(() => import("./pages/Home"), "default");
+const AutopilotPage = page(() => import("./pages/Autopilot"), "default");
+const AnalysisPage = page(() => import("./pages/Analysis"), "default");
+const PracticePage = page(() => import("./pages/Practice"), "default");
 const BrokersPage = page(monitor, "BrokersPage");
 const MarketPage = page(monitor, "MarketPage");
 const AgentPage = page(monitor, "AgentPage");
@@ -56,7 +60,11 @@ export default function App() {
     <LiveProvider>
       <Routes>
         <Route element={<Layout />}>
-          <Route index element={<OverviewPage />} />
+          <Route index element={<HomePage />} />
+          <Route path="autopilot" element={<AutopilotPage />} />
+          <Route path="analysis" element={<AnalysisPage />} />
+          <Route path="practice" element={<PracticePage />} />
+          <Route path="overview" element={<OverviewPage />} />
           <Route path="brokers" element={<BrokersPage />} />
           <Route path="market" element={<MarketPage />} />
           <Route path="agent" element={<AgentPage />} />

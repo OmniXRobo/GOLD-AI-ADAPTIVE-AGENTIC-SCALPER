@@ -3,6 +3,11 @@
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No real-market performance exists yet.
 
+## Session 2c (simplified UI)
+- New default look (cream and gold) with Home, Autopilot, Analysis, Practice; older pages under Advanced.
+- Android app 1.1.0 built (same key as 1.0.0, installs as an update). Strategy ideas from the reference app are
+  written up in docs/STRATEGY_IDEAS.md; engine changes wait for the owner.
+
 ## Session 2b (dashboard UI and Android app)
 - Dashboard redesigned (dark gold theme, icons, live price from real ticks only, mobile layout) and code-split.
 - Android app in `android/` (dashboard + read-only signal alerts). APK built and signature-verified; **not yet tested

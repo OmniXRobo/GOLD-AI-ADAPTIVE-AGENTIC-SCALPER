@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { latestSignals, SignalCard, signalTime } from "../components/SignalCard";
 import { api, type Signal, type SignalAction } from "../api";
 import { Card, ConfirmDialog, DataView, ErrorState, JsonBlock, KVTable, PageHeader, Pill, Stat, Table, toneFor } from "../components/ui";
 import { fmtNum, fmtTime, humanize, useApi } from "../lib";
@@ -98,6 +99,13 @@ export function SignalsPage() {
     <>
       <PageHeader title="Signals and Notifications" subtitle="Trade signals proposed by the agent. Actions are sent with the signal's one-time action token." actions={<button className="btn" onClick={st.reload}>Refresh</button>} />
       {msg && <p className="state state-ok">{msg}</p>}
+      {st.data && st.data.some((s) => s.status === "pending") && (
+        <div className="signal-list">
+          {latestSignals(st.data.filter((s) => s.status === "pending"), 4).map((s) => (
+            <SignalCard key={String(s.id)} s={s} />
+          ))}
+        </div>
+      )}
       <Card title="Signals">
         <DataView state={st} isEmpty={(d) => !d.length} empty="No signals yet.">
           {(rows) => (
@@ -105,7 +113,7 @@ export function SignalsPage() {
               rows={rows}
               rowKey={(r, i) => String(r.id ?? i)}
               columns={[
-                { key: "time", label: "Time", render: (r) => fmtTime(r.time) },
+                { key: "time", label: "Time", render: (r) => fmtTime(signalTime(r)) },
                 { key: "domain", label: "Domain", render: (r) => r.domain ?? "n/a" },
                 { key: "broker", label: "Broker" },
                 { key: "side", label: "Side", render: (r) => <span className={`side side-${String(r.side ?? "").toLowerCase()}`}>{r.side ?? "n/a"}</span> },
@@ -113,9 +121,9 @@ export function SignalsPage() {
                 { key: "entry", label: "Entry", className: "num", render: (r) => fmtNum(r.entry, 2) },
                 { key: "stop_loss", label: "SL", className: "num", render: (r) => fmtNum(r.stop_loss, 2) },
                 { key: "take_profit", label: "TP", className: "num", render: (r) => fmtNum(r.take_profit, 2) },
-                { key: "lots", label: "Lots", className: "num", render: (r) => fmtNum(r.lots, 2) },
+                { key: "lots", label: "Lots", className: "num", render: (r) => fmtNum(r.suggested_lots ?? r.lots, 2) },
                 { key: "status", label: "Status", render: (r) => <Pill tone={toneFor(r.status)}>{r.status ?? "n/a"}</Pill> },
-                { key: "explanation", label: "Why", render: (r) => <span className="small">{r.explanation ?? ""}</span> },
+                { key: "explanation", label: "Why", render: (r) => <span className="small">{r.reason ?? r.explanation ?? ""}</span> },
                 {
                   key: "actions",
                   label: "Action",
