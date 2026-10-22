@@ -105,8 +105,9 @@
       "phase": 10,
       "title": "Verify connector/specs/virtual engine on Exness, Equiti, MultiBank demo terminals",
       "status": "blocked",
-      "blocked_on": "owner Windows VPS + MT5 terminals",
-      "priority": 1
+      "blocked_on": "owner: log MT5 terminals into Exness / Equiti / MultiBank demo accounts",
+      "priority": 1,
+      "notes": "Session 2: verified read-only on MetaQuotes-Demo (generic broker) on the VPS: connect, account demo detection, XAUUSD discovery/spec, tick collection, live virtual engine start. Exness/Equiti/MultiBank demo logins still needed."
     },
     {
       "id": "T-REAL-DATA-RESEARCH",
@@ -120,9 +121,9 @@
       "id": "T-MQL5-COMPILE",
       "phase": 2,
       "title": "Compile GoldAIBridge.mq5 in MetaEditor",
-      "status": "blocked",
-      "blocked_on": "MetaEditor on VPS",
-      "priority": 3
+      "status": "done",
+      "priority": 3,
+      "notes": "Compiled on VPS with MetaEditor build 6241: 0 errors, 1 warning (version string format, Market only). Not yet attached to a chart."
     },
     {
       "id": "T-SUPERVISOR-WIRE",
@@ -188,6 +189,28 @@
       "status": "blocked",
       "blocked_on": "explicit owner authorization; never enable during development",
       "priority": 99
+    },
+    {
+      "id": "T-SERVER-TIME",
+      "phase": 2,
+      "title": "Convert MT5 broker server time to UTC in the connector",
+      "status": "done",
+      "priority": 1,
+      "notes": "Found on the real terminal: ticks were stamped 3h ahead (server UTC+3) and collector ranges lagged 3h."
+    },
+    {
+      "id": "T-WINDOWS-SCRIPTS-FIX",
+      "phase": 9,
+      "title": "Fix install.ps1 (py -3.11 pin) and start.ps1 (@args, stderr)",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-VIRTUAL-WARMUP-SEED",
+      "phase": 3,
+      "title": "Seed the live virtual engine's market state from stored ticks so it does not wait ~100 min (20 M5 bars) after each restart",
+      "status": "todo",
+      "priority": 2
     }
   ]
 }

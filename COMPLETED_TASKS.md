@@ -24,3 +24,13 @@ All items below have code + passing tests unless noted.
   broker checks), reconciliation, emergency close, trailing modify — tested with fake MT5 only; NOT wired into the
   running service.
 - P9 partial: maturity engine, health agent + supervisor, backups with checksum manifest, Windows scripts and docs.
+
+## Session 2 — 2026-10-22 (owner's Windows VPS)
+- Installed on Windows Server 2022 (Python 3.12.10); full test suite passes on Windows.
+- Read-only MT5 path verified on a real terminal (MetaQuotes-Demo, generic broker): connect, demo detection,
+  XAUUSD discovery and spec, tick collection, live virtual engine start. Exness/Equiti/MultiBank still unverified.
+- Fixed broker server time handling: the connector measures the server's UTC offset from live ticks (only from a
+  tick that just changed, re-measured after market pauses) and returns true UTC; collector waits until it is known.
+- Fixed `install.ps1` (hard-coded `py -3.11`) and `start.ps1` (passed `@args` instead of its arguments; stderr
+  redirection stopped the script on PowerShell 5.1). Logs now go to `logs\gold_ai_<timestamp>.log`.
+- Compiled GoldAIBridge.mq5 (0 errors, 1 warning).

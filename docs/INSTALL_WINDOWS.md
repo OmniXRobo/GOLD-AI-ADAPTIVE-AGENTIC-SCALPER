@@ -2,12 +2,13 @@
 
 ## 1. Prerequisites
 - Windows Server 2019+/Windows 10+ VPS, 4 GB RAM minimum (8 GB with PostgreSQL and several terminals).
-- Python 3.11+ (python.org installer, "Add to PATH"; per-user install, no admin needed).
+- Python 3.11+ (python.org installer, "Add to PATH"). On Windows Server 2022 the per-user install failed
+  (MSI error 0x80070003); the all-users install (`InstallAllUsers=1 TargetDir=C:\Python312`) worked.
 - Node.js 20+ (only to build the dashboard).
 - Git for Windows.
 - One MetaTrader 5 terminal per broker account, installed to separate folders
   (e.g. `C:\MT5\Exness`, `C:\MT5\Equiti`, `C:\MT5\MultiBank`) using each broker's installer.
-  In each terminal: Tools → Options → Expert Advisors → tick "Allow algorithmic trading" ONLY if you later
+  In each terminal: Tools в†’ Options в†’ Expert Advisors в†’ tick "Allow algorithmic trading" ONLY if you later
   authorize execution; the read-only data path does not need it.
 
 ## 2. Install
@@ -36,7 +37,7 @@ notepad config.local.json     # set secret_key (64 random chars), database_url
   `python -m gold_ai import-ticks <file> --broker exness --symbol XAUUSDm --format csv --tz-offset-hours 2`.
 
 ## 5. Historical data
-Export ticks in MT5 (View → Symbols → Ticks → select range → Request → Export) and import:
+Export ticks in MT5 (View в†’ Symbols в†’ Ticks в†’ select range в†’ Request в†’ Export) and import:
 `python -m gold_ai import-ticks XAUUSD_ticks.csv --broker exness --symbol XAUUSDm --tz-offset-hours 2`
 Then `python -m gold_ai backtest --broker exness --symbol XAUUSDm` / `walkforward ...`.
 

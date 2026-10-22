@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..domain import SymbolSpec, Tick
@@ -72,8 +72,27 @@ class AccountSnapshot:
         return self.trade_mode == "real"
 
 
+# MT5 stamps ticks in broker *server* time encoded as if it were UTC (e.g. MetaQuotes-Demo is UTC+3
+# in summer). Offsets are whole or half hours; a fresh tick lets us measure the current one.
+_OFFSET_STEP_S = 1800
+_OFFSET_MAX_S = 14 * 3600
+_FRESH_TICK_S = 60
+_REMEASURE_GAP_S = 1800
+
+
 class MT5ReadOnlyConnector:
-    def __init__(self, mt5_module: Any | None = None, terminal_path: str | None = None):
+    """Times returned by this connector are true UTC.
+
+    `server_utc_offset_hours=None` (default) measures the broker's server-time offset from live
+    ticks: an offset is accepted only from a tick that just changed (so a closed market's stale
+    last quote is never used) and that sits within a minute of a whole/half-hour offset. It is
+    re-measured when quotes resume after a pause of 30+ minutes (daylight-saving switches happen
+    while gold is closed), never mid-session, so tick times cannot jump. Until it is known,
+    `latest_tick` returns None and `ticks_range` raises. Pass a number to pin the offset.
+    """
+
+    def __init__(self, mt5_module: Any | None = None, terminal_path: str | None = None,
+                 server_utc_offset_hours: float | None = None):
         if mt5_module is None:
             try:
                 import MetaTrader5 as mt5_module  # type: ignore
@@ -83,6 +102,42 @@ class MT5ReadOnlyConnector:
         self.terminal_path = terminal_path
         self.connected = False
         self.last_latency_ms: float | None = None
+        self.offset_pinned = server_utc_offset_hours is not None
+        self.server_offset_s: int | None = (int(round(server_utc_offset_hours * 3600))
+                                            if server_utc_offset_hours is not None else None)
+        self._last_raw_msc: dict[str, int] = {}
+        self._last_move_wall: float | None = None
+
+    # -- server time ---------------------------------------------------------
+    @property
+    def server_offset_known(self) -> bool:
+        return self.server_offset_s is not None
+
+    def _observe_offset(self, symbol: str, raw_msc: int, now: float | None = None) -> None:
+        if self.offset_pinned:
+            return
+        now = time.time() if now is None else now
+        prev = self._last_raw_msc.get(symbol)
+        self._last_raw_msc[symbol] = raw_msc
+        if prev is None or raw_msc == prev:
+            return  # need a tick that just arrived, not a stale last quote
+        last_move, self._last_move_wall = self._last_move_wall, now
+        if self.server_offset_known and last_move is not None and now - last_move < _REMEASURE_GAP_S:
+            return  # only re-measure after a market pause (weekend/daily break), so time never jumps mid-session
+        diff = raw_msc / 1000.0 - now
+        candidate = int(round(diff / _OFFSET_STEP_S) * _OFFSET_STEP_S)
+        if abs(diff - candidate) > _FRESH_TICK_S or abs(candidate) > _OFFSET_MAX_S:
+            return
+        if candidate != self.server_offset_s:
+            log.info("broker server time offset: UTC%+.1fh", candidate / 3600)
+            self.server_offset_s = candidate
+
+    def _to_utc(self, raw_msc: int) -> datetime:
+        return datetime.fromtimestamp(raw_msc / 1000.0 - (self.server_offset_s or 0), tz=timezone.utc)
+
+    def server_time_info(self) -> dict:
+        return {"offset_hours": None if self.server_offset_s is None else self.server_offset_s / 3600,
+                "pinned": self.offset_pinned}
 
     # -- connection -------------------------------------------------------
     def connect(self, login: int | None = None, password: str | None = None, server: str | None = None) -> bool:
@@ -159,12 +214,19 @@ class MT5ReadOnlyConnector:
         t = self.mt5.symbol_info_tick(symbol)
         if t is None:
             return None
-        ts = datetime.fromtimestamp(t.time_msc / 1000.0, tz=timezone.utc)
-        return Tick(ts, t.bid, t.ask, float(getattr(t, "volume_real", 0.0) or getattr(t, "volume", 0)))
+        self._observe_offset(symbol, int(t.time_msc))
+        if not self.server_offset_known:
+            return None
+        return Tick(self._to_utc(int(t.time_msc)), t.bid, t.ask,
+                    float(getattr(t, "volume_real", 0.0) or getattr(t, "volume", 0)))
 
     def ticks_range(self, symbol: str, start: datetime, end: datetime) -> list[Tick]:
+        """Ticks between UTC `start` and `end` (converted to and from broker server time)."""
+        if not self.server_offset_known:
+            raise RuntimeError("broker server time offset not known yet (needs a live tick)")
+        off = timedelta(seconds=self.server_offset_s)
         flags = getattr(self.mt5, "COPY_TICKS_ALL", -1)
-        arr = self.mt5.copy_ticks_range(symbol, start, end, flags)
+        arr = self.mt5.copy_ticks_range(symbol, start + off, end + off, flags)
         if arr is None:
             raise RuntimeError(f"copy_ticks_range failed: {self.mt5.last_error()}")
         out = []
@@ -172,6 +234,6 @@ class MT5ReadOnlyConnector:
             bid, ask = float(r["bid"]), float(r["ask"])
             if bid <= 0 or ask <= 0:
                 continue  # MT5 emits last-only ticks with zero bid/ask
-            out.append(Tick(datetime.fromtimestamp(int(r["time_msc"]) / 1000.0, tz=timezone.utc),
+            out.append(Tick(self._to_utc(int(r["time_msc"])),
                             bid, ask, float(r["volume_real"]) if "volume_real" in r.dtype.names else 0.0))
         return out

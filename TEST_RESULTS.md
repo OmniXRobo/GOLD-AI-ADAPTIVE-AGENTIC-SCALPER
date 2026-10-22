@@ -1,5 +1,23 @@
 # Test results
 
+## 2026-10-22 — session 2 (owner's Windows VPS: Windows Server 2022, Python 3.12.10)
+- `deploy\windows\install.ps1` (after fixing its Python launcher pin) → `python -m pytest -q` **155 passed, 1 skipped**,
+  matching session 1. After the server-time fix and its 4 new tests: **159 passed, 1 skipped**.
+- MT5 terminals found: `C:\Program Files\MT5_1` (build 6241, running, logged in to **MetaQuotes-Demo**, demo account,
+  hedging) and `C:\Program Files\MT5_2` (build 6244, not logged in). No Exness / Equiti / MultiBank login yet.
+- Read-only connector on MetaQuotes-Demo: connect OK, account detected as `demo`, broker `generic`; gold discovery
+  validated `XAUUSD` (base XAU, profit USD, contract 100, 2 digits, FOK/IOC, market execution, swap -12.6/-4.6 points,
+  commission not reported by symbol info). Real demo quotes read (e.g. bid 4076.99 / ask 4077.36 at 13:29:55 UTC).
+- **Defect found and fixed:** MT5 stamps ticks in broker server time (MetaQuotes-Demo = UTC+3). Before the fix the
+  latest tick was labelled 3 h in the future and the collector's range queries returned ticks 3 h old. After the fix
+  the measured offset is UTC+3.0 h, the latest tick's age is ~0.1 s, and a 2-minute range returns 2 minutes of ticks.
+- `GoldAIBridge.mq5` compiled with MetaEditor (build 6241): **0 errors, 1 warning** (version string format, MQL5 Market
+  only). Not attached to a chart yet; the Python collector does not need it.
+- Service (`start.ps1`, read-only `--mt5`, real and demo execution disabled) running against MT5_1: tick collector
+  stored 37,252 real XAUUSD demo ticks in its first ~2 minutes (1 h backfill + live). The live virtual engine started
+  and is warming up (needs 20 M5 bars ≈ 100 min of live ticks before its first decision). No virtual trade yet.
+
+
 ## 2026-10-22 — session 1 (Linux cloud container, Python 3.13, Node 22)
 - `python -m pytest -q` → **155 passed, 1 skipped** (skip = PostgreSQL test without `GOLDAI_TEST_PG_URL`).
 - With `GOLDAI_TEST_PG_URL=postgresql+psycopg://...` against a local PostgreSQL 16 → **156 passed**.
@@ -29,13 +47,13 @@
 | test_risk.py | 7 |
 | test_runtime.py | 1 |
 | test_self_healing.py | 11 |
-| test_symbols_and_connector.py | 7 |
+| test_symbols_and_connector.py | 11 |
 
 ## Not tested (cannot be, in this environment)
 - Real MT5 terminals (Windows only) and the Exness/Equiti/MultiBank servers — only FakeMT5.
-- MQL5 EA compilation.
+- MQL5 EA compilation (done in session 2 on the VPS).
 - Real Telegram/WhatsApp/push delivery — HTTP mocked.
-- Windows PowerShell scripts — not executed (no Windows host).
+- Windows PowerShell scripts — not executed in session 1 (install.ps1 and start.ps1 run on the VPS in session 2).
 
 ## Performance results
 None. Every engine run so far used **synthetic random data** for testing mechanics. No real XAUUSD backtest,

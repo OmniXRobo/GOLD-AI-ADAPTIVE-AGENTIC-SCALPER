@@ -29,8 +29,12 @@ class TickCollector:
         return f"collector:{self.broker}:{self.symbol}:last"
 
     def collect_once(self, now: datetime | None = None) -> int:
+        if not getattr(self.c, "server_offset_known", True):
+            self.c.latest_tick(self.symbol)   # measures the broker's server-time offset from live ticks
+            if not self.c.server_offset_known:
+                return 0
         now = now or datetime.now(timezone.utc)
-        last = self.store.kv_get(self._cursor_key())
+        last =self.store.kv_get(self._cursor_key())
         start = datetime.fromisoformat(last) + timedelta(milliseconds=1) if last else now - self.backfill
         ticks = self.c.ticks_range(self.symbol, start, now)
         if not ticks:
