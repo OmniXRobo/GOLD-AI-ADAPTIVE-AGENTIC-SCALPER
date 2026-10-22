@@ -54,25 +54,37 @@ def test_runtime_with_fake_mt5(settings, store):
 
 def test_virtual_engine_warms_up_from_stored_ticks(settings, store):
     now = datetime.now(timezone.utc)
-    stored = synthetic_ticks(12_000, start=now - timedelta(hours=2), step_seconds=0.5)
+    stored = synthetic_ticks(40_000, start=now - timedelta(hours=11), step_seconds=1.0)
     store.save_ticks("exness", "XAUUSDm", stored, source="mt5")
     fake = TickingFake()
     app, supervisor = build_runtime(settings, store, use_mt5=True,
                                     connector_factory=lambda: MT5ReadOnlyConnector(fake))
     eng = next(iter(app.state.gold.virtual_engines.values()))
-    assert eng.loop.market.state().ready              # no 100-minute wait after a restart
-    assert eng.loop.stats.decisions == 0 and eng.loop.stats.ticks == 0   # warm-up never decides or trades
     assert set(supervisor.status()) == {"collector", "live_virtual", "news_sync", "self_healing"}
-    supervisor.start()
+    supervisor.start()                                 # warm-up runs in the live_virtual worker
     try:
-        for _ in range(100):
-            if supervisor.status()["live_virtual"]["alive"]:
+        for _ in range(1000):
+            if len(eng.loop.market.mtf.bars["H1"]) >= 10:   # warm-up finished replaying ~11 h
                 break
-            time.sleep(0.01)
+            time.sleep(0.02)
+        assert eng.loop.market.state().ready           # no 100-minute wait after a restart
+        assert len(eng.loop.market.mtf.bars["H1"]) >= 10   # higher timeframes get history for analysis
         assert all(w["alive"] for w in supervisor.status().values())
     finally:
         supervisor.stop()
     assert fake.order_send_calls == 0
+
+
+def test_warm_up_never_decides_or_trades(settings, store):
+    now = datetime.now(timezone.utc)
+    store.save_ticks("exness", "XAUUSDm", synthetic_ticks(12_000, start=now - timedelta(hours=2), step_seconds=0.5),
+                     source="mt5")
+    fake = TickingFake()
+    app, _ = build_runtime(settings, store, use_mt5=True, connector_factory=lambda: MT5ReadOnlyConnector(fake))
+    eng = next(iter(app.state.gold.virtual_engines.values()))
+    assert eng.warm_up(chunk=timedelta(minutes=17)) == 12_000     # chunked loading loses no ticks
+    assert eng.loop.market.state().ready
+    assert eng.loop.stats.decisions == 0 and eng.loop.stats.ticks == 0 and not eng.loop.sim.positions
 
 
 def test_scheduled_self_healing_runs_once_per_interval(settings, store):

@@ -102,21 +102,30 @@ class LiveVirtualEngine:
         self._persist()
 
     # -- running --------------------------------------------------------------------
-    def warm_up(self, lookback: timedelta = timedelta(hours=3), now: datetime | None = None) -> int:
-        """Rebuild market state (bars, features) from ticks already stored for this broker/symbol.
+    def warm_up(self, lookback: timedelta = timedelta(days=7), now: datetime | None = None,
+                chunk: timedelta = timedelta(hours=6)) -> int:
+        """Rebuild market state (multi-timeframe bars, features) from ticks already stored for this broker/symbol.
 
         Market state only: no decisions, fills or learning happen on these ticks, so a restart does
-        not have to wait for 20 live M5 bars. Returns the number of ticks replayed.
+        not have to wait for 20 live M5 bars, and H1/H4 analysis has history. Loaded in `chunk`
+        slices to bound memory (~0.5 M ticks per trading day). Returns the number of ticks replayed.
         """
         now = now or datetime.now(timezone.utc)
-        ticks = self.store.load_ticks(self.spec.broker, self.spec.symbol, now - lookback, now)
-        for t in ticks:
-            self.loop.market.on_tick(t)
-        if ticks:
-            self._last_tick_time = ticks[-1].time
-            log.info("virtual engine warmed up from %d stored ticks (%s .. %s), ready=%s", len(ticks),
-                     ticks[0].time.isoformat(), ticks[-1].time.isoformat(), self.loop.market.state().ready)
-        return len(ticks)
+        n, first, last = 0, None, None
+        t = now - lookback
+        while t < now:
+            stop = min(t + chunk, now)
+            ticks = self.store.load_ticks(self.spec.broker, self.spec.symbol, t, stop)
+            for x in ticks:
+                self.loop.market.on_tick(x)
+                first, last = first or x, x
+                n += 1
+            t = stop
+        if last is not None:
+            self._last_tick_time = last.time
+            log.info("virtual engine warmed up from %d stored ticks (%s .. %s), ready=%s", n,
+                     first.time.isoformat(), last.time.isoformat(), self.loop.market.state().ready)
+        return n
 
     def poll_once(self) -> Tick | None:
         tick = self.source.latest_tick(self.spec.symbol)

@@ -229,10 +229,15 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
         supervisor.register("collector", collector.run)
         engine = LiveVirtualEngine(settings, spec, conn, store, params=StrategyParams(exploration_rate=0.2),
                                    account=f"virtual-{acct.login}")
-        engine.warm_up()
         state.virtual_engines[f"{spec.broker}:{spec.symbol}"] = engine
+        warmed = threading.Event()
 
         def run_engine(stop: threading.Event) -> None:
+            # Warm-up replays up to 7 days of stored ticks (minutes on a VPS), so it runs here rather
+            # than before the API starts; it happens once, not again after a worker restart.
+            if not warmed.is_set():
+                engine.warm_up()
+                warmed.set()
             while True:
                 engine.poll_once()
                 heartbeats.beat("live_virtual")

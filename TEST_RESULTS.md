@@ -63,6 +63,11 @@
   net -18.18 USD (exploration trade, estimated fill).
 - Economic calendar: GoldAICalendar.mq5 compiled (0 errors, 0 warnings), attached in MT5_1 via start config;
   exported 346 events; service loaded 170 events in its 7-day window. Tests **164 passed, 1 skipped**.
+- **PR #1 and #2 deployed on the VPS (18:08 UTC):** tests 172 passed / 1 skipped, dashboard built, new UI served at
+  the Tailscale address. Found: the new Analysis page had no H1/H4/D1 history because warm-up replayed only 3 h.
+  Warm-up now replays up to 7 days in 6 h chunks inside the engine worker (API stays up): on the VPS it replayed
+  2,275,498 Equiti ticks (Oct 18 22:00 – Oct 22 18:16 UTC) in about 3 minutes, ~450 MB RAM for Python.
+  Tests **173 passed, 1 skipped**.
 
 
 ## 2026-10-22 — session 1 (Linux cloud container, Python 3.13, Node 22)
