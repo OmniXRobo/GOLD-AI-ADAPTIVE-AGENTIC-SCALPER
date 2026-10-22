@@ -14,7 +14,6 @@ import getpass
 import json
 import logging
 import sys
-import threading
 from datetime import datetime, timedelta
 
 from .agents.decision import StrategyParams
@@ -153,10 +152,12 @@ def main(argv: list[str] | None = None) -> int:
         import uvicorn
 
         from .runtime import build_runtime
-        app, workers = build_runtime(settings, store, use_mt5=a.mt5, terminal_path=a.terminal_path,
-                                     symbol=a.symbol, dashboard_dir=a.dashboard)
-        for w in workers:
-            threading.Thread(target=w, daemon=True).start()
-        uvicorn.run(app, host=a.host, port=a.port)
+        app, supervisor = build_runtime(settings, store, use_mt5=a.mt5, terminal_path=a.terminal_path,
+                                        symbol=a.symbol, dashboard_dir=a.dashboard)
+        supervisor.start()
+        try:
+            uvicorn.run(app, host=a.host, port=a.port)
+        finally:
+            supervisor.stop()
         return 0
     return 1

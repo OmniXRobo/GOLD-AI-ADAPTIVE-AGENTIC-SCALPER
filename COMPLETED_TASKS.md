@@ -34,3 +34,7 @@ All items below have code + passing tests unless noted.
 - Fixed `install.ps1` (hard-coded `py -3.11`) and `start.ps1` (passed `@args` instead of its arguments; stderr
   redirection stopped the script on PowerShell 5.1). Logs now go to `logs\gold_ai_<timestamp>.log`.
 - Compiled GoldAIBridge.mq5 (0 errors, 1 warning).
+- Owner decision: Equiti demo only for now (MetaQuotes-Demo service stopped).
+- T-SUPERVISOR-WIRE: background workers run under `Supervisor` (restart with backoff, incidents audited).
+- T-VIRTUAL-WARMUP-SEED: `LiveVirtualEngine.warm_up` rebuilds market state from stored ticks after a restart.
+- Dashboard built on the VPS (Node 22) and served by the running service; `register-task.ps1` gained `-Port`.

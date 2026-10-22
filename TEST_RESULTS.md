@@ -22,6 +22,11 @@
   (check the account type's commission). Server offset measured UTC+3.0 h; latest tick age ~0 s (bid 4057.76 /
   ask 4058.03 at 13:57:08 UTC). Second read-only service on port 8001 stored 63,528 Equiti ticks in its first
   minute (1 h backfill + live). Virtual engine warming up; no decision or trade yet.
+- **Later in session 2 (Equiti only, owner decision):** Node.js 22.20.0 installed; dashboard `npm ci`, `tsc --noEmit`
+  and `npm run build` OK (697 kB JS bundle) and served at http://127.0.0.1:8001. Runtime workers now run under the
+  Supervisor and the virtual engine warms up from stored ticks: tests **160 passed, 1 skipped**. After restart the
+  engine replayed 82,305 stored Equiti ticks (12:57–14:10 UTC); that is under the 100 minutes needed, so it was not
+  ready yet. Still no decision or virtual trade at that point.
 
 
 ## 2026-10-22 — session 1 (Linux cloud container, Python 3.13, Node 22)
@@ -51,7 +56,7 @@
 | test_notifications.py | 13 |
 | test_postgres.py | 1 |
 | test_risk.py | 7 |
-| test_runtime.py | 1 |
+| test_runtime.py | 2 |
 | test_self_healing.py | 11 |
 | test_symbols_and_connector.py | 11 |
 

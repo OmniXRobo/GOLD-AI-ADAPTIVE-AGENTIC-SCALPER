@@ -129,8 +129,9 @@
       "id": "T-SUPERVISOR-WIRE",
       "phase": 9,
       "title": "Run runtime workers under Supervisor with restart/backoff",
-      "status": "todo",
-      "priority": 2
+      "status": "done",
+      "priority": 2,
+      "notes": "build_runtime returns (app, supervisor); collector, live_virtual and news_sync restart with backoff; health agent sees worker states."
     },
     {
       "id": "T-SELFHEAL-SCHEDULE",
@@ -209,7 +210,15 @@
       "id": "T-VIRTUAL-WARMUP-SEED",
       "phase": 3,
       "title": "Seed the live virtual engine's market state from stored ticks so it does not wait ~100 min (20 M5 bars) after each restart",
-      "status": "todo",
+      "status": "done",
+      "priority": 2,
+      "notes": "LiveVirtualEngine.warm_up replays up to 3 h of stored ticks into market state only (no decisions, fills or learning)."
+    },
+    {
+      "id": "T-DASH-BUILD-VPS",
+      "phase": 7,
+      "title": "Build dashboard on the VPS (Node 22)",
+      "status": "done",
       "priority": 2
     }
   ]

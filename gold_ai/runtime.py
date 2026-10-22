@@ -18,7 +18,7 @@ from typing import Callable
 from fastapi import HTTPException
 
 from .agents.decision import StrategyParams
-from .agents.health import HeartbeatRegistry, SystemHealthAgent
+from .agents.health import HeartbeatRegistry, Supervisor, SystemHealthAgent
 from .agents.institutional import InstitutionalFlowAgent
 from .agents.maturity import assess, assess_all_brokers
 from .agents.self_healing import SelfHealingAgent
@@ -38,7 +38,8 @@ log = logging.getLogger(__name__)
 def register_services(state: AppState, *, news: NewsAgent | None = None,
                       institutional: InstitutionalFlowAgent | None = None,
                       heartbeats: HeartbeatRegistry | None = None,
-                      health_agent: SystemHealthAgent | None = None) -> dict:
+                      health_agent: SystemHealthAgent | None = None,
+                      supervisor: Supervisor | None = None) -> dict:
     """Attach optional service providers to the API. Returns the created service objects."""
     s = state
     news = news or NewsAgent()
@@ -51,7 +52,7 @@ def register_services(state: AppState, *, news: NewsAgent | None = None,
     backups = BackupService(s.store, s.settings.database_url, Path(s.settings.data_dir) / "backups")
     health = health_agent or SystemHealthAgent(
         connector=next(iter(s.connectors.values()), None), store=s.store, heartbeats=heartbeats,
-        disk_path=s.settings.data_dir if Path(s.settings.data_dir).exists() else ".")
+        supervisor=supervisor, disk_path=s.settings.data_dir if Path(s.settings.data_dir).exists() else ".")
 
     def maturity(broker: str | None = None):
         ops = health.run().as_operational_checks()
@@ -160,9 +161,11 @@ def _blackout(state: AppState, now: datetime) -> bool:
 def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = False, terminal_path: str | None = None,
                   symbol: str | None = None, dashboard_dir: str | None = None,
                   connector_factory: Callable | None = None):
+    """Returns (app, supervisor). Call `supervisor.start()` to run the background workers; a crashed
+    worker is restarted with exponential backoff and recorded as an incident."""
     state = AppState(settings, store)
-    workers: list[Callable[[], None]] = []
     heartbeats = HeartbeatRegistry()
+    supervisor = Supervisor(store, heartbeats=heartbeats)
     engine = None
     if use_mt5:
         from .brokers.mt5_connector import MT5ReadOnlyConnector
@@ -183,27 +186,27 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
         state.connectors[acct.broker] = conn
         state.specs[(spec.broker, spec.symbol)] = spec
         collector = TickCollector(conn, store, spec.broker, spec.symbol)
-        workers.append(collector.run)
+        supervisor.register("collector", collector.run)
         engine = LiveVirtualEngine(settings, spec, conn, store, params=StrategyParams(exploration_rate=0.2),
                                    account=f"virtual-{acct.login}")
+        engine.warm_up()
         state.virtual_engines[f"{spec.broker}:{spec.symbol}"] = engine
 
-        def run_engine():
+        def run_engine(stop: threading.Event) -> None:
             while True:
                 engine.poll_once()
                 heartbeats.beat("live_virtual")
-                if engine._stop.wait(engine.poll_interval):
+                if stop.wait(engine.poll_interval) or engine._stop.is_set():
                     return
-        workers.append(run_engine)
+        supervisor.register("live_virtual", run_engine)
 
-    svc = register_services(state, heartbeats=heartbeats)
+    svc = register_services(state, heartbeats=heartbeats, supervisor=supervisor)
     if engine is not None:
         news: NewsAgent = svc["news"]
         signals: SignalService = svc["signals"]
         engine.signal_hook = lambda p, tick: signals.create(p, tick, engine.spec.broker, engine.spec.symbol)
 
-        def news_sync():
-            stop = threading.Event()
+        def news_sync(stop: threading.Event) -> None:
             while not stop.wait(300):
                 now = datetime.now(timezone.utc)
                 try:
@@ -211,6 +214,6 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                     news.sync_risk_engine(engine.loop.risk)
                 except Exception:
                     log.exception("news refresh failed")
-        workers.append(news_sync)
+        supervisor.register("news_sync", news_sync)
     app = create_app(state, dashboard_dir)
-    return app, workers
+    return app, supervisor

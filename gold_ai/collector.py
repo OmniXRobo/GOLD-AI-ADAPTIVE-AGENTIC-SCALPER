@@ -44,14 +44,18 @@ class TickCollector:
         self.collected += n
         return n
 
-    def run(self) -> None:
-        while not self._stop.is_set():
+    def run(self, stop: threading.Event | None = None) -> None:
+        """Collect until `stop()` is called or the given (supervisor) stop event is set."""
+        def stopped() -> bool:
+            return self._stop.is_set() or (stop is not None and stop.is_set())
+
+        while not stopped():
             try:
                 self.collect_once()
             except Exception:
                 self.errors += 1
                 log.exception("tick collection failed")
-            self._stop.wait(self.interval)
+            (stop or self._stop).wait(self.interval)
 
     def stop(self) -> None:
         self._stop.set()
