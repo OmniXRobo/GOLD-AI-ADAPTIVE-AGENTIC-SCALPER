@@ -1,6 +1,6 @@
 # Next actions
 
-1. (Owner) Log the MT5 terminals in to Exness, Equiti and MultiBank demo accounts (one terminal per account; a third
+1. (Owner) Equiti demo is connected. Log terminals in to Exness and MultiBank demo accounts (one terminal per account; a third
    terminal folder is needed for the third broker), then start one `start.ps1` per terminal on different ports
    (task T-VERIFY-BROKERS).
 2. (Owner) Create the owner account on the VPS: `.\.venv\Scripts\python.exe -m gold_ai --config config.local.json create-user owner`.

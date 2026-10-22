@@ -16,6 +16,12 @@
 - Service (`start.ps1`, read-only `--mt5`, real and demo execution disabled) running against MT5_1: tick collector
   stored 37,252 real XAUUSD demo ticks in its first ~2 minutes (1 h backfill + live). The live virtual engine started
   and is warming up (needs 20 M5 bars ≈ 100 min of live ticks before its first decision). No virtual trade yet.
+- **Equiti demo (MT5_2, EquitiSecurities-Demo, demo/hedging), added 13:57 UTC:** broker identified as `equiti`.
+  Discovery chose `XAUUSD.sd` (tradeable); plain `XAUUSD` exists but has trading disabled. Spec: 2 digits, contract
+  100, tick value 1.0, IOC only, market execution, swap -11.41/+6.427 points, commission not reported by symbol info
+  (check the account type's commission). Server offset measured UTC+3.0 h; latest tick age ~0 s (bid 4057.76 /
+  ask 4058.03 at 13:57:08 UTC). Second read-only service on port 8001 stored 63,528 Equiti ticks in its first
+  minute (1 h backfill + live). Virtual engine warming up; no decision or trade yet.
 
 
 ## 2026-10-22 — session 1 (Linux cloud container, Python 3.13, Node 22)

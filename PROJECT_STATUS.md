@@ -6,11 +6,11 @@ No real-market performance exists yet.
 ## Session 2 (VPS)
 - Installed on the VPS at `C:\Users\Administrator\Desktop\GOLD-AI-ADAPTIVE-AGENTIC-SCALPER` (Python 3.12.10, venv).
   Tests 159 passed / 1 skipped.
-- Running read-only against the MT5 terminal logged in to **MetaQuotes-Demo** (not one of the three target brokers):
+- Two read-only services run: port 8000 on **MetaQuotes-Demo** (MT5_1) and port 8001 on **Equiti demo** (MT5_2, XAUUSD.sd):
   real XAUUSD demo ticks are being collected; the live virtual engine is warming up. See TEST_RESULTS.md.
 - Fixed: broker server time → UTC conversion in the MT5 connector (ticks were 3 h off); Windows install/start scripts.
 - MQL5 bridge compiled (0 errors).
-- Still needed from the owner: Exness / Equiti / MultiBank demo logins, tick exports, and an owner account
+- Still needed from the owner: Exness and MultiBank demo logins, tick exports, and an owner account
   (`create-user owner` asks for a password, so the owner runs it). See BLOCKERS.md.
 
 

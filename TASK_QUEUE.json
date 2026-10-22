@@ -105,9 +105,9 @@
       "phase": 10,
       "title": "Verify connector/specs/virtual engine on Exness, Equiti, MultiBank demo terminals",
       "status": "blocked",
-      "blocked_on": "owner: log MT5 terminals into Exness / Equiti / MultiBank demo accounts",
+      "blocked_on": "owner: Exness and MultiBank demo logins",
       "priority": 1,
-      "notes": "Session 2: verified read-only on MetaQuotes-Demo (generic broker) on the VPS: connect, account demo detection, XAUUSD discovery/spec, tick collection, live virtual engine start. Exness/Equiti/MultiBank demo logins still needed."
+      "notes": "Verified read-only on the VPS: MetaQuotes-Demo (generic) and Equiti demo (EquitiSecurities-Demo, XAUUSD.sd): connect, demo detection, gold discovery/spec, UTC tick collection, live virtual engine start. Exness and MultiBank demo logins still needed."
     },
     {
       "id": "T-REAL-DATA-RESEARCH",
