@@ -1,14 +1,44 @@
+import { lazy, type ComponentType } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import { Empty, PageHeader } from "./components/ui";
-import { AgentPage, BrokersPage, InstitutionalPage, IntelligencePage, MarketPage, NewsPage } from "./pages/Monitor";
-import { AuthorizationPage, ModesPage, RiskPage, SignalsPage } from "./pages/Control";
-import { MaturityPage, SelfHealingPage, StrategiesPage } from "./pages/Learning";
 import LoginPage from "./pages/Login";
-import { BacktestingPage, ForwardPage, MemoryPage, PerformancePage, RealPage, VirtualPage } from "./pages/Memories";
-import OverviewPage from "./pages/Overview";
-import { AuditPage, BackupsPage, HealthPage, SettingsPage } from "./pages/System";
 import { LiveProvider, useAuth } from "./state";
+
+// Each page group loads on first visit so the first screen paints quickly on phones.
+function page<M extends Record<string, unknown>>(load: () => Promise<M>, name: keyof M) {
+  return lazy(() => load().then((m) => ({ default: m[name] as ComponentType })));
+}
+const monitor = () => import("./pages/Monitor");
+const control = () => import("./pages/Control");
+const learning = () => import("./pages/Learning");
+const memories = () => import("./pages/Memories");
+const system = () => import("./pages/System");
+
+const OverviewPage = page(() => import("./pages/Overview"), "default");
+const BrokersPage = page(monitor, "BrokersPage");
+const MarketPage = page(monitor, "MarketPage");
+const AgentPage = page(monitor, "AgentPage");
+const IntelligencePage = page(monitor, "IntelligencePage");
+const InstitutionalPage = page(monitor, "InstitutionalPage");
+const NewsPage = page(monitor, "NewsPage");
+const AuthorizationPage = page(control, "AuthorizationPage");
+const ModesPage = page(control, "ModesPage");
+const RiskPage = page(control, "RiskPage");
+const SignalsPage = page(control, "SignalsPage");
+const MaturityPage = page(learning, "MaturityPage");
+const SelfHealingPage = page(learning, "SelfHealingPage");
+const StrategiesPage = page(learning, "StrategiesPage");
+const BacktestingPage = page(memories, "BacktestingPage");
+const ForwardPage = page(memories, "ForwardPage");
+const MemoryPage = page(memories, "MemoryPage");
+const PerformancePage = page(memories, "PerformancePage");
+const RealPage = page(memories, "RealPage");
+const VirtualPage = page(memories, "VirtualPage");
+const AuditPage = page(system, "AuditPage");
+const BackupsPage = page(system, "BackupsPage");
+const HealthPage = page(system, "HealthPage");
+const SettingsPage = page(system, "SettingsPage");
 
 function NotFound() {
   return (

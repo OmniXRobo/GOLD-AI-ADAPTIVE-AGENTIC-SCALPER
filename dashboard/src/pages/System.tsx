@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { api } from "../api";
-import { Card, DataView, JsonBlock, KVTable, PageHeader, Pill, Table, toneFor } from "../components/ui";
+import { Card, ConfirmDialog, DataView, JsonBlock, KVTable, PageHeader, Pill, Stat, Table, toneFor } from "../components/ui";
+import { nativeApp } from "../native";
 import { fmtTime, useApi } from "../lib";
 
 export function HealthPage() {
@@ -42,12 +43,55 @@ export function SettingsPage() {
   return (
     <>
       <PageHeader title="Settings" subtitle="Effective backend configuration (read-only; secrets should be redacted by the backend)." />
+      <MobileAppCard />
       <Card title="Configuration">
         <DataView state={st} isEmpty={(d) => !Object.keys(d).length}>
           {(d) => <KVTable data={d} />}
         </DataView>
       </Card>
     </>
+  );
+}
+
+function MobileAppCard() {
+  const [dlg, setDlg] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
+  const inApp = nativeApp.available();
+  return (
+    <Card title="Android app">
+      {inApp ? (
+        <div className="stats">
+          <Stat label="App version" value={nativeApp.version() ?? "n/a"} />
+          <Stat label="Signal alerts" value={nativeApp.alertsEnabled() ? "on" : "off"} hint="Read-only alerts for new signals" />
+        </div>
+      ) : (
+        <p className="muted small">
+          Install the Android app from the repository's <code>android/</code> folder to view this dashboard on your phone and receive signal alerts. See <code>docs/ANDROID_APP.md</code>.
+        </p>
+      )}
+      <div className="page-actions" style={{ marginTop: 12 }}>
+        {inApp && (
+          <button className="btn" onClick={() => nativeApp.openSettings()}>
+            Server and alert settings
+          </button>
+        )}
+        <button className="btn" onClick={() => setDlg(true)}>
+          Revoke all phone alert tokens
+        </button>
+        {done && <span className="small muted">{done}</span>}
+      </div>
+      <ConfirmDialog
+        open={dlg}
+        title="Revoke all phone alert tokens?"
+        confirmLabel="Revoke"
+        body={<p>Every phone stops receiving signal alerts until someone signs in on it again. Requires the admin permission. The action is audited.</p>}
+        onConfirm={async () => {
+          await api.revokeDeviceTokens();
+          setDone("All phone alert tokens revoked.");
+        }}
+        onClose={() => setDlg(false)}
+      />
+    </Card>
   );
 }
 

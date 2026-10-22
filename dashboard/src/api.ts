@@ -6,6 +6,8 @@
  * explicit error / empty state.
  */
 
+import { nativeApp } from "./native";
+
 // ---------------------------------------------------------------- domains
 
 export type Domain = "historical" | "forward" | "virtual" | "real";
@@ -418,6 +420,7 @@ export function getRole(): string | null {
 export function setSession(token: string, role: string): void {
   safeStorage()?.setItem(TOKEN_KEY, token);
   safeStorage()?.setItem(ROLE_KEY, role);
+  nativeApp.onSession(token);
 }
 export function clearSession(): void {
   safeStorage()?.removeItem(TOKEN_KEY);
@@ -492,6 +495,7 @@ export const api = {
   selfHealing: () => get<SelfHealing>("/api/self-healing"),
   systemHealth: () => get<SystemHealth>("/api/system/health"),
   signals: () => get<Signal[]>("/api/signals"),
+  revokeDeviceTokens: () => post<{ ok: boolean }>("/api/auth/device-token/revoke-all", {}),
   signalAction: (id: string | number, action: SignalAction, token: string) =>
     post<unknown>(`/api/signals/${enc(String(id))}/action`, { action, token }),
   news: () => get<NewsResponse>("/api/news"),

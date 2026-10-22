@@ -11,5 +11,6 @@
    (requires model schema version bump + migration of stored model state).
 5. (Dev) T-MULTI-TERMINAL: one process managing several terminals/brokers with separate memories per broker.
 6. (Dev) T-TELEGRAM-WEBHOOK: inbound Telegram/WhatsApp callback endpoints calling `SignalService.handle_callback`.
-7. (Dev) T-DASH-SPLIT: code-split the dashboard bundle.
 8. (Dev) T-TORCH-MODEL: optional PyTorch candidate model class behind the same ModelState interface.
+9. (Owner) Phone access: install Tailscale on the VPS and the phone, run `tailscale serve --bg 8001` on the VPS,
+   install the APK and sign in (docs/ANDROID_APP.md, task T-ANDROID-DEVICE-TEST).

@@ -166,7 +166,7 @@
       "id": "T-DASH-SPLIT",
       "phase": 7,
       "title": "Code-split dashboard bundle",
-      "status": "todo",
+      "status": "done",
       "priority": 4
     },
     {
@@ -258,6 +258,29 @@
       "status": "blocked",
       "blocked_on": "owner: bot token + chat id in config.local.json",
       "priority": 2
+    },
+    {
+      "id": "T-DASH-REDESIGN",
+      "phase": 7,
+      "title": "Dashboard UI redesign (dark gold theme, icons, live price ticker, mobile layout)",
+      "status": "done",
+      "priority": 3
+    },
+    {
+      "id": "T-ANDROID-APP",
+      "phase": 7,
+      "title": "Android app: dashboard WebView + read-only signal alerts via device token",
+      "status": "done",
+      "priority": 3,
+      "notes": "APK built and signature-verified; not yet run on a phone"
+    },
+    {
+      "id": "T-ANDROID-DEVICE-TEST",
+      "phase": 7,
+      "title": "Install the APK on the owner's phone over Tailscale and confirm login + a signal alert",
+      "status": "todo",
+      "priority": 2,
+      "notes": "Tailscale done 2026-10-22; app reaches the dashboard. Signal alert on the phone still to confirm."
     }
   ]
 }

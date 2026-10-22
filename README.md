@@ -9,6 +9,7 @@ explicit, expiring owner authorization (docs/SECURITY.md).
 - Adaptive decision agent with calibrated confidence; independent risk engine; self-healing with owner-only promotion.
 - Signal-only mode: Telegram, WhatsApp Business, push, dashboard.
 - FastAPI + React dashboard (24 pages), mobile-ready API.
+- Android app (`android/`, docs/ANDROID_APP.md): the dashboard on your phone plus read-only signal alerts.
 
 Start here: CLAUDE.md · PROJECT_STATUS.md · ARCHITECTURE.md · docs/INSTALL_WINDOWS.md · docs/SECURITY.md
 

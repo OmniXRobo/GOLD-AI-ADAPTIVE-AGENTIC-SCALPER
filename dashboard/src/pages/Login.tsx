@@ -1,4 +1,6 @@
 import { useState, type FormEvent } from "react";
+import { Icon } from "../components/icons";
+import { nativeApp } from "../native";
 import { useAuth } from "../state";
 
 export default function LoginPage() {
@@ -23,13 +25,16 @@ export default function LoginPage() {
     <div className="login">
       <form className="card login-card" onSubmit={submit}>
         <div className="brand">
-          <span className="brand-mark">Au</span>
-          <span className="brand-name">Gold AI Adaptive Agentic Scalper</span>
+          <span className="brand-mark" aria-hidden="true">
+            <Icon name="market" size={24} />
+          </span>
+          <span className="brand-name">
+            Gold AI <small>Adaptive Agentic Scalper · XAUUSD</small>
+          </span>
         </div>
-        <p className="muted small">XAUUSD research and simulation platform. Real-money trading is disabled unless the owner grants it.</p>
         <label className="field">
           <span>Username</span>
-          <input value={u} onChange={(e) => setU(e.target.value)} autoComplete="username" required />
+          <input value={u} onChange={(e) => setU(e.target.value)} autoComplete="username" autoCapitalize="none" required />
         </label>
         <label className="field">
           <span>Password</span>
@@ -39,6 +44,15 @@ export default function LoginPage() {
         <button className="btn btn-primary" disabled={busy}>
           {busy ? "Signing in..." : "Sign in"}
         </button>
+        <div className="login-safety">
+          <Icon name="risk" size={16} />
+          <span>Research and simulation platform. Real-money trading is disabled unless the owner grants it.</span>
+        </div>
+        {nativeApp.available() && (
+          <button type="button" className="btn btn-ghost btn-small" onClick={() => nativeApp.openSettings()}>
+            <Icon name="phone" size={16} /> Change server
+          </button>
+        )}
       </form>
     </div>
   );

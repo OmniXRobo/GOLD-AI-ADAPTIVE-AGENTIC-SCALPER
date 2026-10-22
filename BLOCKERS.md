@@ -7,3 +7,4 @@
 | News data provider | Done for now: MT5 economic calendar via GoldAICalendar.mq5 (MT5_1). A licensed API is optional | Headlines are not interpreted (no provider) |
 | Institutional data | Licensed COMEX futures / depth / COT data source | Institutional agent reports `available=false` until configured |
 | Telegram / WhatsApp / push credentials | Owner to put Telegram bot token + chat id in config.local.json (asked 2026-10-22); WhatsApp Business Cloud API token + phone id; push endpoint | Channels tested with mocked HTTP only |
+| Phone access to the VPS | Done: Tailscale on VPS and phone, `tailscale serve --bg 8001` (owner ran it 2026-10-22) | App reaches the dashboard; not yet tested beyond that |
