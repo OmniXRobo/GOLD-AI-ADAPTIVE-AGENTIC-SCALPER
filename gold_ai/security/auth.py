@@ -132,6 +132,31 @@ class AuthService:
     def issue_token(self, user: User, ttl_seconds: int = 8 * 3600) -> str:
         return self.signer.sign({"sub": user.username, "role": user.role, "typ": "session"}, ttl_seconds)
 
+    # -- read-only device tokens (Android app signal alerts) ------------------------
+    # A device token only lets a phone read the signal list in the background; it is
+    # never accepted where a session token is required. Bumping the epoch revokes all.
+    DEVICE_TOKEN_TTL = 30 * 24 * 3600
+
+    def issue_device_token(self, user: User, device: str = "") -> str:
+        epoch = int(self.store.kv_get("device_token_epoch", 0) or 0)
+        self.store.audit(user.username, "device_token_issued", {"device": device[:64]})
+        return self.signer.sign({"sub": user.username, "role": user.role, "typ": "device", "epoch": epoch,
+                                 "device": device[:64]}, self.DEVICE_TOKEN_TTL)
+
+    def user_from_device_token(self, token: str) -> User | None:
+        body = self.signer.verify(token)
+        if not body or body.get("typ") != "device":
+            return None
+        if body.get("epoch") != int(self.store.kv_get("device_token_epoch", 0) or 0):
+            return None
+        u = (self.store.kv_get("users", {}) or {}).get(body["sub"])
+        return User(body["sub"], u["role"]) if u else None
+
+    def revoke_device_tokens(self, actor: User) -> None:
+        epoch = int(self.store.kv_get("device_token_epoch", 0) or 0)
+        self.store.kv_set("device_token_epoch", epoch + 1)
+        self.store.audit(actor.username, "device_tokens_revoked", {})
+
     def user_from_token(self, token: str) -> User | None:
         body = self.signer.verify(token)
         if not body or body.get("typ") != "session":

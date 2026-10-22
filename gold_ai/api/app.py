@@ -75,6 +75,15 @@ class GrantBody(BaseModel):
     hours: float
 
 
+class SignalAction(BaseModel):
+    action: str
+    token: str = ""
+
+
+class DeviceTokenBody(BaseModel):
+    device: str = ""
+
+
 class AppState:
     """Runtime container. Optional services are attached by the runner when available."""
 
@@ -321,13 +330,28 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             return handler
         app.get(path)(make())
 
-    class SignalAction(BaseModel):
-        action: str
-        token: str = ""
-
     @app.post("/api/signals/{signal_id}/action")
     def signal_action(signal_id: str, body: SignalAction, u: User = Depends(need(Permission.SIGNALS))):
         return extra("signal_action", signal_id, body.action, body.token, u)
+
+    # -- Android app: read-only device token for background signal alerts ---------------
+    @app.post("/api/auth/device-token")
+    def device_token(body: DeviceTokenBody, u: User = Depends(current_user)):
+        return {"token": s.auth.issue_device_token(u, body.device), "expires_in": s.auth.DEVICE_TOKEN_TTL,
+                "scope": "signals:read"}
+
+    @app.post("/api/auth/device-token/revoke-all")
+    def revoke_device_tokens(u: User = Depends(need(Permission.ADMIN))):
+        s.auth.revoke_device_tokens(u)
+        return {"ok": True}
+
+    @app.get("/api/device/signals")
+    def device_signals(authorization: str = Header(default="")):
+        token = authorization.removeprefix("Bearer ").strip()
+        if not token or s.auth.user_from_device_token(token) is None:
+            raise HTTPException(401, "invalid or revoked device token")
+        # Read-only view: action tokens stay in the dashboard session.
+        return [{k: v for k, v in d.items() if k != "action_token"} for d in extra("signals")]
 
     @app.post("/api/backups")
     def make_backup(u: User = Depends(need(Permission.ADMIN))):
@@ -349,13 +373,14 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
 
     # -- static dashboard ----------------------------------------------------------------
     if dashboard_dir and Path(dashboard_dir).exists():
-        root = Path(dashboard_dir)
+        root = Path(dashboard_dir).resolve()
         app.mount("/assets", StaticFiles(directory=root / "assets"), name="assets")
 
         @app.get("/{path:path}")
         def spa(path: str):
-            f = root / path
-            return FileResponse(f if path and f.is_file() else root / "index.html")
+            f = (root / path).resolve()
+            inside = f == root or root in f.parents  # never serve files outside the build folder
+            return FileResponse(f if path and inside and f.is_file() else root / "index.html")
 
     return app
 

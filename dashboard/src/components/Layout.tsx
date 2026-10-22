@@ -1,13 +1,15 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { api } from "../api";
-import { fmtTime } from "../lib";
+import { fmtNum, fmtTime, useApi } from "../lib";
 import { useAuth, useLive } from "../state";
-import { NAV_GROUPS, MOBILE_TABS } from "../nav";
+import { NAV_GROUPS, MOBILE_TABS, navLabel } from "../nav";
+import { useTheme } from "../theme";
+import { Icon } from "./icons";
 import { ConfirmDialog } from "./ui";
 
 function RealTradingBanner() {
-  const { overview, overviewError, auth, authError, wsConnected, overviewAt, refresh } = useLive();
+  const { overview, overviewError, auth, authError, refresh } = useLive();
   const [dlg, setDlg] = useState<"stop" | "release" | null>(null);
 
   const enabled = auth?.real_trading_enabled ?? overview?.real_trading_enabled;
@@ -28,24 +30,24 @@ function RealTradingBanner() {
   return (
     <div className={`banner ${cls}`} role="status" aria-live="polite">
       <div className="banner-text">
+        <span className="banner-dot" aria-hidden="true" />
         <strong>{text}</strong>
         <span className="banner-meta">
           {estop && <span className="pill pill-bad">EMERGENCY STOP ACTIVE</span>}
           {overview && <span className="pill pill-neutral">Demo exec: {overview.demo_execution_enabled ? "on" : "off"}</span>}
-          <span className={`pill ${wsConnected ? "pill-ok" : "pill-warn"}`} title={overviewAt ? `Last status ${overviewAt.toLocaleTimeString()}` : "No status received"}>
-            {wsConnected ? "live" : "polling"}
-          </span>
           {(overviewError || authError) && !known && <span className="small mono">{overviewError ?? authError}</span>}
         </span>
       </div>
       <div className="banner-actions">
         {estop && (
-          <button className="btn btn-small" onClick={() => setDlg("release")}>
+          <button className="btn btn-small btn-ghost" onClick={() => setDlg("release")}>
             Release
           </button>
         )}
         <button className="btn btn-danger estop" onClick={() => setDlg("stop")} aria-label="Emergency stop">
-          EMERGENCY STOP
+          <Icon name="risk" size={16} />
+          <span className="estop-long">EMERGENCY STOP</span>
+          <span className="estop-short">STOP</span>
         </button>
       </div>
       <ConfirmDialog
@@ -78,8 +80,33 @@ function RealTradingBanner() {
   );
 }
 
+function PriceTicker() {
+  // Real ticks only: hidden until /api/market/state returns a tick.
+  const st = useApi(api.market, [], 3000);
+  const prev = useRef<number | null>(null);
+  const [dir, setDir] = useState<"up" | "down" | "">("");
+  const lt = st.data?.last_tick;
+  useEffect(() => {
+    if (!lt || typeof lt.bid !== "number") return;
+    if (prev.current !== null && lt.bid !== prev.current) setDir(lt.bid > prev.current ? "up" : "down");
+    prev.current = lt.bid;
+  }, [lt?.bid]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!st.data || !lt) return null;
+  return (
+    <NavLink to="/market" className={`ticker ticker-${dir}`} title={`Last tick ${fmtTime(lt.time)} from ${st.data.broker}`}>
+      <span className="ticker-sym">{st.data.symbol}</span>
+      <span className="ticker-px">{fmtNum(lt.bid, 2)}</span>
+      <span className="ticker-spread">spr {fmtNum(lt.spread, 2)}</span>
+    </NavLink>
+  );
+}
+
+const THEME_ICON = { dark: "moon", light: "sun", auto: "auto" } as const;
+
 export default function Layout() {
   const { role, logout } = useAuth();
+  const { wsConnected } = useLive();
+  const [theme, cycleTheme] = useTheme();
   const [drawer, setDrawer] = useState(false);
   const loc = useLocation();
   useEffect(() => setDrawer(false), [loc.pathname]);
@@ -87,47 +114,74 @@ export default function Layout() {
   return (
     <div className="app">
       <RealTradingBanner />
-      <div className="topbar">
-        <button className="btn btn-icon menu-btn" onClick={() => setDrawer((d) => !d)} aria-label="Toggle navigation" aria-expanded={drawer}>
-          <span className="hamburger" />
-        </button>
-        <div className="brand">
-          <span className="brand-mark">Au</span>
-          <span className="brand-name">Gold AI Adaptive Agentic Scalper</span>
-        </div>
-        <div className="topbar-right">
-          {role && <span className="pill pill-neutral">{role}</span>}
-          <button className="btn btn-small" onClick={logout}>
-            Sign out
-          </button>
-        </div>
-      </div>
       <div className="body">
         <nav className={`sidebar ${drawer ? "open" : ""}`} aria-label="Main">
+          <div className="sidebar-brand">
+            <span className="brand-mark" aria-hidden="true">
+              <Icon name="market" size={18} />
+            </span>
+            <span className="brand-name">
+              Gold AI <small>Adaptive Agentic Scalper</small>
+            </span>
+          </div>
           {NAV_GROUPS.map((g) => (
             <div key={g.title} className="nav-group">
               <div className="nav-group-title">{g.title}</div>
               {g.items.map((i) => (
                 <NavLink key={i.path} to={i.path} end={i.path === "/"} className={({ isActive }) => `nav-link ${isActive ? "active" : ""}`}>
-                  {i.label}
+                  <Icon name={i.icon} />
+                  <span>{i.label}</span>
                 </NavLink>
               ))}
             </div>
           ))}
+          <div className="sidebar-foot">
+            {role && <span className="pill pill-neutral">{role}</span>}
+            <button className="btn btn-small btn-ghost" onClick={logout}>
+              <Icon name="logout" size={16} /> Sign out
+            </button>
+          </div>
         </nav>
         {drawer && <div className="scrim" onClick={() => setDrawer(false)} />}
-        <main className="main">
-          <Outlet />
-        </main>
+        <div className="content">
+          <header className="topbar">
+            <button className="btn btn-icon menu-btn" onClick={() => setDrawer((d) => !d)} aria-label="Toggle navigation" aria-expanded={drawer}>
+              <Icon name="more" size={20} />
+            </button>
+            <div className="topbar-title">
+              <span className="brand-mark brand-mark-sm" aria-hidden="true">
+                <Icon name="market" size={15} />
+              </span>
+              <span>{navLabel(loc.pathname) || "Gold AI"}</span>
+            </div>
+            <div className="topbar-right">
+              <PriceTicker />
+              <span className={`conn ${wsConnected ? "conn-on" : "conn-off"}`} title={wsConnected ? "Live status stream connected" : "Live stream down, polling every 10 s"}>
+                <i />
+                <span className="conn-label">{wsConnected ? "Live" : "Polling"}</span>
+              </span>
+              <button className="btn btn-icon" onClick={cycleTheme} aria-label={`Theme: ${theme}. Switch theme`} title={`Theme: ${theme}`}>
+                <Icon name={THEME_ICON[theme]} />
+              </button>
+            </div>
+          </header>
+          <main className="main">
+            <Suspense fallback={<div className="state state-loading">Loading...</div>}>
+              <Outlet />
+            </Suspense>
+          </main>
+        </div>
       </div>
       <nav className="bottom-nav" aria-label="Quick">
         {MOBILE_TABS.map((i) => (
           <NavLink key={i.path} to={i.path} end={i.path === "/"} className={({ isActive }) => `bn-link ${isActive ? "active" : ""}`}>
-            {i.short}
+            <Icon name={i.icon} size={20} />
+            <span>{i.short}</span>
           </NavLink>
         ))}
         <button className={`bn-link ${drawer ? "active" : ""}`} onClick={() => setDrawer((d) => !d)}>
-          More
+          <Icon name="more" size={20} />
+          <span>More</span>
         </button>
       </nav>
     </div>

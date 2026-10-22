@@ -67,6 +67,51 @@ export function currentVersions(models: ModelInfo[]): ModelInfo[] {
   return models.filter((m) => ["approved", "production", "active", "live"].includes(m.stage));
 }
 
+/** Latest real tick from the running engine; shows why it is missing instead of a placeholder price. */
+function LiveGoldCard() {
+  const st = useApi(api.market, [], 3000);
+  const m = st.data;
+  const lt = m?.last_tick;
+  return (
+    <Card
+      className="card-hero"
+      title={m ? `${m.symbol} live` : "Gold live"}
+      badge={m ? <Pill tone={m.ready ? "ok" : "warn"}>{m.ready ? "model ready" : "warming up"}</Pill> : undefined}
+      actions={
+        <Link to="/market" className="small">
+          Market detail
+        </Link>
+      }
+    >
+      {m && lt ? (
+        <>
+          <div className="price-big">{fmtNum(lt.bid, 2)}</div>
+          <div className="price-sub">
+            <span>
+              Ask <b>{fmtNum(lt.ask, 2)}</b>
+            </span>
+            <span>
+              Spread <b>{fmtNum(lt.spread, 2)}</b>
+            </span>
+            <span>
+              Regime <b>{m.regime ?? "n/a"}</b>
+            </span>
+          </div>
+          <p className="muted small">
+            {m.broker} · last tick {fmtTime(lt.time)}
+          </p>
+        </>
+      ) : st.error ? (
+        <Empty>No live price: {st.error}</Empty>
+      ) : m ? (
+        <Empty>Connected to {m.broker}; waiting for the first tick.</Empty>
+      ) : (
+        <div className="state state-loading">Loading...</div>
+      )}
+    </Card>
+  );
+}
+
 export default function OverviewPage() {
   const { overview, overviewError, overviewAt } = useLive();
   const doms = useAllDomains(60000);
@@ -80,28 +125,31 @@ export default function OverviewPage() {
     <>
       <PageHeader title="Overview" subtitle={overviewAt ? `Status updated ${overviewAt.toLocaleTimeString()}` : "Waiting for status..."} />
 
-      {overviewError && !overview && <ErrorState error={overviewError} />}
-
-      {overview && (
-        <Card title="Platform state">
-          <div className="stats">
-            <Stat label="Real trading" value={overview.real_trading_enabled ? "ENABLED" : "DISABLED"} tone={overview.real_trading_enabled ? "neg" : ""} />
-            <Stat label="Demo execution" value={overview.demo_execution_enabled ? "enabled" : "disabled"} />
-            <Stat label="Emergency stop" value={overview.emergency_stop ? "ACTIVE" : "inactive"} tone={overview.emergency_stop ? "neg" : ""} />
-            <Stat label="Active virtual positions" value={openPositions === null ? "n/a" : String(openPositions)} hint={`${engines.length} virtual engine(s)`} />
-            <Stat
-              label="System health"
-              value={health.data ? <Pill tone={toneFor(health.data.overall)}>{health.data.overall}</Pill> : health.error ? "unavailable" : "..."}
-            />
-          </div>
-          <h3>Memory records</h3>
-          <div className="stats">
-            {DOMAINS.map((d) => (
-              <Stat key={d} label={DOMAIN_TITLE[d]} value={overview.memory_counts?.[d]?.toLocaleString() ?? "n/a"} hint={<DomainBadge domain={d} />} />
-            ))}
-          </div>
-        </Card>
-      )}
+      <div className="hero">
+        <LiveGoldCard />
+        {overview ? (
+          <Card title="Platform state">
+            <div className="stats">
+              <Stat label="Real trading" value={overview.real_trading_enabled ? "ENABLED" : "DISABLED"} tone={overview.real_trading_enabled ? "neg" : ""} />
+              <Stat label="Demo execution" value={overview.demo_execution_enabled ? "enabled" : "disabled"} />
+              <Stat label="Emergency stop" value={overview.emergency_stop ? "ACTIVE" : "inactive"} tone={overview.emergency_stop ? "neg" : ""} />
+              <Stat label="Active virtual positions" value={openPositions === null ? "n/a" : String(openPositions)} hint={`${engines.length} virtual engine(s)`} />
+              <Stat
+                label="System health"
+                value={health.data ? <Pill tone={toneFor(health.data.overall)}>{health.data.overall}</Pill> : health.error ? "unavailable" : "..."}
+              />
+            </div>
+            <h3>Memory records</h3>
+            <div className="stats">
+              {DOMAINS.map((d) => (
+                <Stat key={d} label={DOMAIN_TITLE[d]} value={overview.memory_counts?.[d]?.toLocaleString() ?? "n/a"} hint={<DomainBadge domain={d} />} />
+              ))}
+            </div>
+          </Card>
+        ) : (
+          <Card title="Platform state">{overviewError ? <ErrorState error={overviewError} /> : <div className="state state-loading">Loading...</div>}</Card>
+        )}
+      </div>
 
       <div className="grid-2">
         {DOMAINS.map((d) => (

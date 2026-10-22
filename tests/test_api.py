@@ -95,3 +95,51 @@ def test_websocket_requires_token(client):
     with c.websocket_connect(f"/ws/live?token={tok}") as ws:
         msg = ws.receive_json()
         assert msg["type"] == "status" and msg["real_trading_enabled"] is False
+
+
+def test_device_token_is_read_only_and_revocable(client):
+    c, st = client
+    st.extras["signals"] = lambda: [{"id": "s1", "status": "pending", "action_token": "secret-action"}]
+    h = login(c, "viewer", "viewer-pass-12")
+    assert c.post("/api/auth/device-token", json={"device": "phone"}).status_code == 401
+    r = c.post("/api/auth/device-token", json={"device": "phone"}, headers=h).json()
+    assert r["scope"] == "signals:read"
+    d = {"Authorization": f"Bearer {r['token']}"}
+    sig = c.get("/api/device/signals", headers=d)
+    assert sig.status_code == 200
+    assert sig.json() == [{"id": "s1", "status": "pending"}]  # action token never leaves the session API
+    # a device token is not a session token
+    assert c.get("/api/overview", headers=d).status_code == 401
+    assert c.get("/api/device/signals", headers=h).status_code == 401
+    # only an admin may revoke; revoking invalidates every device token
+    assert c.post("/api/auth/device-token/revoke-all", headers=h).status_code == 403
+    ho = login(c, "owner", "owner-pass-123")
+    assert c.post("/api/auth/device-token/revoke-all", headers=ho).status_code == 200
+    assert c.get("/api/device/signals", headers=d).status_code == 401
+
+
+def test_signal_action_reads_json_body(client):
+    c, st = client
+    seen = {}
+
+    def act(signal_id, action, token, user):
+        seen.update(id=signal_id, action=action, token=token, user=user.username)
+        return {"ok": True}
+
+    st.extras["signal_action"] = act
+    h = login(c, "owner", "owner-pass-123")
+    r = c.post("/api/signals/abc/action", json={"action": "reject", "token": "t1"}, headers=h)
+    assert r.status_code == 200
+    assert seen == {"id": "abc", "action": "reject", "token": "t1", "user": "owner"}
+
+
+def test_dashboard_static_files_stay_inside_build_folder(settings, store, tmp_path):
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text("<html>app</html>")
+    (dist / "favicon.svg").write_text("<svg/>")
+    (tmp_path / "secret.txt").write_text("do not serve")
+    c = TestClient(create_app(AppState(settings, store), dashboard_dir=dist))
+    assert c.get("/favicon.svg").text == "<svg/>"
+    assert c.get("/signals").text == "<html>app</html>"
+    assert "do not serve" not in c.get("/..%2Fsecret.txt").text

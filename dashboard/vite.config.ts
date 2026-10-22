@@ -15,6 +15,15 @@ export default defineConfig(({ mode }) => {
         "/ws": { target: backend.replace(/^http/, "ws"), ws: true, changeOrigin: true },
       },
     },
-    build: { outDir: "dist", sourcemap: false, chunkSizeWarningLimit: 900 },
+    build: {
+      outDir: "dist",
+      sourcemap: false,
+      rollupOptions: {
+        output: {
+          // Charts are the heaviest dependency; keep them out of the first paint.
+          manualChunks: { react: ["react", "react-dom", "react-router-dom"], charts: ["recharts"] },
+        },
+      },
+    },
   };
 });
