@@ -1,0 +1,193 @@
+{
+  "updated": "2026-10-22",
+  "real_money_execution": "DISABLED",
+  "tasks": [
+    {
+      "id": "T-FOUNDATION",
+      "phase": 1,
+      "title": "Repo, config, domain, store, auth, audit, checkpoints",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-MT5-READONLY",
+      "phase": 2,
+      "title": "Read-only MT5 connector, symbol discovery, broker identification",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-TICK-STORAGE",
+      "phase": 2,
+      "title": "Tick collector, import, validation, persistent tick storage",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-ENGINE-A",
+      "phase": 3,
+      "title": "Historical backtesting engine",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-ENGINE-B",
+      "phase": 3,
+      "title": "Walk-forward validation engine",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-ENGINE-C",
+      "phase": 3,
+      "title": "Live virtual forward trading engine",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-DECISION",
+      "phase": 4,
+      "title": "Adaptive decision agent, calibration, model registry",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-NEWS",
+      "phase": 5,
+      "title": "News adapters, classifier, blackout",
+      "status": "done",
+      "priority": 2
+    },
+    {
+      "id": "T-INSTITUTIONAL",
+      "phase": 5,
+      "title": "Optional institutional flow agent",
+      "status": "done",
+      "priority": 2
+    },
+    {
+      "id": "T-SELFHEAL",
+      "phase": 5,
+      "title": "Self-healing pipeline with owner-only promotion",
+      "status": "done",
+      "priority": 2
+    },
+    {
+      "id": "T-SIGNALS",
+      "phase": 6,
+      "title": "Signal-only mode and channels",
+      "status": "done",
+      "priority": 2
+    },
+    {
+      "id": "T-DASHBOARD",
+      "phase": 7,
+      "title": "React dashboard, 24 pages",
+      "status": "done",
+      "priority": 2
+    },
+    {
+      "id": "T-EXECUTION",
+      "phase": 8,
+      "title": "Gated MT5 execution adapter (fake-MT5 tested, not wired)",
+      "status": "done",
+      "priority": 2
+    },
+    {
+      "id": "T-MATURITY-HEALTH-BACKUP",
+      "phase": 9,
+      "title": "Maturity engine, health agent, backups",
+      "status": "done",
+      "priority": 2
+    },
+    {
+      "id": "T-VERIFY-BROKERS",
+      "phase": 10,
+      "title": "Verify connector/specs/virtual engine on Exness, Equiti, MultiBank demo terminals",
+      "status": "blocked",
+      "blocked_on": "owner Windows VPS + MT5 terminals",
+      "priority": 1
+    },
+    {
+      "id": "T-REAL-DATA-RESEARCH",
+      "phase": 3,
+      "title": "Import real XAUUSD ticks; run first real backtest + walk-forward",
+      "status": "blocked",
+      "blocked_on": "owner tick exports",
+      "priority": 1
+    },
+    {
+      "id": "T-MQL5-COMPILE",
+      "phase": 2,
+      "title": "Compile GoldAIBridge.mq5 in MetaEditor",
+      "status": "blocked",
+      "blocked_on": "MetaEditor on VPS",
+      "priority": 3
+    },
+    {
+      "id": "T-SUPERVISOR-WIRE",
+      "phase": 9,
+      "title": "Run runtime workers under Supervisor with restart/backoff",
+      "status": "todo",
+      "priority": 2
+    },
+    {
+      "id": "T-SELFHEAL-SCHEDULE",
+      "phase": 5,
+      "title": "Schedule self-healing cycles on Memory C; expose current diagnosis",
+      "status": "todo",
+      "priority": 2
+    },
+    {
+      "id": "T-NEWS-FEATURES",
+      "phase": 5,
+      "title": "Feed news/institutional flags into decision model (schema bump)",
+      "status": "todo",
+      "priority": 3
+    },
+    {
+      "id": "T-MULTI-TERMINAL",
+      "phase": 2,
+      "title": "Multi-terminal / multi-broker process management",
+      "status": "todo",
+      "priority": 3
+    },
+    {
+      "id": "T-TELEGRAM-WEBHOOK",
+      "phase": 6,
+      "title": "Inbound Telegram/WhatsApp callback endpoints",
+      "status": "todo",
+      "priority": 3
+    },
+    {
+      "id": "T-DASH-SPLIT",
+      "phase": 7,
+      "title": "Code-split dashboard bundle",
+      "status": "todo",
+      "priority": 4
+    },
+    {
+      "id": "T-TORCH-MODEL",
+      "phase": 4,
+      "title": "Optional PyTorch candidate model class",
+      "status": "todo",
+      "priority": 4
+    },
+    {
+      "id": "T-DEMO-EXEC-TEST",
+      "phase": 8,
+      "title": "Demo-account execution tests on a real broker demo (owner enables demo_execution_enabled)",
+      "status": "blocked",
+      "blocked_on": "owner approval + demo terminal",
+      "priority": 3
+    },
+    {
+      "id": "T-REAL-EXEC",
+      "phase": 8,
+      "title": "Real-money execution",
+      "status": "blocked",
+      "blocked_on": "explicit owner authorization; never enable during development",
+      "priority": 99
+    }
+  ]
+}

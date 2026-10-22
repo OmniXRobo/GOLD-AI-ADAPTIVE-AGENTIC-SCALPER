@@ -272,6 +272,9 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
     @app.get("/api/authorization")
     def authorization(u: User = Depends(current_user)):
         g = s.store.kv_get("real_execution_grant")
+        if g:
+            g = dict(g, expires_at=datetime.fromtimestamp(g["expires"], timezone.utc).isoformat(),
+                     active=g["expires"] > datetime.now(timezone.utc).timestamp())
         return {"real_trading_enabled": s.settings.real_trading_enabled,
                 "demo_execution_enabled": s.settings.demo_execution_enabled,
                 "grant": g, "account_allowlist": s.settings.account_allowlist}

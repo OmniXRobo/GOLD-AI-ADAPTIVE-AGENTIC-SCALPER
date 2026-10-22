@@ -53,6 +53,7 @@ class Settings(BaseModel):
     whatsapp_token: str | None = None
     whatsapp_phone_id: str | None = None
     whatsapp_recipient: str | None = None
+    push_webhook_url: str | None = None
 
 
 def load_settings(path: str | os.PathLike | None = None) -> Settings:

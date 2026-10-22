@@ -50,6 +50,8 @@ class LiveVirtualEngine:
         self._stop = threading.Event()
         self._last_tick_time: datetime | None = None
         self.stale_polls = 0
+        # Called with (proposal, tick) for risk-approved, non-exploratory proposals (signal-only mode).
+        self.signal_hook = None
 
     # -- persistence -------------------------------------------------------------
     def _restore_model(self) -> ModelState:
@@ -88,6 +90,12 @@ class LiveVirtualEngine:
     def _on_decision(self, d: Decision, verdict: dict) -> None:
         if d.side != Side.WAIT:
             self.store.save_decision(MemoryDomain.VIRTUAL, self.spec.broker, d, verdict)
+            if (self.signal_hook and verdict.get("approved") and d.proposal is not None
+                    and "[EXPLORATION]" not in d.proposal.explanation):
+                try:
+                    self.signal_hook(d.proposal, self.loop.last_tick)
+                except Exception:
+                    log.exception("signal hook failed")
 
     def _on_close(self, t: SimTrade) -> None:
         self.store.save_trade(MemoryDomain.VIRTUAL, t)

@@ -78,6 +78,10 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--test-days", type=float, default=7)
             p.add_argument("--anchored", action="store_true")
 
+    bk = sub.add_parser("backup", help="owner-authenticated database backup with checksum manifest")
+    bk.add_argument("--owner", default="owner")
+    bk.add_argument("--dest", default=None)
+
     sv = sub.add_parser("serve")
     sv.add_argument("--host", default="127.0.0.1")
     sv.add_argument("--port", type=int, default=8000)
@@ -134,6 +138,15 @@ def main(argv: list[str] | None = None) -> int:
             rep = run_walkforward(settings, spec, ticks, [params], cfg, store=store, data_source="stored")
             print(json.dumps({"label": rep.label, "verdict": rep.verdict, "oos_trades": rep.oos_trades,
                               "oos_net": rep.oos_net, "flags": rep.overfit_flags}, indent=2))
+        return 0
+
+    if a.cmd == "backup":
+        from .backup import BackupService
+        user = AuthService(settings, store).authenticate(a.owner, getpass.getpass("Owner password: "))
+        if user is None:
+            sys.exit("authentication failed")
+        m = BackupService(store, settings.database_url, f"{settings.data_dir}/backups").backup(user, dest_dir=a.dest)
+        print(json.dumps({k: v for k, v in m.items() if k != "table_counts"}, indent=2, default=str))
         return 0
 
     if a.cmd == "serve":

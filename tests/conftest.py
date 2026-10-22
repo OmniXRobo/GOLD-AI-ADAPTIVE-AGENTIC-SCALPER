@@ -7,7 +7,7 @@ from gold_ai.memory.store import MemoryStore
 
 @pytest.fixture
 def settings(tmp_path):
-    return Settings(database_url=f"sqlite:///{tmp_path}/t.db", secret_key="test-secret-key-0123456789")
+    return Settings(database_url=f"sqlite:///{tmp_path}/t.db", data_dir=str(tmp_path), secret_key="test-secret-key-0123456789")
 
 
 @pytest.fixture
