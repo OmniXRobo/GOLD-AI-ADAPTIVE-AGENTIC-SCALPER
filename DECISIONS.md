@@ -10,3 +10,4 @@
 | 6 | 2026-10-22 | Real execution needs config flag + owner grant (password + phrase, expiry, account + lot scope) + allowlist + no emergency stop | Defence in depth; no single setting enables real money |
 | 7 | 2026-10-22 | SQLite default, PostgreSQL supported via URL | Runs immediately on a Windows VPS; PostgreSQL recommended for production |
 | 8 | 2026-10-22 | Code hosted at github.com/OmniXRobo/GOLD-AI-ADAPTIVE-AGENTIC-SCALPER (public); git bundle kept in project files as a backup | Owner created the repo; the bundle survives without GitHub access |
+| 9 | 2026-10-22 | Focus on Equiti demo only for now (owner); Exness and MultiBank later | Owner instruction; MetaQuotes-Demo service stopped |
