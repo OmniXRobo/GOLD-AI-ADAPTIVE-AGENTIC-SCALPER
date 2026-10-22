@@ -31,6 +31,18 @@
   `/api/health` OK and the owner signed in to the dashboard. Scheduled self-healing and log token redaction added:
   tests **162 passed, 1 skipped**. Found that uvicorn logged the dashboard session token in WebSocket URLs; now
   redacted, and the two existing log files were scrubbed.
+- **First research on real Equiti ticks (1,973,343 ticks copied read-only from the terminal, 2026-10-18 21:00 to
+  2026-10-22 15:00 UTC, about 3.5 trading days; backtests use Equiti's live spec, commission 0 as reported):**
+  - Backtest, default params (exploration 0): **0 trades** — a fresh model waits without evidence. 614 s.
+  - Backtest, `exploration_rate=0.2`: 10 trades, 2 wins / 8 losses, net **-271.90 USD** on 10,000 (-2.7%),
+    profit factor 0.25, expectancy -27.19 USD/trade, max drawdown 2.72%, spread 20.45 + slippage 15.35 USD.
+    Exits: 7 stop loss, 1 trailing, 1 take profit, 1 expiry. 610 s. Run `backtest-e42ff115cdff`.
+  - Walk-forward (train 1 d / validation 6 h / test 6 h, exploration 0.2): verdict **insufficient_data**, 0 OOS trades.
+  - Interpretation: there is no evidence of an edge yet; the sample is far too small to judge. Not a performance claim.
+- Live virtual (Equiti): first trade BUY 0.03 @ 4058.25 at 14:40 UTC closed on time expiry at 15:40 UTC,
+  net -18.18 USD (exploration trade, estimated fill).
+- Economic calendar: GoldAICalendar.mq5 compiled (0 errors, 0 warnings), attached in MT5_1 via start config;
+  exported 346 events; service loaded 170 events in its 7-day window. Tests **164 passed, 1 skipped**.
 
 
 ## 2026-10-22 — session 1 (Linux cloud container, Python 3.13, Node 22)
@@ -71,5 +83,5 @@
 - Windows PowerShell scripts — not executed in session 1 (install.ps1 and start.ps1 run on the VPS in session 2).
 
 ## Performance results
-None. Every engine run so far used **synthetic random data** for testing mechanics. No real XAUUSD backtest,
+See session 2 above for the first runs on real Equiti ticks (no edge shown; sample too small). Session 1 runs used synthetic data only.
 walk-forward or virtual result exists yet, and none is claimed.

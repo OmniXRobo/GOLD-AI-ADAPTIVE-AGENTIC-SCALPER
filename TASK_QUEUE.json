@@ -113,9 +113,9 @@
       "id": "T-REAL-DATA-RESEARCH",
       "phase": 3,
       "title": "Import real XAUUSD ticks; run first real backtest + walk-forward",
-      "status": "blocked",
-      "blocked_on": "owner tick exports",
-      "priority": 1
+      "status": "in_progress",
+      "priority": 1,
+      "notes": "First Equiti runs on 1.97M real ticks (3.5 days): no edge shown, walk-forward insufficient_data. Needs weeks of data; keep backfilling/collecting."
     },
     {
       "id": "T-MQL5-COMPILE",
@@ -236,6 +236,28 @@
       "title": "Redact WebSocket session tokens from uvicorn logs",
       "status": "done",
       "priority": 1
+    },
+    {
+      "id": "T-NEWS-CALENDAR-MT5",
+      "phase": 5,
+      "title": "MT5 economic calendar exporter EA + news_calendar_files wiring",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-TICK-BACKFILL",
+      "phase": 2,
+      "title": "backfill-ticks CLI (terminal tick history, read-only)",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-TELEGRAM-CONFIG",
+      "phase": 6,
+      "title": "Configure Telegram bot for signal alerts",
+      "status": "blocked",
+      "blocked_on": "owner: bot token + chat id in config.local.json",
+      "priority": 2
     }
   ]
 }
