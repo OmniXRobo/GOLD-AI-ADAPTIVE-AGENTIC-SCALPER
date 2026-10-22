@@ -7,3 +7,4 @@
 | News data provider | Choice of economic-calendar source (licensed API or exported CSV) | News blackout works from supplied events; no live calendar feed configured |
 | Institutional data | Licensed COMEX futures / depth / COT data source | Institutional agent reports `available=false` until configured |
 | Telegram / WhatsApp / push credentials | Bot token + chat id; WhatsApp Business Cloud API token + phone id; push endpoint | Channels tested with mocked HTTP only |
+| Phone access to the VPS | Tailscale (or another private VPN) on the VPS and phone; `tailscale serve --bg 8001` | Android app built but not yet tested on a phone; the service only listens on 127.0.0.1 |

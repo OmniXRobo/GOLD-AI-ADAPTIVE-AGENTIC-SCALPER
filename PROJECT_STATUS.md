@@ -3,6 +3,13 @@
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No real-market performance exists yet.
 
+## Session 2b (dashboard UI and Android app)
+- Dashboard redesigned (dark gold theme, icons, live price from real ticks only, mobile layout) and code-split.
+- Android app in `android/` (dashboard + read-only signal alerts). APK built and signature-verified; **not yet tested
+  on a phone**. Phone access needs Tailscale on the VPS and phone (docs/ANDROID_APP.md).
+- Fixed the signal Approve/Reject endpoint (was always rejected with 422). Tests 165 passed / 1 skipped.
+- After merging, the VPS needs `git pull` and `npm run build` in `dashboard/` to serve the new UI.
+
 ## Session 2 (VPS)
 - Installed on the VPS at `C:\Users\Administrator\Desktop\GOLD-AI-ADAPTIVE-AGENTIC-SCALPER` (Python 3.12.10, venv).
   Tests 159 passed / 1 skipped.

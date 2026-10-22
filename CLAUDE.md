@@ -22,10 +22,12 @@ Read this first in every session, then PROJECT_STATUS.md, TASK_QUEUE.json and RE
 - `gold_ai/memory/store.py` persistence · `gold_ai/news/` · `gold_ai/notifications/` · `gold_ai/execution.py` gated MT5 execution
 - `gold_ai/api/app.py` FastAPI · `gold_ai/runtime.py` wiring · `gold_ai/cli.py` CLI
 - `dashboard/` React + TypeScript · `mql5/` read-only EA bridge · `deploy/` Windows scripts
+- `android/` native Android app (WebView dashboard + read-only signal alerts), built by `android/build.sh`
 
 ## Commands
 - Tests: `python -m pytest -q`
 - Dashboard: `cd dashboard && npm ci && npx tsc --noEmit && npm run build`
+- Android APK: `ANDROID_JAR=... ./android/build.sh` (see docs/ANDROID_APP.md; signing key is not in the repo)
 - Run API: `python -m gold_ai --config config.local.json serve` (add `--mt5` on Windows with a logged-in terminal)
 
 ## Checkpoint protocol

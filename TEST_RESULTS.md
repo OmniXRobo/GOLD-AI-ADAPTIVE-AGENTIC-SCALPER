@@ -1,5 +1,16 @@
 # Test results
 
+
+## 2026-10-22 — session 2b (cloud container, Linux, Python 3.13)
+- `python -m pytest -q` → **165 passed, 1 skipped** (new: device-token scope/revocation, signal action JSON body,
+  static file containment).
+- Dashboard: `npx tsc --noEmit` and `npm run build` OK; pages split into chunks (entry + React ~83 kB gzip, charts
+  108 kB gzip loaded with the first chart page). Checked in Chromium at 1440×900 and 390×844 against a local
+  server with an empty database (no live engine, so the price ticker was hidden and Overview showed the 503 reason).
+- Android: `android/build.sh` built `gold-ai.apk` (versionCode 1, minSdk 24, targetSdk 34) against the Robolectric
+  Android 13 jar; `zipalign -c` OK; `apksigner verify` OK (v2 + v3). Not installed on a device or emulator (none
+  available in the container).
+
 ## 2026-10-22 — session 2 (owner's Windows VPS: Windows Server 2022, Python 3.12.10)
 - `deploy\windows\install.ps1` (after fixing its Python launcher pin) → `python -m pytest -q` **155 passed, 1 skipped**,
   matching session 1. After the server-time fix and its 4 new tests: **159 passed, 1 skipped**.

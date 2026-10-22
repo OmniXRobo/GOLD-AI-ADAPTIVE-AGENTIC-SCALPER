@@ -166,7 +166,7 @@
       "id": "T-DASH-SPLIT",
       "phase": 7,
       "title": "Code-split dashboard bundle",
-      "status": "todo",
+      "status": "done",
       "priority": 4
     },
     {
@@ -236,6 +236,29 @@
       "title": "Redact WebSocket session tokens from uvicorn logs",
       "status": "done",
       "priority": 1
+    },
+    {
+      "id": "T-DASH-REDESIGN",
+      "phase": 7,
+      "title": "Dashboard UI redesign (dark gold theme, icons, live price ticker, mobile layout)",
+      "status": "done",
+      "priority": 3
+    },
+    {
+      "id": "T-ANDROID-APP",
+      "phase": 7,
+      "title": "Android app: dashboard WebView + read-only signal alerts via device token",
+      "status": "done",
+      "priority": 3,
+      "notes": "APK built and signature-verified; not yet run on a phone"
+    },
+    {
+      "id": "T-ANDROID-DEVICE-TEST",
+      "phase": 7,
+      "title": "Install the APK on the owner's phone over Tailscale and confirm login + a signal alert",
+      "status": "todo",
+      "priority": 2,
+      "blocked_on": "owner: Tailscale on VPS and phone"
     }
   ]
 }

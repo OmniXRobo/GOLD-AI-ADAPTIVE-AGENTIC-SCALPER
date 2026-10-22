@@ -41,3 +41,16 @@ All items below have code + passing tests unless noted.
 - Auto-start: scheduled task `GoldAI-Equiti` (logon, restart on failure) runs the Equiti service.
 - T-SELFHEAL-SCHEDULE: daily self-healing check on Memory C, current diagnosis exposed to the dashboard.
 - Session tokens redacted from uvicorn logs.
+
+## Session 2b — 2026-10-22 (dashboard UI and Android app, cloud)
+- T-DASH-REDESIGN: dark gold theme (light/auto selectable), icon navigation, slimmer real-trading banner with a
+  compact STOP button on phones, live XAUUSD price ticker (real ticks only, hidden when no engine runs), Overview hero
+  card, better stat tiles and bottom tabs (Overview, Market, Signals, Virtual, More).
+- T-DASH-SPLIT: pages load on demand and charts are a separate chunk; first load ~83 kB gzip (was ~203 kB).
+- T-ANDROID-APP: `android/` native app (API 24+): dashboard WebView with server setup, connection error screen and
+  read-only signal notifications. Built with `android/build.sh`; APK signature verified. Not yet run on a phone.
+- Backend: read-only device tokens (`POST /api/auth/device-token`, `GET /api/device/signals`,
+  `POST /api/auth/device-token/revoke-all`), 30-day TTL, revocable, audited.
+- Fixed: `POST /api/signals/{id}/action` read its JSON body as a query parameter, so dashboard Approve/Reject always
+  failed with 422. Fixed: the static dashboard route could resolve paths outside the build folder.
+
