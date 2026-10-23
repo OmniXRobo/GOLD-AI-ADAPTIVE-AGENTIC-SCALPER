@@ -3,6 +3,11 @@
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No real-market performance exists yet.
 
+## Session 2f (alternative data)
+- Quiver Quantitative adapter (`gold_ai/altdata/`, `GET /api/altdata`): GLD/IAU off-exchange short ratio and congress
+  trades in gold ETFs/miners as slow context. Off without `quiver_api_token`; tested with mocked HTTP only, not the
+  live API. Not yet fed into the learned model (T-NEWS-FEATURES). Liquid skipped: no public API. See docs/ALT_DATA.md.
+
 ## Session 2e (more reference-app screens)
 - Results: period chips (today, yesterday, 7 days, month, all), gain/loss pips banner, stat tiles, green/red trade
   cards with exit reason and time held. Home: next medium/high impact calendar event with countdown. Autopilot:

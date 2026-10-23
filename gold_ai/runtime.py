@@ -23,6 +23,7 @@ from .agents.health import HeartbeatRegistry, Supervisor, SystemHealthAgent
 from .agents.institutional import InstitutionalFlowAgent
 from .agents.maturity import assess, assess_all_brokers
 from .agents.self_healing import SelfHealingAgent
+from .altdata import QuiverAgent, QuiverClient, QuiverConfig
 from .api.app import AppState, create_app, json_safe_any
 from .backup import BackupService
 from .brokers.mock_feed import synthetic_spec
@@ -36,17 +37,26 @@ from .notifications.service import TOKENS_KEY
 log = logging.getLogger(__name__)
 
 
+def _quiver_from_settings(settings: Settings) -> QuiverAgent:
+    if not settings.quiver_api_token:
+        return QuiverAgent()
+    cfg = QuiverConfig(offexchange_tickers=list(settings.quiver_offexchange_tickers),
+                       congress_tickers=list(settings.quiver_congress_tickers))
+    return QuiverAgent(QuiverClient(settings.quiver_api_token, timeout=cfg.timeout), cfg)
+
+
 def register_services(state: AppState, *, news: NewsAgent | None = None,
                       institutional: InstitutionalFlowAgent | None = None,
                       heartbeats: HeartbeatRegistry | None = None,
                       health_agent: SystemHealthAgent | None = None,
-                      supervisor: Supervisor | None = None) -> dict:
+                      supervisor: Supervisor | None = None, quiver: QuiverAgent | None = None) -> dict:
     """Attach optional service providers to the API. Returns the created service objects."""
     s = state
     news = news or NewsAgent(sources=[
         CalendarFileSource(os.path.expandvars(p), name=f"calendar_file:{Path(p).name}")
         for p in s.settings.news_calendar_files])
     institutional = institutional or InstitutionalFlowAgent()
+    quiver = quiver or _quiver_from_settings(s.settings)
     heartbeats = heartbeats or HeartbeatRegistry()
     dashboard = DashboardChannel()
     signals = SignalService(s.store, s.auth, channels_from_settings(s.settings, dashboard=dashboard))
@@ -96,6 +106,26 @@ def register_services(state: AppState, *, news: NewsAgent | None = None,
         if not f.available:
             d["reason"] = "no licensed institutional data source configured"
         return d
+
+    def altdata_view():
+        now = datetime.now(timezone.utc)
+        f = quiver.features(now)
+        d = {"quiver": {"available": f.available, "features": f.values, "sources": f.sources, "as_of": f.as_of,
+                        "source_errors": quiver.source_errors,
+                        "last_refresh": quiver.last_refresh.isoformat() if quiver.last_refresh else None,
+                        "used_by": "virtual engine context only; not part of the learned model yet"}}
+        if not f.available:
+            d["quiver"]["reason"] = "no Quiver API token configured (quiver_api_token in config.local.json)"
+        return json_safe_any(d)
+
+    if supervisor is not None and quiver.available:
+        def quiver_sync(stop: threading.Event) -> None:
+            while True:   # daily disclosures: refresh at start, then every 6 hours
+                n = quiver.refresh()
+                log.info("quiver refresh: %d rows, errors=%s", n, quiver.source_errors or "none")
+                if stop.wait(6 * 3600):
+                    return
+        supervisor.register("quiver_sync", quiver_sync)
 
     def system_health():
         d = health.run().to_dict()
@@ -147,6 +177,7 @@ def register_services(state: AppState, *, news: NewsAgent | None = None,
         "system_health": system_health,
         "news": news_view,
         "institutional": institutional_view,
+        "altdata": altdata_view,
         "signals": signal_list,
         "signal_action": signal_action,
         "promote": promote,
@@ -154,7 +185,7 @@ def register_services(state: AppState, *, news: NewsAgent | None = None,
         "backups": backup_list,
         "create_backup": create_backup,
     })
-    return {"news": news, "institutional": institutional, "signals": signals, "healer": healer,
+    return {"news": news, "institutional": institutional, "quiver": quiver, "signals": signals, "healer": healer,
             "backups": backups, "health": health, "heartbeats": heartbeats, "dashboard_channel": dashboard}
 
 

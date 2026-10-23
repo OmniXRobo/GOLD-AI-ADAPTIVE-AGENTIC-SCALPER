@@ -44,6 +44,8 @@ def test_runtime_with_fake_mt5(settings, store):
         r = c.get(path, headers=h)
         assert r.status_code == 200, (path, r.text)
     assert c.get("/api/institutional", headers=h).json()["available"] is False
+    q = c.get("/api/altdata", headers=h).json()["quiver"]
+    assert q["available"] is False and "quiver_api_token" in q["reason"]
     m = c.get("/api/maturity?broker=exness", headers=h).json()
     assert m["live_authorized"] is False if "live_authorized" in m else m["stages"]["live_authorized"] is False
     b = c.post("/api/backups", headers=h)
