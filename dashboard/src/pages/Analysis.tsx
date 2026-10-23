@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { api, type NewsEvent, type Technical } from "../api";
 import { Card, DataView, Empty, PageHeader, Pill } from "../components/ui";
+import { instrumentChoices, priceDigits, SymbolChips, useInstruments } from "../instruments";
 import { fmtNum, fmtTime, humanize, useApi } from "../lib";
 
 type Tab = "technical" | "fundamental" | "calendar";
@@ -68,9 +69,13 @@ function sentimentTone(label: string): "ok" | "bad" | "warn" | "neutral" {
 
 function TechnicalTab() {
   const [tf, setTf] = useState("H1");
-  const st = useApi(() => api.technical(tf), [tf], 15000);
+  const running = useInstruments(60000);
+  const choices = instrumentChoices(running.data);
+  const [sym, setSym] = useState<string | null>(null);
+  const st = useApi(() => api.technical(tf, sym), [tf, sym], 15000);
   return (
     <>
+      {choices.length > 1 && <SymbolChips choices={choices} value={sym ?? choices[0]} onChange={setSym} allLabel={null} />}
       <Seg value={tf} options={TFS} onChange={setTf} />
       <DataView state={st}>{(t) => <TechnicalView t={t} />}</DataView>
     </>
@@ -79,6 +84,7 @@ function TechnicalTab() {
 
 function TechnicalView({ t }: { t: Technical }) {
   const missing = Object.entries(t.bars_missing);
+  const n = priceDigits(t.symbol);
   const rsiZone = t.rsi14 === null ? "" : t.rsi14 > 70 ? "Overbought" : t.rsi14 < 30 ? "Oversold" : "Neutral";
   return (
     <>
@@ -88,23 +94,23 @@ function TechnicalView({ t }: { t: Technical }) {
             <div className="muted small">
               {t.symbol} · {t.timeframe} · {t.bars} closed bars
             </div>
-            <div className="price-big">{fmtNum(t.last_close, 2)}</div>
+            <div className="price-big">{fmtNum(t.last_close, n)}</div>
             <Pill tone={sentimentTone(t.label)}>{humanize(t.label)}</Pill>
           </div>
           <Gauge score={t.score} />
         </div>
         <div className="price-sub">
           <span>
-            Support <b>{fmtNum(t.support, 2)}</b>
+            Support <b>{fmtNum(t.support, n)}</b>
           </span>
           <span>
-            Resistance <b>{fmtNum(t.resistance, 2)}</b>
+            Resistance <b>{fmtNum(t.resistance, n)}</b>
           </span>
           <span>
-            MA50 <b>{fmtNum(t.ma50, 2)}</b>
+            MA50 <b>{fmtNum(t.ma50, n)}</b>
           </span>
           <span>
-            MA200 <b>{fmtNum(t.ma200, 2)}</b>
+            MA200 <b>{fmtNum(t.ma200, n)}</b>
           </span>
         </div>
         <p className="muted small">
@@ -136,11 +142,11 @@ function TechnicalView({ t }: { t: Technical }) {
           </div>
           <div className="stat">
             <div className="stat-label">Bollinger upper</div>
-            <div className="stat-value">{fmtNum(t.bollinger?.upper, 2)}</div>
+            <div className="stat-value">{fmtNum(t.bollinger?.upper, n)}</div>
           </div>
           <div className="stat">
             <div className="stat-label">Bollinger lower</div>
-            <div className="stat-value">{fmtNum(t.bollinger?.lower, 2)}</div>
+            <div className="stat-value">{fmtNum(t.bollinger?.lower, n)}</div>
           </div>
         </div>
         {missing.length > 0 && (

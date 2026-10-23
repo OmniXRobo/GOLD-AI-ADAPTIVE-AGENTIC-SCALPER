@@ -346,10 +346,10 @@
     {
       "id": "T-MULTI-ASSET-SIGNALS",
       "phase": 7,
-      "title": "Forex / oil / crypto signals (engine work, VPS thread)",
-      "status": "todo",
+      "title": "BTCUSD and major forex pair signals (owner asked 2026-10-23); oil not included",
+      "status": "done",
       "priority": 5,
-      "blocked_on": "owner approval"
+      "notes": "gold_ai/instruments.py, per-symbol engines/collectors/memory, /api/instruments, symbol filters in the dashboard, app 1.3.0 source. Needs merge, VPS pull + dashboard build, and APK 1.3.0 build on the VPS. See docs/INSTRUMENTS.md."
     },
     {
       "id": "T-PROFIT-LOCK",

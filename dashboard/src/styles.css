@@ -1161,6 +1161,11 @@ details summary {
   font-size: 1rem;
   font-variant-numeric: tabular-nums;
 }
+.signal-levels small {
+  display: block;
+  font-size: 0.68rem;
+  color: #d9c9a3;
+}
 .signal-card footer {
   display: flex;
   flex-wrap: wrap;

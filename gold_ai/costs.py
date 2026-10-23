@@ -40,7 +40,8 @@ class CostModel:
     def swap(self, side: Side, lots: float, entry: datetime, exit: datetime) -> float:
         """Swap charged per rollover crossed (00:00 server time approximated as UTC).
 
-        Wednesday rollovers are charged triple, the MT5 default for metals. Returns
+        Rollovers on `triple_swap_weekday` (Wednesday, the MT5 default for metals and forex) are
+        charged triple; crypto has no triple day and is charged every night. Returns
         signed account-currency amount (negative = cost).
         """
         nights = 0
@@ -48,7 +49,7 @@ class CostModel:
         d = entry.date()
         while d < exit.date():
             nights += 1
-            if d.weekday() == 2:
+            if d.weekday() == self.cfg.triple_swap_weekday:
                 triple += 1
             d = d.fromordinal(d.toordinal() + 1)
         charge_units = nights + 2 * triple

@@ -1,7 +1,16 @@
-# Project status — 2026-10-22 (session 2, owner's Windows VPS)
+# Project status — 2026-10-23 (session 2, owner's Windows VPS)
 
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No real-market performance exists yet.
+
+## Session 2f (BTCUSD and major forex pairs)
+- Owner asked for BTCUSD and major currency pair signals. The live service now runs one collector, live virtual
+  engine and learning memory per instrument: XAUUSD, BTCUSD, EURUSD, GBPUSD, USDJPY, USDCHF, AUDUSD, USDCAD,
+  NZDUSD (whichever the broker offers). Per-instrument pip size, spread/slippage limits, trading hours, news
+  currencies and swap rules (docs/INSTRUMENTS.md); contract values still come from broker metadata.
+- Dashboard: market chips on Home (live price), Signals, Results (pips per instrument) and Analysis; `/api/instruments`.
+  Android 1.3.0 source (alert prices with the right decimals); APK still to be built on the VPS with the signing key.
+- Signals and virtual trades only; nothing is executed. No results exist yet for the new instruments.
 
 ## Session 2e (more reference-app screens)
 - Results: period chips (today, yesterday, 7 days, month, all), gain/loss pips banner, stat tiles, green/red trade

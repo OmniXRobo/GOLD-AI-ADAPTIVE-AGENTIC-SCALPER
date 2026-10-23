@@ -2,7 +2,7 @@ import { Icon } from "../components/icons";
 import { FAQ, HOW } from "../content";
 
 const FEATURES: [string, string, string][] = [
-  ["agent", "Self-learning AI", "Trades a virtual account on live XAUUSD ticks, learns from every closed trade and keeps its own version history."],
+  ["agent", "Self-learning AI", "Trades a virtual account on live gold, Bitcoin and major forex ticks, one memory per market, learns from every closed trade and keeps its own version history."],
   ["signals", "Signals with levels", "Entry, stop loss and take profit with confidence and reward-to-risk, sent to the app, the dashboard and Telegram."],
   ["performance", "Live analysis", "Technical sentiment from live candles, US data surprises, Fed events and an economic calendar."],
   ["risk", "Risk first", "An independent risk engine vetoes trades: daily loss cap, spread and news filters, no martingale or grid."],
@@ -33,9 +33,9 @@ export default function LandingPage({ onSignIn }: { onSignIn: () => void }) {
       </header>
 
       <section className="landing-hero">
-        <h1>Your AI assistant for trading gold</h1>
+        <h1>Your AI assistant for gold, Bitcoin and forex</h1>
         <p>
-          An adaptive, self-learning XAUUSD system for MetaTrader 5: live analysis, signals with clear levels and an AI that learns from every trade, under strict risk control.
+          An adaptive, self-learning system for MetaTrader 5 covering XAUUSD, BTCUSD and the seven major forex pairs: live analysis, signals with clear levels and an AI that learns from every trade, under strict risk control.
         </p>
         <div className="landing-cta">
           <button className="btn btn-primary" onClick={onSignIn}>

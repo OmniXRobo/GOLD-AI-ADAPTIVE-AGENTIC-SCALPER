@@ -7,6 +7,7 @@
 param(
     [string]$TerminalPath = "",
     [string]$Symbol = "",
+    [string]$Symbols = "",
     [int]$Port = 8000,
     [switch]$Once
 )
@@ -15,6 +16,7 @@ Set-Location (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
 $pyArgs = @("-m", "gold_ai", "--config", "config.local.json", "serve", "--mt5", "--port", $Port)
 if ($TerminalPath) { $pyArgs += @("--terminal-path", $TerminalPath) }
 if ($Symbol) { $pyArgs += @("--symbol", $Symbol) }
+if ($Symbols) { $pyArgs += @("--symbols", $Symbols) }
 New-Item -ItemType Directory -Force -Path logs | Out-Null
 Remove-Item logs\STOP -ErrorAction SilentlyContinue
 # Start-Process keeps Python's stderr (uvicorn logs) from being turned into PowerShell errors,

@@ -14,6 +14,7 @@ Read this first in every session, then PROJECT_STATUS.md, TASK_QUEUE.json and RE
 
 ## Layout
 - `gold_ai/domain.py` core types · `config.py` settings · `costs.py` spread/commission/swap/slippage
+- `gold_ai/instruments.py` XAUUSD, BTCUSD, 7 forex majors: pip, per-symbol limits/sessions/news (docs/INSTRUMENTS.md)
 - `gold_ai/brokers/` symbol discovery, read-only MT5 connector, synthetic feed + FakeMT5
 - `gold_ai/market/` candles (M1..D1 + M10), features/regimes (Market Intelligence Agent), tick ingestion/validation
 - `gold_ai/agents/` decision (adaptive model + calibration), institutional, maturity, self_healing, health

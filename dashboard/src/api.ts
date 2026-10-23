@@ -127,8 +127,28 @@ export interface MarketState {
   [k: string]: unknown;
 }
 
+export interface Instrument {
+  broker: string;
+  symbol: string;
+  instrument: string;
+  asset_class: string;
+  pip_size: number | null;
+  digits: number;
+  trades_weekends: boolean;
+  sessions_utc: [number, number][];
+  max_spread_points: number;
+  trade_mode: string;
+  ready: boolean;
+  regime: string | null;
+  last_tick: LastTick | null;
+  open_positions: number;
+}
+
 export interface Trade {
   trade_id: string;
+  /** Canonical instrument (EURUSD for EURUSD.sd) and its pip size, from the server. */
+  instrument?: string;
+  pip_size?: number | null;
   run_id?: string | null;
   broker: string;
   account?: string;
@@ -332,6 +352,12 @@ export interface Signal {
   suggested_lots?: number;
   risk_reward?: number;
   reason?: string;
+  instrument?: string;
+  asset_class?: string | null;
+  pip_size?: number | null;
+  digits?: number;
+  sl_pips?: number | null;
+  tp_pips?: number | null;
   [k: string]: unknown;
 }
 
@@ -516,8 +542,10 @@ export const api = {
   health: () => get<Health>("/api/health"),
   overview: () => get<Overview>("/api/overview"),
   brokers: () => get<BrokerStatus[]>("/api/brokers"),
-  market: () => get<MarketState>("/api/market/state"),
-  trades: (domain: Domain, limit = 200) => get<TradesResponse>(`/api/trades/${domain}?limit=${limit}`),
+  market: (symbol?: string | null) => get<MarketState>(`/api/market/state${symbol ? `?symbol=${enc(symbol)}` : ""}`),
+  instruments: () => get<Instrument[]>("/api/instruments"),
+  trades: (domain: Domain, limit = 200, symbol?: string | null) =>
+    get<TradesResponse>(`/api/trades/${domain}?limit=${limit}${symbol ? `&symbol=${enc(symbol)}` : ""}`),
   runs: (domain: "historical" | "forward") => get<Run[]>(`/api/runs?domain=${domain}`),
   backtest: (req: BacktestRequest) => post<BacktestResult>("/api/backtest", req),
   walkforward: (req: WalkForwardRequest) => post<WalkForwardReport>("/api/walkforward", req),
@@ -532,7 +560,8 @@ export const api = {
   signalAction: (id: string | number, action: SignalAction, token: string) =>
     post<unknown>(`/api/signals/${enc(String(id))}/action`, { action, token }),
   news: () => get<NewsResponse>("/api/news"),
-  technical: (tf: string) => get<Technical>(`/api/analysis/technical?tf=${enc(tf)}`),
+  technical: (tf: string, symbol?: string | null) =>
+    get<Technical>(`/api/analysis/technical?tf=${enc(tf)}${symbol ? `&symbol=${enc(symbol)}` : ""}`),
   institutional: () => get<Institutional>("/api/institutional"),
   risk: () => get<RiskResponse>("/api/risk"),
   emergencyStop: (active: boolean, reason: string) => post<unknown>("/api/emergency-stop", { active, reason }),

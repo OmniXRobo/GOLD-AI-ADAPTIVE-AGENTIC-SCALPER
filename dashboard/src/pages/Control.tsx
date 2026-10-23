@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { latestSignals, SignalCard, signalTime } from "../components/SignalCard";
+import { canonical, instrumentChoices, priceDigits, SymbolChips, useInstruments } from "../instruments";
 import { api, type Signal, type SignalAction } from "../api";
 import { Card, ConfirmDialog, DataView, ErrorState, JsonBlock, KVTable, PageHeader, Pill, Stat, Table, toneFor } from "../components/ui";
 import { fmtNum, fmtTime, humanize, useApi } from "../lib";
@@ -92,13 +93,18 @@ export function ModesPage() {
 // ---------------------------------------------------------------- signals
 
 export function SignalsPage() {
-  const st = useApi(api.signals, [], 10000);
+  const all = useApi(api.signals, [], 10000);
+  const running = useInstruments(60000);
+  const [sym, setSym] = useState<string | null>(null);
+  const choices = instrumentChoices(running.data, (all.data ?? []).map((x) => x.symbol));
+  const st = { ...all, data: all.data ? all.data.filter((x) => sym === null || canonical(x.symbol) === sym) : null };
   const [act, setAct] = useState<{ s: Signal; a: SignalAction } | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   return (
     <>
       <PageHeader title="Signals and Notifications" subtitle="Trade signals proposed by the agent. Actions are sent with the signal's one-time action token." actions={<button className="btn" onClick={st.reload}>Refresh</button>} />
       {msg && <p className="state state-ok">{msg}</p>}
+      <SymbolChips choices={choices} value={sym} onChange={setSym} allLabel="All markets" />
       {st.data && st.data.some((s) => s.status === "pending") && (
         <div className="signal-list">
           {latestSignals(st.data.filter((s) => s.status === "pending"), 4).map((s) => (
@@ -116,11 +122,12 @@ export function SignalsPage() {
                 { key: "time", label: "Time", render: (r) => fmtTime(signalTime(r)) },
                 { key: "domain", label: "Domain", render: (r) => r.domain ?? "n/a" },
                 { key: "broker", label: "Broker" },
+                { key: "symbol", label: "Symbol", render: (r) => r.symbol ?? "n/a" },
                 { key: "side", label: "Side", render: (r) => <span className={`side side-${String(r.side ?? "").toLowerCase()}`}>{r.side ?? "n/a"}</span> },
                 { key: "confidence", label: "Conf.", className: "num", render: (r) => fmtNum(r.confidence, 2) },
-                { key: "entry", label: "Entry", className: "num", render: (r) => fmtNum(r.entry, 2) },
-                { key: "stop_loss", label: "SL", className: "num", render: (r) => fmtNum(r.stop_loss, 2) },
-                { key: "take_profit", label: "TP", className: "num", render: (r) => fmtNum(r.take_profit, 2) },
+                { key: "entry", label: "Entry", className: "num", render: (r) => fmtNum(r.entry, typeof r.digits === "number" ? r.digits : priceDigits(r.symbol)) },
+                { key: "stop_loss", label: "SL", className: "num", render: (r) => fmtNum(r.stop_loss, typeof r.digits === "number" ? r.digits : priceDigits(r.symbol)) },
+                { key: "take_profit", label: "TP", className: "num", render: (r) => fmtNum(r.take_profit, typeof r.digits === "number" ? r.digits : priceDigits(r.symbol)) },
                 { key: "lots", label: "Lots", className: "num", render: (r) => fmtNum(r.suggested_lots ?? r.lots, 2) },
                 { key: "status", label: "Status", render: (r) => <Pill tone={toneFor(r.status)}>{r.status ?? "n/a"}</Pill> },
                 { key: "explanation", label: "Why", render: (r) => <span className="small">{r.reason ?? r.explanation ?? ""}</span> },

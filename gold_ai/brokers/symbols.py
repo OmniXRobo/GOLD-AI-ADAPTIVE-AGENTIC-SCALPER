@@ -77,3 +77,49 @@ def discover_gold_symbols(symbols: Iterable[Any]) -> list[GoldCandidate]:
     # Prefer plain names (shortest) at equal score so XAUUSD beats XAUUSD.ecn variants.
     accepted.sort(key=lambda c: (-c.score, len(c.name), c.name))
     return accepted
+
+
+def evaluate_instrument(meta: Any, instrument: str) -> GoldCandidate:
+    """Score one symbol's metadata as a candidate for a canonical instrument (XAUUSD, BTCUSD, EURUSD ...).
+
+    The name only shortlists; base and profit currency from the broker must match the instrument
+    (crypto CFDs may report a non-crypto base, then the description must name the coin).
+    """
+    from ..instruments import INSTRUMENTS, canonical
+    if instrument == "XAUUSD":
+        return evaluate_symbol(meta)
+    inst = INSTRUMENTS[instrument]
+    name = str(_get(meta, "name", ""))
+    if canonical(name) != instrument:
+        return GoldCandidate(name, 0, ("name does not match",), rejected=True)
+    base = str(_get(meta, "currency_base", "") or "").upper()
+    profit = str(_get(meta, "currency_profit", "") or "").upper()
+    desc = str(_get(meta, "description", "") or "").lower()
+    reasons, score = ["name matches"], 1
+    if profit and profit != inst.quote:
+        return GoldCandidate(name, score, tuple(reasons + [f"profit currency {profit} != {inst.quote}"]), rejected=True)
+    if profit == inst.quote:
+        score += 2
+        reasons.append(f"profit currency {profit}")
+    if base == inst.base:
+        score += 3
+        reasons.append(f"base currency {base}")
+    elif any(w in desc for w in inst.description_words):
+        score += 2
+        reasons.append(f"description names {inst.base}")
+    else:
+        return GoldCandidate(name, score, tuple(reasons + [f"base currency {base or '?'} != {inst.base}"]), rejected=True)
+    if _get(meta, "trade_mode", None) == 0:
+        reasons.append("trading disabled on symbol")
+        score -= 1
+    return GoldCandidate(name, score, tuple(reasons), rejected=score < 4)
+
+
+def discover_instrument(symbols: Iterable[Any], instrument: str, prefer_suffix: str | None = None) -> list[GoldCandidate]:
+    """Broker symbols validated as `instrument`, best first. A symbol with `prefer_suffix` (the gold symbol's
+    account-type suffix, e.g. ".sd") ranks first so every instrument comes from the same account type."""
+    from ..instruments import suffix_of
+    accepted = [c for c in (evaluate_instrument(s, instrument) for s in symbols) if not c.rejected]
+    accepted.sort(key=lambda c: (prefer_suffix is not None and suffix_of(c.name).lower() != prefer_suffix.lower(),
+                                 -c.score, len(c.name), c.name))
+    return accepted

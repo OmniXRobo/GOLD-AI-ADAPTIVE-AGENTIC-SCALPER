@@ -84,7 +84,10 @@ class RiskEngine:
     def blocked_by_news(self, now: datetime) -> NewsEvent | None:
         before = timedelta(minutes=self.cfg.block_minutes_before_high_impact)
         after = timedelta(minutes=self.cfg.block_minutes_after_high_impact)
+        only = {c.upper() for c in self.cfg.news_currencies}
         for ev in self.news:
+            if only and ev.currency and ev.currency.upper() not in only and ev.currency.upper() != "ALL":
+                continue
             if ev.impact == "high" and ev.time - before <= now <= ev.time + after:
                 return ev
         return None

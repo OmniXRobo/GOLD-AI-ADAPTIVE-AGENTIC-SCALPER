@@ -3,7 +3,8 @@ import { DOMAIN_TITLE, type Domain, type Trade } from "../api";
 import { useTrades } from "../components/domain";
 import { Card, DataView, DomainBadge, Empty, PageHeader } from "../components/ui";
 import { fmtMoney, fmtNum, humanize, signClass } from "../lib";
-import { GOLD_PIP, holdTime, inPeriod, periodStats, PERIODS, tradePips, type Period, type PeriodStats } from "../results";
+import { canonical, instrumentChoices, instrumentLabel, pipText, priceDigits, SymbolChips, useInstruments } from "../instruments";
+import { holdTime, inPeriod, periodStats, PERIODS, tradePips, type Period, type PeriodStats } from "../results";
 
 function shortTime(iso: string): string {
   const d = new Date(iso);
@@ -49,25 +50,27 @@ function History({ trades }: { trades: Trade[] }) {
         const side = String(t.side).toUpperCase();
         const result = p !== null && Math.abs(p) < 1 ? "be" : t.net_pnl > 0 ? "win" : "loss";
         const held = holdTime(t);
+        const n = priceDigits(t.symbol);
         return (
           <div className={`hist-row hist-${result}`} key={t.trade_id}>
             <div className="hist-top">
               <span className={`signal-side ${side === "BUY" ? "buy" : "sell"}`}>{side}</span>
-              <b>{t.symbol}</b>
+              <b>{instrumentLabel(t.symbol)}</b>
+              <span className="muted small">{t.symbol}</span>
               <b className={`hist-pips ${signClass(p)}`}>{p === null ? "n/a" : `${p > 0 ? "+" : ""}${fmtNum(p, 0)} pips`}</b>
             </div>
             <div className="hist-levels">
               <span>
-                Entry <b>{fmtNum(t.entry_price, 2)}</b>
+                Entry <b>{fmtNum(t.entry_price, n)}</b>
               </span>
               <span>
-                SL <b>{fmtNum(t.stop_loss, 2)}</b>
+                SL <b>{fmtNum(t.stop_loss, n)}</b>
               </span>
               <span>
-                TP <b>{fmtNum(t.take_profit, 2)}</b>
+                TP <b>{fmtNum(t.take_profit, n)}</b>
               </span>
               <span>
-                Exit <b>{fmtNum(t.exit_price, 2)}</b>
+                Exit <b>{fmtNum(t.exit_price, n)}</b>
               </span>
             </div>
             <div className="hist-foot">
@@ -87,9 +90,16 @@ function History({ trades }: { trades: Trade[] }) {
 export default function ResultsPage() {
   const [domain, setDomain] = useState<Domain>("virtual");
   const [period, setPeriod] = useState<Period>("week");
+  const [sym, setSym] = useState<string | null>(null);
   const st = useTrades(domain, 5000, 60000);
-  const trades = useMemo(() => (st.data ? inPeriod(st.data.trades, period) : []), [st.data, period]);
+  const running = useInstruments(60000);
+  const choices = useMemo(() => instrumentChoices(running.data, (st.data?.trades ?? []).map((t) => t.symbol)), [running.data, st.data]);
+  const trades = useMemo(
+    () => (st.data ? inPeriod(st.data.trades, period).filter((t) => sym === null || canonical(t.symbol) === sym) : []),
+    [st.data, period, sym],
+  );
   const label = PERIODS.find(([k]) => k === period)?.[1] ?? "";
+  const pipNote = sym ? `${pipText(sym)}.` : "Pips are counted in each trade's own instrument (gold $0.10, Bitcoin $1, forex 0.0001, JPY pairs 0.01), so the all-markets total mixes instruments.";
   return (
     <>
       <PageHeader title="Results" subtitle="Win rate and pips from trades that actually closed. Nothing is estimated or rounded up." />
@@ -100,6 +110,7 @@ export default function ResultsPage() {
           </button>
         ))}
       </div>
+      <SymbolChips choices={choices} value={sym} onChange={setSym} allLabel="All markets" />
       <div className="chips chips-scroll">
         {PERIODS.map(([k, l]) => (
           <button key={k} className={`chip ${period === k ? "active" : ""}`} onClick={() => setPeriod(k)}>
@@ -107,10 +118,10 @@ export default function ResultsPage() {
           </button>
         ))}
       </div>
-      <Card title={`${label} · ${DOMAIN_TITLE[domain]}`} badge={<DomainBadge domain={domain} />}>
+      <Card title={`${sym ? `${instrumentLabel(sym)} · ` : ""}${label} · ${DOMAIN_TITLE[domain]}`} badge={<DomainBadge domain={domain} />}>
         <DataView state={st}>{() => <Summary s={periodStats(trades)} />}</DataView>
         <p className="muted small">
-          1 pip = ${GOLD_PIP.toFixed(2)} of gold price. Win rate counts a trade as won only if it made money after costs.{" "}
+          {pipNote} Win rate counts a trade as won only if it made money after costs.{" "}
           {domain === "virtual" ? "Virtual fills are estimated from the live price; no real money." : "Real fills from the broker."}
         </p>
       </Card>

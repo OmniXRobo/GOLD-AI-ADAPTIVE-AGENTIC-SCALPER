@@ -1,6 +1,6 @@
 # GOLD AI ADAPTIVE AGENTIC SCALPER
 
-Adaptive multi-agent research, simulation and signal platform for XAUUSD on MetaTrader 5
+Adaptive multi-agent research, simulation and signal platform for XAUUSD, BTCUSD and the major forex pairs on MetaTrader 5 (see docs/INSTRUMENTS.md)
 (Exness, Equiti, MultiBank and other MT5 brokers). **Real-money trading is disabled by default** and requires
 explicit, expiring owner authorization (docs/SECURITY.md).
 

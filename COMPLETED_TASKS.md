@@ -69,3 +69,12 @@ All items below have code + passing tests unless noted.
 - Results page (win rate, pips, money by period; last 50 closed trades), Learn page (calculator, money guide, how it
   works, FAQ), public landing page, nav updates. Android app 1.2.0.
 - Session 2e: Results period filters/tiles/history cards, Home next-event card, Autopilot performance card, app 1.2.1.
+
+## Session 2f — 2026-10-23
+- T-MULTI-ASSET-SIGNALS: BTCUSD + 7 forex majors alongside gold. `gold_ai/instruments.py` (pip, limits, sessions,
+  news currencies, triple-swap day, symbol matching), metadata-validated discovery preferring the gold symbol's
+  suffix, per-instrument engines/collectors/self-healing in the runtime, `settings.symbols` / `--symbols`,
+  `instrument_overrides`, `/api/instruments`, `symbol` filters on trades/market/technical, signal text with
+  per-instrument decimals and SL/TP pips, server-time offset tracked per symbol (BTC streams through weekends).
+  Dashboard market filters and Android 1.3.0 source. Tests: tests/test_instruments.py.
+

@@ -1,5 +1,13 @@
 # Test results
 
+## 2026-10-23 — session 2f (cloud container)
+- `python -m pytest -q` → **183 passed, 1 skipped** (adds tests/test_instruments.py: symbol matching, pip→point
+  limits, news by currency, crypto swap, signal text, one engine per instrument with FakeMT5, per-symbol offset).
+- Dashboard `tsc --noEmit` and build OK. Android 1.3.0 source not compiled here (no android.jar/signing key in
+  the container); build it on the VPS.
+- Synthetic smoke check (scaled synthetic ticks, labeled synthetic, not stored): EURUSD/USDJPY/BTCUSD specs are not
+  blocked by the new spread limits. Says nothing about real markets. Not yet run against Equiti's real symbols.
+
 
 ## 2026-10-23 — session 2e (cloud container)
 - `python -m pytest -q` → **173 passed, 1 skipped**. Dashboard `tsc --noEmit` and build OK.

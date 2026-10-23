@@ -198,6 +198,67 @@ def _blackout(state: AppState, now: datetime) -> bool:
     return any(e.loop.risk.blocked_by_news(now) is not None for e in state.virtual_engines.values())
 
 
+def resolve_symbols(conn, broker: str, wanted: list[str], override: str | None = None) -> list[SymbolSpec]:
+    """Match each wanted canonical instrument to the broker's own symbol and read its spec (read-only).
+
+    `override` is a broker symbol name given on the command line (e.g. XAUUSD.sd); it replaces discovery
+    for its instrument. Other instruments prefer the gold symbol's account-type suffix. An instrument the
+    broker does not offer, or whose spec cannot be read, is logged and skipped.
+    """
+    from .instruments import INSTRUMENTS, canonical, suffix_of
+    wanted = [w.upper() for w in wanted]
+    over_inst = canonical(override) if override else None
+    if override and over_inst is None:
+        over_inst = "XAUUSD"   # unknown name: treat as the gold symbol, as before
+    if over_inst and over_inst not in wanted:
+        wanted.insert(0, over_inst)
+    if "XAUUSD" in wanted:     # gold first: it is the primary instrument and sets the preferred suffix
+        wanted.remove("XAUUSD")
+        wanted.insert(0, "XAUUSD")
+    specs: list[SymbolSpec] = []
+    prefer: str | None = None
+    for inst in wanted:
+        if inst not in INSTRUMENTS:
+            log.warning("unknown instrument %s in settings.symbols; supported: %s", inst, ", ".join(INSTRUMENTS))
+            continue
+        if inst == over_inst:
+            names = [override]
+        elif inst == "XAUUSD":
+            names = conn.discover_gold()
+        else:
+            names = conn.discover(inst, prefer)
+        if not names:
+            log.warning("%s: no matching symbol at %s; skipped", inst, broker)
+            continue
+        try:
+            spec = conn.symbol_spec(names[0], broker)
+        except Exception as e:
+            log.warning("%s: could not read spec for %s (%s); skipped", inst, names[0], e)
+            continue
+        if inst == "XAUUSD":
+            prefer = suffix_of(spec.symbol)
+        log.info("%s -> %s (%s)", inst, spec.symbol, broker)
+        specs.append(spec)
+    return specs
+
+
+def _engine_worker(engine, heartbeats: HeartbeatRegistry, beat_name: str):
+    warmed = threading.Event()
+
+    def run_engine(stop: threading.Event) -> None:
+        # Warm-up replays up to 7 days of stored ticks (minutes on a VPS), so it runs here rather
+        # than before the API starts; it happens once, not again after a worker restart.
+        if not warmed.is_set():
+            engine.warm_up()
+            warmed.set()
+        while True:
+            engine.poll_once()
+            heartbeats.beat(beat_name)
+            if stop.wait(engine.poll_interval) or engine._stop.is_set():
+                return
+    return run_engine
+
+
 def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = False, terminal_path: str | None = None,
                   symbol: str | None = None, dashboard_dir: str | None = None,
                   connector_factory: Callable | None = None):
@@ -206,7 +267,8 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
     state = AppState(settings, store)
     heartbeats = HeartbeatRegistry()
     supervisor = Supervisor(store, heartbeats=heartbeats)
-    engine = None
+    engines: list = []
+    collectors: dict[str, object] = {}
     if use_mt5:
         from .brokers.mt5_connector import MT5ReadOnlyConnector
         from .collector import TickCollector
@@ -215,48 +277,45 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
         if not conn.connect():
             raise RuntimeError("could not connect to the MT5 terminal")
         acct = conn.account()
-        gold = [symbol] if symbol else conn.discover_gold()
-        if not gold:
-            raise RuntimeError("no gold symbol validated from broker metadata; pass --symbol explicitly")
-        spec: SymbolSpec = conn.symbol_spec(gold[0], acct.broker)
-        store.kv_set(f"spec:{spec.broker}:{spec.symbol}", {**asdict(spec), "filling_modes": list(spec.filling_modes)})
-        store.audit("runtime", "mt5_connected", {"broker": acct.broker, "server": acct.server,
-                                                 "account": acct.login, "mode": acct.trade_mode,
-                                                 "symbol": spec.symbol})
+        specs = resolve_symbols(conn, acct.broker, settings.symbols, override=symbol)
+        if not specs:
+            raise RuntimeError("no symbol validated from broker metadata; pass --symbol explicitly")
         state.connectors[acct.broker] = conn
-        state.specs[(spec.broker, spec.symbol)] = spec
-        collector = TickCollector(conn, store, spec.broker, spec.symbol)
-        supervisor.register("collector", collector.run)
-        engine = LiveVirtualEngine(settings, spec, conn, store, params=StrategyParams(exploration_rate=0.2),
-                                   account=f"virtual-{acct.login}")
-        state.virtual_engines[f"{spec.broker}:{spec.symbol}"] = engine
-        warmed = threading.Event()
-
-        def run_engine(stop: threading.Event) -> None:
-            # Warm-up replays up to 7 days of stored ticks (minutes on a VPS), so it runs here rather
-            # than before the API starts; it happens once, not again after a worker restart.
-            if not warmed.is_set():
-                engine.warm_up()
-                warmed.set()
-            while True:
-                engine.poll_once()
-                heartbeats.beat("live_virtual")
-                if stop.wait(engine.poll_interval) or engine._stop.is_set():
-                    return
-        supervisor.register("live_virtual", run_engine)
+        for i, spec in enumerate(specs):
+            store.kv_set(f"spec:{spec.broker}:{spec.symbol}",
+                         {**asdict(spec), "filling_modes": list(spec.filling_modes)})
+            store.audit("runtime", "mt5_connected", {"broker": acct.broker, "server": acct.server,
+                                                     "account": acct.login, "mode": acct.trade_mode,
+                                                     "symbol": spec.symbol})
+            state.specs[(spec.broker, spec.symbol)] = spec
+            # The first symbol keeps the original worker names; the others are suffixed with their symbol.
+            tag = "" if i == 0 else f":{spec.symbol}"
+            collector = TickCollector(conn, store, spec.broker, spec.symbol)
+            collectors[spec.symbol] = collector
+            supervisor.register(f"collector{tag}", collector.run)
+            engine = LiveVirtualEngine(settings, spec, conn, store, params=StrategyParams(exploration_rate=0.2),
+                                       account=f"virtual-{acct.login}")
+            state.virtual_engines[f"{spec.broker}:{spec.symbol}"] = engine
+            engines.append(engine)
+            supervisor.register(f"live_virtual{tag}", _engine_worker(engine, heartbeats, f"live_virtual{tag}"))
 
     svc = register_services(state, heartbeats=heartbeats, supervisor=supervisor)
-    if engine is not None:
+    if engines:
         news: NewsAgent = svc["news"]
         signals: SignalService = svc["signals"]
-        engine.signal_hook = lambda p, tick: signals.create(p, tick, engine.spec.broker, engine.spec.symbol)
+        healers = {e.spec.symbol: (svc["healer"] if i == 0 else SelfHealingAgent(settings, e.spec, store))
+                   for i, e in enumerate(engines)}
+        for engine in engines:
+            engine.signal_hook = (lambda p, tick, e=engine:
+                                  signals.create(p, tick, e.spec.broker, e.spec.symbol))
 
         def news_sync(stop: threading.Event) -> None:
             while True:   # refresh at start, then every 5 minutes
                 now = datetime.now(timezone.utc)
                 try:
                     n = news.refresh(now - timedelta(days=1), now + timedelta(days=7))
-                    news.sync_risk_engine(engine.loop.risk)
+                    for e in engines:
+                        news.sync_risk_engine(e.loop.risk)
                     log.info("news refresh: %d events loaded, %d upcoming high-impact in 24 h", n,
                              sum(e.impact == "high" for e in news.upcoming(now)))
                 except Exception:
@@ -269,8 +328,12 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
             # First check an hour after start (feed settled), then every 10 min whether the 24 h interval is due.
             delay = 3600
             while not stop.wait(delay):
-                scheduled_self_healing(engine, svc["healer"], store,
-                                       error_counters={"collector": collector.errors})
+                for e in engines:
+                    try:
+                        scheduled_self_healing(e, healers[e.spec.symbol], store,
+                                               error_counters={"collector": collectors[e.spec.symbol].errors})
+                    except Exception:
+                        log.exception("self-healing check failed for %s", e.spec.symbol)
                 delay = 600
         supervisor.register("self_healing", self_healing)
     app = create_app(state, dashboard_dir)
