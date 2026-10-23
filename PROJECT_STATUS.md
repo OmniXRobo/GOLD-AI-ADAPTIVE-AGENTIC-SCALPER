@@ -3,6 +3,11 @@
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No real-market performance exists yet.
 
+## Session 2e (more reference-app screens)
+- Results: period chips (today, yesterday, 7 days, month, all), gain/loss pips banner, stat tiles, green/red trade
+  cards with exit reason and time held. Home: next medium/high impact calendar event with countdown. Autopilot:
+  trading performance summary of the virtual account. Fixed a CSS clash that underlined green numbers. App 1.2.1.
+
 ## Session 2d (ideas from a reference gold-signal site)
 - New dashboard pages: Results (win rate, pips won/lost, today / 7 days / month, trade history, virtual or real
   account), Learn (how it works, lot size and risk calculator, money management, FAQ), and a public landing page
