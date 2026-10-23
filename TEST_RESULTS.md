@@ -1,6 +1,9 @@
 # Test results
 
 
+## 2026-10-23 — session 2f (cloud container)
+- `python -m pytest -q` → **177 passed, 1 skipped** (new tests/test_quiver.py uses mocked HTTP; no live Quiver call).
+
 ## 2026-10-23 — session 2e (cloud container)
 - `python -m pytest -q` → **173 passed, 1 skipped**. Dashboard `tsc --noEmit` and build OK.
 - Results, Home and Autopilot checked in Chromium at 390×844 and 1440×900 against the local preview server

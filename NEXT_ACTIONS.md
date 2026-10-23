@@ -16,3 +16,4 @@
    install the APK and sign in (docs/ANDROID_APP.md, task T-ANDROID-DEVICE-TEST).
 10. (Owner) Decide on the reference-site features that need outside services or engine work: paid packages/coupons,
     copy trading/rewards, forex/oil/crypto signals, profit lock to breakeven, community links (TASK_QUEUE.json, T-PACKAGES etc.).
+- (Owner, optional) Quiver API token in config.local.json, then check `/api/altdata` (docs/ALT_DATA.md).

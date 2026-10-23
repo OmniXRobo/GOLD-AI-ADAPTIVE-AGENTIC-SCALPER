@@ -366,6 +366,27 @@
       "status": "todo",
       "priority": 5,
       "blocked_on": "owner approval"
+    },
+    {
+      "id": "T-ALTDATA-QUIVER",
+      "phase": 5,
+      "title": "Quiver Quantitative adapter (GLD/IAU off-exchange, congress gold trades), off without token",
+      "status": "done",
+      "priority": 3
+    },
+    {
+      "id": "T-ALTDATA-QUIVER-VERIFY",
+      "phase": 5,
+      "title": "Verify Quiver endpoints/fields against live API once owner adds a token",
+      "status": "blocked",
+      "priority": 4
+    },
+    {
+      "id": "T-LIQUID",
+      "phase": 5,
+      "title": "Liquid (liquid.trade): no public API; skipped by owner 2026-10-23",
+      "status": "blocked",
+      "priority": 5
     }
   ]
 }

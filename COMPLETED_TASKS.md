@@ -69,3 +69,6 @@ All items below have code + passing tests unless noted.
 - Results page (win rate, pips, money by period; last 50 closed trades), Learn page (calculator, money guide, how it
   works, FAQ), public landing page, nav updates. Android app 1.2.0.
 - Session 2e: Results period filters/tiles/history cards, Home next-event card, Autopilot performance card, app 1.2.1.
+
+## Session 2f — 2026-10-23
+- T-ALTDATA-QUIVER: Quiver adapter, `/api/altdata`, token redacted in `/api/settings`, docs/ALT_DATA.md.

@@ -57,6 +57,10 @@ class Settings(BaseModel):
     # Economic-calendar files read by the news agent (e.g. Common\Files\goldai_calendar.csv written by
     # mql5/GoldAICalendar.mq5). Re-read on every refresh.
     news_calendar_files: list[str] = Field(default_factory=list)
+    # Quiver Quantitative API token (owner's paid plan). Unset = Quiver features stay unavailable/neutral.
+    quiver_api_token: str | None = None
+    quiver_offexchange_tickers: list[str] = Field(default_factory=lambda: ["GLD", "IAU"])
+    quiver_congress_tickers: list[str] = Field(default_factory=lambda: ["GLD", "IAU", "GDX", "NEM"])
 
 
 def load_settings(path: str | os.PathLike | None = None) -> Settings:
