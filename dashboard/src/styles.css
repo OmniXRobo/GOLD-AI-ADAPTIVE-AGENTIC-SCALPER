@@ -1494,7 +1494,7 @@ details summary {
   display: flex;
   flex-direction: column;
 }
-.pos {
+.pos-list .pos {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -1502,7 +1502,7 @@ details summary {
   padding: 10px 0;
   border-bottom: 1px solid var(--grid);
 }
-.pos b {
+.pos-list .pos b {
   margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
@@ -1542,46 +1542,64 @@ details summary {
 }
 
 /* ---------------------------------------------------------------- results / learn */
-.result-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
-  gap: 12px;
-}
-.result-card {
-  border-radius: 16px;
+.pip-banner {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 6px 16px;
   padding: 14px 16px;
+  border-radius: 16px;
+  border: 1.5px solid var(--accent);
+  background: var(--accent-soft);
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.tile {
+  border-radius: 14px;
+  padding: 12px 14px;
   background: var(--surface-2);
   border: 1px solid var(--border);
+  min-width: 0;
 }
-.result-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  font-weight: 650;
+.tile-label {
+  font-size: 0.78rem;
+  color: var(--text-3);
 }
-.result-head b {
-  font-size: 1.7rem;
-  font-variant-numeric: tabular-nums;
-  color: var(--accent);
-}
-.result-pips {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 10px;
-  font-weight: 650;
+.tile-value {
+  font-size: 1.45rem;
+  font-weight: 750;
+  margin-top: 2px;
   font-variant-numeric: tabular-nums;
 }
-.result-net {
-  margin-top: 4px;
-  font-size: 0.85rem;
-  color: var(--text-2);
+.tile-sub {
+  font-size: 0.75rem;
+  color: var(--text-3);
+}
+.hist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .hist-row {
-  padding: 12px 0;
-  border-bottom: 1px solid var(--grid);
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
 }
-.hist-row:last-child {
-  border-bottom: 0;
+.hist-win {
+  border-color: color-mix(in srgb, var(--pos) 45%, transparent);
+  background: color-mix(in srgb, var(--pos) 8%, var(--surface));
+}
+.hist-loss {
+  border-color: color-mix(in srgb, var(--neg) 45%, transparent);
+  background: color-mix(in srgb, var(--neg) 7%, var(--surface));
 }
 .hist-top {
   display: flex;
@@ -1589,6 +1607,7 @@ details summary {
   gap: 10px;
 }
 .hist-pips {
+  white-space: nowrap;
   margin-left: auto;
   font-variant-numeric: tabular-nums;
 }
@@ -1596,13 +1615,92 @@ details summary {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 14px;
-  margin-top: 6px;
-  font-size: 0.8rem;
+  margin-top: 8px;
+  font-size: 0.82rem;
   color: var(--text-3);
   font-variant-numeric: tabular-nums;
 }
 .hist-levels b {
   color: var(--text);
+}
+.hist-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}
+.result-tag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.tag-win {
+  color: var(--pos);
+}
+.tag-loss {
+  color: var(--neg);
+}
+.tag-be {
+  color: var(--text-3);
+}
+.perf {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  text-align: center;
+  gap: 8px;
+}
+.perf-value {
+  font-size: 1.4rem;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.perf-rows {
+  border-top: 1px solid var(--grid);
+  margin-top: 12px;
+  padding-top: 8px;
+}
+.perf-rows div {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  color: var(--text-2);
+}
+.perf-rows b {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.event-card {
+  display: block;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+.event-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--text-3);
+}
+.event-top b {
+  color: var(--accent);
+  font-size: 1rem;
+}
+.event-title {
+  font-size: 1.05rem;
+  font-weight: 650;
+  margin: 6px 0 8px;
+}
+@media (max-width: 420px) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .steps {
   list-style: none;

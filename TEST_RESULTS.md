@@ -1,6 +1,11 @@
 # Test results
 
 
+## 2026-10-23 — session 2e (cloud container)
+- `python -m pytest -q` → **173 passed, 1 skipped**. Dashboard `tsc --noEmit` and build OK.
+- Results, Home and Autopilot checked in Chromium at 390×844 and 1440×900 against the local preview server
+  (synthetic placeholder values, layout check only). Android 1.2.1 (versionCode 4) built with the same key.
+
 ## 2026-10-23 — session 2d (cloud container)
 - `python -m pytest -q` → **173 passed, 1 skipped**.
 - Dashboard `tsc --noEmit` and build OK. Results, Learn and landing pages checked in Chromium at 390×844 and

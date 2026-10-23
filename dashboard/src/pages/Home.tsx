@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { api } from "../api";
+import { api, type NewsEvent } from "../api";
 import { useTrades } from "../components/domain";
 import { Icon } from "../components/icons";
 import { latestSignals, SignalCard } from "../components/SignalCard";
@@ -40,6 +40,54 @@ function PriceHero() {
         <p className="hero-empty">{st.error ? `No live price: ${st.error}` : m ? "Waiting for the first tick." : "Loading..."}</p>
       )}
     </section>
+  );
+}
+
+function untilText(ms: number): string {
+  const m = Math.max(0, Math.round(ms / 60000));
+  if (m < 60) return `in ${m}m`;
+  if (m < 48 * 60) return `in ${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`;
+  return `in ${Math.round(m / 1440)} days`;
+}
+
+/** The next medium or high impact calendar release, from the server's own calendar feed. */
+function NextEvent() {
+  const st = useApi(api.news, [], 60000);
+  const now = Date.now();
+  const next: NewsEvent | undefined = (st.data?.events ?? [])
+    .filter((e) => Date.parse(e.time) > now && (e.impact === "high" || e.impact === "medium"))
+    .sort((a, b) => a.time.localeCompare(b.time))[0];
+  if (!next) return null;
+  return (
+    <>
+      <div className="section-head">
+        <h2>Next economic event</h2>
+        <Link to="/analysis" className="small">
+          Calendar
+        </Link>
+      </div>
+      <Link to="/analysis" className="event-card">
+        <div className="event-top">
+          <b>{new Date(next.time).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</b>
+          <span>
+            {next.currency ?? ""} · {untilText(Date.parse(next.time) - now)}
+          </span>
+          <span className={`impact impact-${next.impact}`}>{next.impact}</span>
+        </div>
+        <div className="event-title">{next.title}</div>
+        <div className="cal-nums">
+          <span>
+            Actual <b>{next.actual ?? "-"}</b>
+          </span>
+          <span>
+            Forecast <b>{next.forecast ?? "-"}</b>
+          </span>
+          <span>
+            Previous <b>{next.previous ?? "-"}</b>
+          </span>
+        </div>
+      </Link>
+    </>
   );
 }
 
@@ -84,6 +132,8 @@ export default function HomePage() {
       ) : (
         <Empty>{sig.data ? "No signals yet. The AI only proposes a trade when its checks pass." : "Loading..."}</Empty>
       )}
+
+      <NextEvent />
 
       <div className="section-head">
         <h2>AI virtual trading results</h2>

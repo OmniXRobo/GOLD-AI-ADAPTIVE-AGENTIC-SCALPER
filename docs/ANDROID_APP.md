@@ -31,7 +31,7 @@ internet. Recommended: **Tailscale** (free for personal use; private, encrypted,
 `http://` addresses are accepted only for private networks; the app warns when a public address is used without HTTPS.
 
 ## Installing the APK
-1. Copy `gold-ai-<version>.apk` (latest: 1.2.0) to the phone (or download it from the project files).
+1. Copy `gold-ai-<version>.apk` (latest: 1.2.1) to the phone (or download it from the project files).
 2. Open it and allow "Install unknown apps" for the app you opened it with when Android asks.
 3. Open **Gold AI**, enter the server address, sign in with your dashboard account.
 4. Allow notifications when asked. For reliable alerts, set the app's battery usage to *Unrestricted*

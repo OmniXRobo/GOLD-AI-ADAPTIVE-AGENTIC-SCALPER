@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { useTrades } from "../components/domain";
 import { Icon } from "../components/icons";
 import { Card, DataView, Empty, PageHeader, Pill } from "../components/ui";
-import { fmtDuration, fmtNum, fmtTime, humanize, useApi } from "../lib";
+import { fmtDuration, fmtMoney, fmtNum, fmtPct, fmtTime, humanize, signClass, useApi } from "../lib";
 import { useLive } from "../state";
 
 const RISK_KEYS = ["risk_per_trade_pct", "max_lots_per_trade", "max_daily_loss_pct", "max_drawdown_pct", "max_open_positions", "min_risk_reward", "min_confidence", "max_spread_points"];
@@ -24,10 +25,50 @@ export default function AutopilotPage() {
   const risk = useApi(api.risk, [], 30000);
   const engines = overview?.virtual_engines ?? [];
   const real = auth?.real_trading_enabled ?? overview?.real_trading_enabled;
+  const virt = useTrades("virtual", 200, 60000);
+  const m = virt.data?.metrics;
+  const open = engines.reduce((a, e) => a + (typeof e.open_positions === "number" ? e.open_positions : 0), 0);
+  const equity = engines.length === 1 ? engines[0].equity : undefined;
 
   return (
     <>
       <PageHeader title="Autopilot" subtitle="What the AI is doing right now, and what it is allowed to do." />
+
+      <Card
+        title="Trading performance"
+        badge={<span className="muted small">AI virtual account</span>}
+        actions={
+          <Link to="/results" className="small">
+            Results
+          </Link>
+        }
+      >
+        <div className="perf">
+          <div>
+            <div className="tile-label">Total profit</div>
+            <div className={`perf-value ${signClass(m?.net_profit)}`}>{m?.total_trades ? fmtMoney(m.net_profit) : "n/a"}</div>
+          </div>
+          <div>
+            <div className="tile-label">Open trades</div>
+            <div className="perf-value">{overview ? open : "..."}</div>
+          </div>
+          <div>
+            <div className="tile-label">Win rate</div>
+            <div className="perf-value">{m?.total_trades ? fmtPct(m.win_rate) : "n/a"}</div>
+          </div>
+        </div>
+        <div className="perf-rows">
+          <div>
+            <span>Closed trades</span>
+            <b>{m ? m.total_trades : virt.error ? "n/a" : "..."}</b>
+          </div>
+          <div>
+            <span>Virtual balance</span>
+            <b>{typeof equity === "number" ? fmtNum(equity) : "n/a"}</b>
+          </div>
+        </div>
+        <p className="muted small">Recorded virtual trades only, with estimated fills. No real money is traded.</p>
+      </Card>
 
       <Card title="AI engines">
         {!overview ? (
