@@ -1,5 +1,9 @@
 # Next actions
 
+0. (VPS thread) After the multi-instrument PR is merged: `git pull`, `npm ci && npm run build` in `dashboard/`, restart
+   the GoldAI-Equiti task, check the log for `EURUSD -> EURUSD.sd` lines and disk use; build Android 1.3.0 with the
+   existing key. New instruments warm up for ~100 minutes of quotes before they can signal.
+
 1. (Owner, later) Equiti only for now. When ready, log terminals in to Exness and MultiBank demo accounts (one terminal per account; a third
    terminal folder is needed for the third broker), then start one `start.ps1` per terminal on different ports
    (task T-VERIFY-BROKERS).
@@ -15,4 +19,4 @@
 9. (Owner) Phone access: install Tailscale on the VPS and the phone, run `tailscale serve --bg 8001` on the VPS,
    install the APK and sign in (docs/ANDROID_APP.md, task T-ANDROID-DEVICE-TEST).
 10. (Owner) Decide on the reference-site features that need outside services or engine work: paid packages/coupons,
-    copy trading/rewards, forex/oil/crypto signals, profit lock to breakeven, community links (TASK_QUEUE.json, T-PACKAGES etc.).
+    copy trading/rewards, oil signals, profit lock to breakeven, community links (TASK_QUEUE.json, T-PACKAGES etc.).

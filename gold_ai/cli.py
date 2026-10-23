@@ -80,7 +80,8 @@ def main(argv: list[str] | None = None) -> int:
 
     bf = sub.add_parser("backfill-ticks", help="copy the broker's tick history from a logged-in terminal (read-only)")
     bf.add_argument("--terminal-path", default=None)
-    bf.add_argument("--symbol", default=None, help="override automatic gold symbol discovery")
+    bf.add_argument("--symbol", default=None, help="broker symbol to copy (default: the discovered gold symbol)")
+    bf.add_argument("--instrument", default=None, help="discover the broker symbol for this instrument, e.g. EURUSD")
     bf.add_argument("--days", type=float, default=5)
 
     for name in ("backtest", "walkforward"):
@@ -106,6 +107,9 @@ def main(argv: list[str] | None = None) -> int:
     sv.add_argument("--mt5", action="store_true", help="connect to the local MT5 terminal (read-only)")
     sv.add_argument("--terminal-path", default=None)
     sv.add_argument("--symbol", default=None, help="override automatic gold symbol discovery")
+    sv.add_argument("--symbols", default=None,
+                    help="comma-separated instruments to analyse, e.g. XAUUSD,BTCUSD,EURUSD (default: config "
+                         "`symbols`, which is gold, BTCUSD and the 7 major forex pairs)")
     sv.add_argument("--dashboard", default="dashboard/dist")
 
     a = ap.parse_args(argv)
@@ -150,9 +154,10 @@ def main(argv: list[str] | None = None) -> int:
         if not conn.connect():
             sys.exit("could not connect to the MT5 terminal")
         acct = conn.account()
-        symbol = a.symbol or (conn.discover_gold() or [None])[0]
+        found = conn.discover(a.instrument.upper()) if a.instrument else conn.discover_gold()
+        symbol = a.symbol or (found or [None])[0]
         if not symbol:
-            sys.exit("no gold symbol validated from broker metadata; pass --symbol")
+            sys.exit("no symbol validated from broker metadata; pass --symbol")
         deadline = _time.monotonic() + 60
         while not conn.server_offset_known and _time.monotonic() < deadline:
             conn.latest_tick(symbol)            # measures the server-time offset from live ticks
@@ -195,6 +200,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.cmd == "serve":
         import uvicorn
+
+        if a.symbols:
+            settings.symbols = [x.strip().upper() for x in a.symbols.split(",") if x.strip()]
 
         from .runtime import build_runtime
         app, supervisor = build_runtime(settings, store, use_mt5=a.mt5, terminal_path=a.terminal_path,

@@ -212,13 +212,15 @@ class MemoryStore:
         return n
 
     def load_trades(self, domain: MemoryDomain, run_id: str | None = None, broker: str | None = None,
-                    limit: int | None = None) -> list[SimTrade]:
+                    limit: int | None = None, symbols: list[str] | None = None) -> list[SimTrade]:
         table = TRADE_TABLES[domain]
         q = select(table).order_by(table.entry_time)
         if run_id:
             q = q.where(table.run_id == run_id)
         if broker:
             q = q.where(table.broker == broker)
+        if symbols is not None:
+            q = q.where(table.symbol.in_(symbols))
         if limit:
             q = q.limit(limit)
         with self.Session() as s:
@@ -267,6 +269,11 @@ class MemoryStore:
         with self.Session() as s:
             t = s.scalar(select(func.min(TickRow.time)).where(TickRow.broker == broker, TickRow.symbol == symbol))
         return _aware(t) if t else None
+
+    def trade_symbols(self, domain: MemoryDomain) -> list[str]:
+        table = TRADE_TABLES[domain]
+        with self.Session() as s:
+            return sorted(x for x in s.scalars(select(table.symbol).distinct()) if x)
 
     def tick_stats(self) -> list[dict]:
         q = select(TickRow.broker, TickRow.symbol, TickRow.source, func.count(), func.min(TickRow.time),

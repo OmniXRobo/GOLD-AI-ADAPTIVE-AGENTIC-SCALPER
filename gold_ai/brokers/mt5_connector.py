@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..domain import SymbolSpec, Tick
-from .symbols import discover_gold_symbols
+from .symbols import discover_gold_symbols, discover_instrument
 
 log = logging.getLogger(__name__)
 
@@ -106,7 +106,7 @@ class MT5ReadOnlyConnector:
         self.server_offset_s: int | None = (int(round(server_utc_offset_hours * 3600))
                                             if server_utc_offset_hours is not None else None)
         self._last_raw_msc: dict[str, int] = {}
-        self._last_move_wall: float | None = None
+        self._last_move_wall: dict[str, float] = {}
 
     # -- server time ---------------------------------------------------------
     @property
@@ -121,7 +121,10 @@ class MT5ReadOnlyConnector:
         self._last_raw_msc[symbol] = raw_msc
         if prev is None or raw_msc == prev:
             return  # need a tick that just arrived, not a stale last quote
-        last_move, self._last_move_wall = self._last_move_wall, now
+        # Per symbol: Bitcoin quotes through the weekend, so its stream never pauses; the offset is then
+        # re-measured when gold/forex quotes resume after their own weekend pause.
+        last_move = self._last_move_wall.get(symbol)
+        self._last_move_wall[symbol] = now
         if self.server_offset_known and last_move is not None and now - last_move < _REMEASURE_GAP_S:
             return  # only re-measure after a market pause (weekend/daily break), so time never jumps mid-session
         diff = raw_msc / 1000.0 - now
@@ -185,6 +188,11 @@ class MT5ReadOnlyConnector:
     def discover_gold(self) -> list[str]:
         symbols = self.mt5.symbols_get() or []
         return [c.name for c in discover_gold_symbols(symbols)]
+
+    def discover(self, instrument: str, prefer_suffix: str | None = None) -> list[str]:
+        """Broker symbols validated as a canonical instrument (XAUUSD, BTCUSD, EURUSD ...), best first."""
+        symbols = self.mt5.symbols_get() or []
+        return [c.name for c in discover_instrument(symbols, instrument, prefer_suffix)]
 
     def symbol_spec(self, symbol: str, broker: str) -> SymbolSpec:
         if not self.mt5.symbol_select(symbol, True):

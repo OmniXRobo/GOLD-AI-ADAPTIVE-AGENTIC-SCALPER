@@ -1,4 +1,5 @@
 import type { Signal } from "../api";
+import { canonical, instrumentLabel, priceDigits } from "../instruments";
 import { fmtNum, fmtTime } from "../lib";
 
 export function signalTime(s: Signal): string | undefined {
@@ -13,12 +14,16 @@ export function latestSignals(list: Signal[] | null, n: number): Signal[] {
 export function SignalCard({ s, compact }: { s: Signal; compact?: boolean }) {
   const side = String(s.side ?? "").toUpperCase();
   const lots = s.suggested_lots ?? s.lots;
+  const n = typeof s.digits === "number" ? s.digits : priceDigits(s.symbol);
+  const label = instrumentLabel(s.symbol ?? "XAUUSD");
+  const pips = (v: unknown) => (typeof v === "number" ? <small> {fmtNum(v, 1)} pips</small> : null);
   return (
     <article className={`signal-card ${compact ? "signal-card-compact" : ""}`}>
       <header>
         <div>
-          <div className="signal-sym">{s.symbol ?? "XAUUSD"}</div>
+          <div className="signal-sym">{label}</div>
           <div className="signal-time">
+            {canonical(s.symbol) && s.symbol !== label ? `${s.symbol} · ` : ""}
             {fmtTime(signalTime(s))}
             {s.broker ? ` · ${s.broker}` : ""}
           </div>
@@ -28,15 +33,17 @@ export function SignalCard({ s, compact }: { s: Signal; compact?: boolean }) {
       <div className="signal-levels">
         <div>
           <span>Entry</span>
-          <b>{fmtNum(s.entry, 2)}</b>
+          <b>{fmtNum(s.entry, n)}</b>
         </div>
         <div>
           <span>SL</span>
-          <b>{fmtNum(s.stop_loss, 2)}</b>
+          <b>{fmtNum(s.stop_loss, n)}</b>
+          {!compact && pips(s.sl_pips)}
         </div>
         <div>
           <span>TP</span>
-          <b>{fmtNum(s.take_profit, 2)}</b>
+          <b>{fmtNum(s.take_profit, n)}</b>
+          {!compact && pips(s.tp_pips)}
         </div>
       </div>
       {!compact && (

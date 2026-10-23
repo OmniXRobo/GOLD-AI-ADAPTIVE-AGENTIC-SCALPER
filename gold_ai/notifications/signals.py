@@ -7,6 +7,7 @@ from datetime import datetime
 from enum import Enum
 
 from ..domain import Tick, TradeProposal, utcnow
+from ..instruments import instrument_for
 
 
 class SignalStatus(str, Enum):
@@ -53,8 +54,21 @@ class Signal:
     def is_expired(self, now: datetime) -> bool:
         return now > self.expiry
 
+    @property
+    def digits(self) -> int:
+        inst = instrument_for(self.symbol)
+        return inst.display_digits if inst else 2
+
+    def pips(self, distance: float) -> float | None:
+        inst = instrument_for(self.symbol)
+        return abs(distance) / inst.pip_size if inst else None
+
     def to_dict(self) -> dict:
         d = asdict(self)
+        inst = instrument_for(self.symbol)
+        d.update(instrument=inst.name if inst else self.symbol, asset_class=inst.asset_class if inst else None,
+                 pip_size=inst.pip_size if inst else None, digits=self.digits,
+                 sl_pips=self.pips(self.entry - self.stop_loss), tp_pips=self.pips(self.take_profit - self.entry))
         d["status"] = self.status.value
         for k in ("timestamp", "expiry", "acted_at"):
             d[k] = d[k].isoformat() if d[k] else None
@@ -62,7 +76,7 @@ class Signal:
 
     @classmethod
     def from_dict(cls, d: dict) -> "Signal":
-        d = dict(d)
+        d = {k: v for k, v in d.items() if k in cls.__dataclass_fields__}
         d["status"] = SignalStatus(d["status"])
         for k in ("timestamp", "expiry", "acted_at"):
             d[k] = datetime.fromisoformat(d[k]) if d.get(k) else None
@@ -72,11 +86,15 @@ class Signal:
 def format_signal(s: Signal) -> str:
     """Plain-text message used by every channel. Always labeled signal-only."""
     exp = s.expiry.strftime("%H:%M:%S UTC")
+    n = s.digits
+    sl_p, tp_p = s.pips(s.entry - s.stop_loss), s.pips(s.take_profit - s.entry)
+    sl_txt = f" ({sl_p:.1f} pips)" if sl_p is not None else ""
+    tp_txt = f" ({tp_p:.1f} pips)" if tp_p is not None else ""
     return (
         "SIGNAL ONLY — no order placed\n"
-        f"{s.side} {s.symbol} @ {s.entry:.2f} ({s.broker})\n"
-        f"SL {s.stop_loss:.2f} | TP {s.take_profit:.2f} | R:R {s.risk_reward:.2f}\n"
-        f"Suggested lots {s.suggested_lots:.2f} | spread {s.spread:.2f} | est. costs {s.estimated_costs:.2f}\n"
+        f"{s.side} {s.symbol} @ {s.entry:.{n}f} ({s.broker})\n"
+        f"SL {s.stop_loss:.{n}f}{sl_txt} | TP {s.take_profit:.{n}f}{tp_txt} | R:R {s.risk_reward:.2f}\n"
+        f"Suggested lots {s.suggested_lots:.2f} | spread {s.spread:.{n}f} | est. costs {s.estimated_costs:.2f}\n"
         f"Confidence {s.confidence:.0%} (calibrated)\n"
         f"Reason: {s.reason}\n"
         f"Valid until {exp} | id {s.id}\n"

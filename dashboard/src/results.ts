@@ -1,12 +1,15 @@
 import type { Trade } from "./api";
+import { pipSize } from "./instruments";
 
 /** Gold pip convention used in the UI: 1 pip = $0.10 of price. */
 export const GOLD_PIP = 0.1;
 
+/** Pips gained or lost, in the trade's own instrument (gold $0.10, BTC $1, forex 0.0001, JPY pairs 0.01). */
 export function tradePips(t: Trade): number | null {
   if (typeof t.exit_price !== "number" || typeof t.entry_price !== "number") return null;
+  const pip = (typeof t.pip_size === "number" && t.pip_size > 0 ? t.pip_size : null) ?? pipSize(t.symbol) ?? GOLD_PIP;
   const move = String(t.side).toLowerCase() === "buy" ? t.exit_price - t.entry_price : t.entry_price - t.exit_price;
-  return move / GOLD_PIP;
+  return move / pip;
 }
 
 export interface PeriodStats {

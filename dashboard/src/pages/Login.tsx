@@ -29,7 +29,7 @@ export default function LoginPage() {
             <Icon name="market" size={24} />
           </span>
           <span className="brand-name">
-            Gold AI <small>Adaptive Agentic Scalper · XAUUSD</small>
+            Gold AI <small>Adaptive Agentic Scalper · Gold, BTC, Forex</small>
           </span>
         </div>
         <label className="field">

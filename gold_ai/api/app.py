@@ -25,6 +25,7 @@ from ..domain import MemoryDomain, SymbolSpec
 from ..engines.backtest import run_backtest
 from ..engines.metrics import compute_metrics, json_safe
 from ..engines.walkforward import WalkForwardConfig, run_walkforward
+from ..instruments import canonical, instrument_for
 from ..market.technical import summary as technical_summary
 from ..memory.store import MemoryStore
 from ..security.auth import AuthService, Permission, User
@@ -165,11 +166,43 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             out.append(row)
         return out
 
-    @app.get("/api/market/state")
-    def market_state(u: User = Depends(current_user)):
+    def engine_for(symbol: str | None):
+        """Live engine for a broker symbol or canonical instrument name; the first (gold) engine by default."""
         if not s.virtual_engines:
             raise HTTPException(503, "no live market engine running")
-        eng = next(iter(s.virtual_engines.values()))
+        if not symbol:
+            return next(iter(s.virtual_engines.values()))
+        want = canonical(symbol) or symbol.upper()
+        for e in s.virtual_engines.values():
+            if e.spec.symbol == symbol or canonical(e.spec.symbol) == want:
+                return e
+        raise HTTPException(404, f"no live engine for {symbol}")
+
+    @app.get("/api/instruments")
+    def instruments(u: User = Depends(current_user)):
+        """Instruments the live service analyses, with pip size and display digits for the apps."""
+        out = []
+        for e in s.virtual_engines.values():
+            inst = instrument_for(e.spec.symbol, s.settings)
+            st = e.loop.market.state()
+            lt = st.last_tick
+            out.append({"broker": e.spec.broker, "symbol": e.spec.symbol,
+                        "instrument": inst.name if inst else e.spec.symbol,
+                        "asset_class": inst.asset_class if inst else "other",
+                        "pip_size": inst.pip_size if inst else None,
+                        "digits": inst.display_digits if inst else e.spec.digits,
+                        "trades_weekends": inst.trades_weekends if inst else False,
+                        "sessions_utc": e.loop.risk.cfg.allowed_sessions_utc,
+                        "max_spread_points": e.loop.risk.cfg.max_spread_points,
+                        "trade_mode": e.spec.trade_mode, "ready": st.ready, "regime": st.regime,
+                        "last_tick": None if lt is None else {"time": lt.time.isoformat(), "bid": lt.bid,
+                                                              "ask": lt.ask, "spread": lt.spread},
+                        "open_positions": len(e.loop.sim.positions)})
+        return json_safe_any(out)
+
+    @app.get("/api/market/state")
+    def market_state(symbol: str | None = None, u: User = Depends(current_user)):
+        eng = engine_for(symbol)
         st = eng.loop.market.state()
         lt = st.last_tick
         return {"broker": eng.spec.broker, "symbol": eng.spec.symbol, "ready": st.ready, "regime": st.regime,
@@ -179,18 +212,21 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
 
     @app.get("/api/analysis/technical")
     def technical_analysis(tf: str = Query("H1", pattern="^(M1|M5|M15|M30|H1|H4|D1)$"),
-                           u: User = Depends(current_user)):
-        if not s.virtual_engines:
-            raise HTTPException(503, "no live market engine running")
-        eng = next(iter(s.virtual_engines.values()))
+                           symbol: str | None = None, u: User = Depends(current_user)):
+        eng = engine_for(symbol)
         bars = list(eng.loop.market.mtf.bars.get(tf, []))
         return {"broker": eng.spec.broker, "symbol": eng.spec.symbol, **technical_summary(bars, tf)}
 
     # -- memory ----------------------------------------------------------------
     @app.get("/api/trades/{domain}")
     def trades(domain: MemoryDomain, limit: int = Query(200, le=5000), broker: str | None = None,
-               u: User = Depends(current_user)):
-        ts = s.store.load_trades(domain, broker=broker)
+               symbol: str | None = None, u: User = Depends(current_user)):
+        """`symbol` is a broker symbol or a canonical instrument (EURUSD matches EURUSD.sd and EURUSDm)."""
+        names = None
+        if symbol:
+            want = canonical(symbol)
+            names = [x for x in s.store.trade_symbols(domain) if x == symbol or (want and canonical(x) == want)]
+        ts = s.store.load_trades(domain, broker=broker, symbols=names)
         m = json_safe(compute_metrics(ts))
         rows = []
         for t in ts[-limit:]:
@@ -198,10 +234,13 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             d["side"] = t.side.value
             d["exit_reason"] = t.exit_reason.value if t.exit_reason else None
             d["r_multiple"] = t.r_multiple
+            inst = instrument_for(t.symbol)
+            d["instrument"] = inst.name if inst else t.symbol
+            d["pip_size"] = inst.pip_size if inst else None
             d["context"] = {k: v for k, v in t.context.items() if k != "features"}
             rows.append(d)
         return {"domain": domain.value, "label": DOMAIN_LABELS[domain], "simulated": domain != MemoryDomain.REAL,
-                "trades": rows, "metrics": m}
+                "symbol": symbol, "trades": rows, "metrics": m}
 
     @app.get("/api/runs")
     def runs(domain: MemoryDomain | None = None, u: User = Depends(current_user)):

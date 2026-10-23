@@ -157,7 +157,7 @@ class PushChannel:
 
     def send(self, msg: Outgoing) -> dict:
         s = msg.signal
-        payload = {"title": f"SIGNAL ONLY: {s.side} {s.symbol} @ {s.entry:.2f}", "body": msg.text,
+        payload = {"title": f"SIGNAL ONLY: {s.side} {s.symbol} @ {s.entry:.{s.digits}f}", "body": msg.text,
                    "data": {"signal_id": s.id, "callback_ref": msg.callback_ref,
                             "actions": {a: msg.callback(a) for a in ACTION_CODES}}}
         if self.sender is not None:

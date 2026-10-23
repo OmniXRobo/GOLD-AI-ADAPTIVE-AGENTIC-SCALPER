@@ -132,8 +132,9 @@ public class SignalWatchService extends Service {
 
     private void notifySignal(JSONObject s) {
         String side = s.optString("side", "").toUpperCase(Locale.US);
-        String title = side + " " + s.optString("symbol", "XAUUSD") + " @ " + num(s, "entry");
-        String text = "SL " + num(s, "stop_loss") + " · TP " + num(s, "take_profit")
+        int d = s.optInt("digits", 2);
+        String title = side + " " + s.optString("symbol", "XAUUSD") + " @ " + num(s, "entry", d);
+        String text = "SL " + num(s, "stop_loss", d) + " · TP " + num(s, "take_profit", d)
                 + " · conf " + Math.round(s.optDouble("confidence", 0) * 100) + "% · " + s.optString("broker", "");
         String more = text + "\n" + s.optString("reason", "") + "\nSignal only. Review it in the app before acting.";
         Notification.Builder b = builder(CH_SIGNALS)
@@ -152,9 +153,11 @@ public class SignalWatchService extends Service {
                 .setContentText(text).setAutoCancel(true).setContentIntent(open("/")).build());
     }
 
-    private static String num(JSONObject s, String key) {
+    /** Price with the instrument's decimals (2 for gold and BTC, 5 for forex, 3 for JPY pairs). */
+    private static String num(JSONObject s, String key, int digits) {
         double v = s.optDouble(key, Double.NaN);
-        return Double.isNaN(v) ? "n/a" : String.format(Locale.US, "%.2f", v);
+        int d = Math.max(0, Math.min(8, digits));
+        return Double.isNaN(v) ? "n/a" : String.format(Locale.US, "%." + d + "f", v);
     }
 
     private Notification ongoing(String text) {
@@ -190,7 +193,7 @@ public class SignalWatchService extends Service {
         NotificationChannel watch = new NotificationChannel(CH_STATUS, "Alert service status", NotificationManager.IMPORTANCE_MIN);
         watch.setShowBadge(false);
         NotificationChannel sig = new NotificationChannel(CH_SIGNALS, "Trade signals", NotificationManager.IMPORTANCE_HIGH);
-        sig.setDescription("New XAUUSD signals from your Gold AI server");
+        sig.setDescription("New gold, Bitcoin and forex signals from your Gold AI server");
         nm().createNotificationChannel(watch);
         nm().createNotificationChannel(sig);
     }

@@ -370,7 +370,7 @@ class SelfHealingAgent:
 
     def _record(self, c: HealingCycleResult, actor: str) -> None:
         self._append_history({
-            "cycle_id": c.cycle_id, "outcome": c.action, "findings": [asdict(f) for f in c.deterioration.findings],
+            "cycle_id": c.cycle_id, "broker": self.spec.broker, "symbol": self.spec.symbol, "outcome": c.action, "findings": [asdict(f) for f in c.deterioration.findings],
             "diagnosis": c.diagnosis, "incumbent": c.incumbent_version,
             "incumbent_walkforward": c.incumbent_walkforward,
             "candidates": [{"strategy_version": e.strategy_version, "passed": e.passed, "reasons": e.reasons,

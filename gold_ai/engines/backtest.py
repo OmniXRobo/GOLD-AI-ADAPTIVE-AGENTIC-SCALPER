@@ -8,6 +8,7 @@ from dataclasses import asdict, dataclass
 from ..agents.decision import ModelState, StrategyParams, TradingDecisionAgent
 from ..config import Settings
 from ..domain import MemoryDomain, SimTrade, SymbolSpec, Tick
+from ..instruments import settings_for
 from ..memory.store import MemoryStore
 from ..risk.engine import NewsEvent, RiskEngine
 from .loop import LoopStats, TradingLoop, data_hash
@@ -40,7 +41,7 @@ def run_backtest(settings: Settings, spec: SymbolSpec, ticks: list[Tick], *, par
     model = copy.deepcopy(model) if model else ModelState()
     agent = TradingDecisionAgent(params, model, seed=seed)
     model_start = model.version()
-    risk = RiskEngine.create(settings.risk, spec, starting_equity)
+    risk = RiskEngine.create(settings_for(settings, spec).risk, spec, starting_equity)  # per-instrument limits
     risk.news = list(news or [])
     loop = TradingLoop(settings, spec, agent, broker=spec.broker, account=account,
                        starting_equity=starting_equity, learn=learn, simulation=True, risk=risk)

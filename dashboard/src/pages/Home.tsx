@@ -1,34 +1,41 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { api, type NewsEvent } from "../api";
 import { useTrades } from "../components/domain";
 import { Icon } from "../components/icons";
 import { latestSignals, SignalCard } from "../components/SignalCard";
 import { DomainBadge, Empty } from "../components/ui";
+import { instrumentChoices, instrumentLabel, priceDigits, SymbolChips, useInstruments } from "../instruments";
 import { fmtMoney, fmtNum, fmtPct, fmtTime, signClass, useApi } from "../lib";
 import { useLive } from "../state";
 
 function PriceHero() {
-  const st = useApi(api.market, [], 3000);
+  const running = useInstruments(30000);
+  const choices = instrumentChoices(running.data);
+  const [sym, setSym] = useState<string | null>(null);
+  const st = useApi(() => api.market(sym), [sym], 3000);
   const m = st.data;
   const lt = m?.last_tick;
+  const n = priceDigits(m?.symbol);
   return (
     <section className="hero-price">
+      {choices.length > 1 && <SymbolChips choices={choices} value={sym ?? choices[0]} onChange={setSym} allLabel={null} />}
       <div className="hero-price-top">
         <div>
-          <div className="hero-sym">{m?.symbol ?? "XAUUSD"}</div>
+          <div className="hero-sym">{m ? `${instrumentLabel(m.symbol)} · ${m.symbol}` : "XAUUSD"}</div>
           <div className="hero-sub">{m ? `Live · ${m.broker}` : "Live price"}</div>
         </div>
         {m && <span className={`pill ${m.ready ? "pill-ok" : "pill-warn"}`}>{m.ready ? "AI ready" : "AI warming up"}</span>}
       </div>
       {lt ? (
         <>
-          <div className="hero-px">{fmtNum(lt.bid, 2)}</div>
+          <div className="hero-px">{fmtNum(lt.bid, n)}</div>
           <div className="hero-meta">
             <span>
-              Ask <b>{fmtNum(lt.ask, 2)}</b>
+              Ask <b>{fmtNum(lt.ask, n)}</b>
             </span>
             <span>
-              Spread <b>{fmtNum(lt.spread, 2)}</b>
+              Spread <b>{fmtNum(lt.spread, n)}</b>
             </span>
             <span>
               Regime <b>{m?.regime ?? "n/a"}</b>
@@ -158,7 +165,7 @@ export default function HomePage() {
       </p>
 
       <div className="quick-grid">
-        <QuickLink to="/autopilot" icon="agent" label="Autopilot" hint={engines.length ? `${engines.length} engine running` : "engine status"} />
+        <QuickLink to="/autopilot" icon="agent" label="Autopilot" hint={engines.length ? `${engines.length} market${engines.length > 1 ? "s" : ""} running` : "engine status"} />
         <QuickLink to="/analysis" icon="performance" label="Analysis" hint="technical, news, calendar" />
         <QuickLink to="/practice" icon="practice" label="Practice" hint="paper trade the live price" />
         <QuickLink to="/results" icon="backtesting" label="Results" hint="win rate and pips by period" />

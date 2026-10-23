@@ -16,6 +16,7 @@ from ..agents.decision import TradingDecisionAgent
 from ..config import Settings
 from ..costs import CostModel
 from ..domain import Decision, ExitReason, Side, SimTrade, SymbolSpec, Tick, TradeProposal
+from ..instruments import settings_for
 from ..market.features import MarketIntelligenceAgent
 from ..risk.engine import RiskEngine
 from .simulator import PositionSimulator
@@ -38,6 +39,7 @@ class TradingLoop:
                  risk: RiskEngine | None = None,
                  on_decision: Callable[[Decision, dict], None] | None = None,
                  on_close: Callable[[SimTrade], None] | None = None):
+        settings = settings_for(settings, spec)   # per-instrument spread/slippage/session/news limits
         self.settings = settings
         self.spec = spec
         self.agent = agent

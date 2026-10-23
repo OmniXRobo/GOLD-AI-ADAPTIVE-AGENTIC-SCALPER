@@ -22,6 +22,8 @@ export const FAQ = [
   ["Does the app trade real money?", "No. Real-money trading is disabled and can only be enabled by the owner with a time-limited, password-confirmed grant. Signals and virtual trading never touch a real account."],
   ["Where do the results come from?", "Only from trades that closed in the AI's virtual account (estimated fills on the live price) or, if ever enabled, real broker fills. Nothing is typed in or estimated after the fact."],
   ["What is a pip on gold?", `This app uses 1 pip = $${GOLD_PIP.toFixed(2)} of price. With 100 oz per lot, 1 pip is worth $10 per 1.00 lot or $0.10 per 0.01 lot.`],
+  ["Which markets does it cover?", "Gold (XAUUSD), Bitcoin (BTCUSD) and the seven major forex pairs: EUR/USD, GBP/USD, USD/JPY, USD/CHF, AUD/USD, USD/CAD and NZD/USD, when your broker offers them. Each market has its own AI memory, spread limit, trading hours and news filter, and learns only from its own trades."],
+  ["What is a pip on the other markets?", "Bitcoin: 1 pip = $1 of price. Forex: 1 pip = 0.0001 (0.01 on USD/JPY). Results show pips in each trade's own market."],
   ["Why didn't I get a signal today?", "The AI only signals when its checks pass. Quiet or news-heavy markets, wide spreads or low confidence mean no trade, which is a decision too."],
   ["How do I get alerts on my phone?", "Install the Android app, sign in, and allow notifications. Alerts are read-only; you act on them in the app."],
   ["Is my practice account linked to the AI?", "No. Practice trades stay in your browser or phone and never enter the AI's memory or a broker."],

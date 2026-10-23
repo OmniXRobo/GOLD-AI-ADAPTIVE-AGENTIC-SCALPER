@@ -12,6 +12,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
+from .instruments import DEFAULT_SYMBOLS
+
 
 class RiskConfig(BaseModel):
     max_open_positions: int = 1                # spec: ONE OPEN TRADE AT A TIME
@@ -28,12 +30,15 @@ class RiskConfig(BaseModel):
     block_minutes_after_high_impact: int = 15
     allowed_sessions_utc: list[tuple[int, int]] = Field(default_factory=lambda: [(0, 24)])
     max_tick_age_seconds: float = 10.0
+    # High-impact events in these currencies black out trading; empty = every currency (gold default).
+    news_currencies: list[str] = Field(default_factory=list)
 
 
 class CostConfig(BaseModel):
     slippage_points_entry: int = 5             # conservative estimate, adverse
     slippage_points_exit: int = 5
     stop_slippage_extra_points: int = 10       # stops fill worse than limits
+    triple_swap_weekday: int | None = 2        # Wednesday rollover charged x3 (metals/forex); None for crypto
 
 
 class Settings(BaseModel):
@@ -57,6 +62,11 @@ class Settings(BaseModel):
     # Economic-calendar files read by the news agent (e.g. Common\Files\goldai_calendar.csv written by
     # mql5/GoldAICalendar.mq5). Re-read on every refresh.
     news_calendar_files: list[str] = Field(default_factory=list)
+    # Instruments the live service analyses (signals + virtual trades only), canonical names; each is matched
+    # to the broker's own symbol (e.g. EURUSD -> EURUSD.sd) and skipped if the broker does not offer it.
+    symbols: list[str] = Field(default_factory=lambda: list(DEFAULT_SYMBOLS))
+    # Per-symbol changes to gold_ai.instruments limits, e.g. {"BTCUSD": {"max_spread_pips": 40}}.
+    instrument_overrides: dict[str, dict] = Field(default_factory=dict)
 
 
 def load_settings(path: str | os.PathLike | None = None) -> Settings:
