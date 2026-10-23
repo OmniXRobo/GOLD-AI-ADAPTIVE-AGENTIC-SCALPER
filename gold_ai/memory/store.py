@@ -173,11 +173,15 @@ class MemoryStore:
     def __init__(self, url: str):
         if url.startswith("sqlite:///") and not url.startswith("sqlite:///:memory:"):
             Path(url.removeprefix("sqlite:///")).parent.mkdir(parents=True, exist_ok=True)
-        self.engine = create_engine(url, future=True)
+        # SQLite allows one writer at a time; with one collector + engine per instrument the startup
+        # backfills overlap, so writers wait up to 30 s for the lock instead of the default 5 s.
+        connect_args = {"timeout": 30} if url.startswith("sqlite") else {}
+        self.engine = create_engine(url, future=True, connect_args=connect_args)
         if url.startswith("sqlite"):
             @event.listens_for(self.engine, "connect")
             def _pragmas(conn, _):  # pragma: no cover - trivial
                 conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA busy_timeout=30000")
                 conn.execute("PRAGMA foreign_keys=ON")
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(self.engine, expire_on_commit=False)

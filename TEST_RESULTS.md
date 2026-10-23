@@ -87,6 +87,11 @@
   Warm-up now replays up to 7 days in 6 h chunks inside the engine worker (API stays up): on the VPS it replayed
   2,275,498 Equiti ticks (Oct 18 22:00 – Oct 22 18:16 UTC) in about 3 minutes, ~450 MB RAM for Python.
   Tests **173 passed, 1 skipped**.
+- **PR #6 (BTCUSD + 7 forex majors) deployed 2026-10-23 17:20 UTC:** tests 183 passed / 1 skipped, dashboard built,
+  task re-registered with `-Symbol XAUUSD.sd`. Equiti mapping: XAUUSD.sd, BTCUSD.lv, EURUSD.sd, GBPUSD.sd, USDCHF.sd,
+  USDJPY.sd, AUDUSD.sd, NZDUSD.sd, USDCAD.sd — none skipped. First start hit 6 `database is locked` errors while
+  nine collectors back-filled at once; SQLite busy timeout raised from 5 s to 30 s, after which a restart showed
+  0 errors and all nine symbols storing ticks.
 
 
 ## 2026-10-22 — session 1 (Linux cloud container, Python 3.13, Node 22)
