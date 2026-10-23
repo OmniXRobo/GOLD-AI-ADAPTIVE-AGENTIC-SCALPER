@@ -111,6 +111,8 @@ export default function HomePage() {
         <QuickLink to="/autopilot" icon="agent" label="Autopilot" hint={engines.length ? `${engines.length} engine running` : "engine status"} />
         <QuickLink to="/analysis" icon="performance" label="Analysis" hint="technical, news, calendar" />
         <QuickLink to="/practice" icon="practice" label="Practice" hint="paper trade the live price" />
+        <QuickLink to="/results" icon="backtesting" label="Results" hint="win rate and pips by period" />
+        <QuickLink to="/learn" icon="news" label="Learn" hint="guide, calculator, FAQ" />
         <QuickLink to="/risk" icon="risk" label="Risk" hint={overview?.emergency_stop ? "emergency stop ACTIVE" : "limits and stop"} />
       </div>
     </>

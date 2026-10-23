@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-22",
+  "updated": "2026-10-23",
   "real_money_execution": "DISABLED",
   "tasks": [
     {
@@ -318,6 +318,53 @@
       "title": "Entry zone (limit fill) and TP1/TP2 partial exits in simulator, compare walk-forward",
       "status": "todo",
       "priority": 4,
+      "blocked_on": "owner approval"
+    },
+    {
+      "id": "T-UI-RESULTS-LEARN",
+      "phase": 7,
+      "title": "Results page, trade history, lot calculator, money guide, how it works/FAQ, public landing page (UI only, own data)",
+      "status": "done",
+      "priority": 2
+    },
+    {
+      "id": "T-PACKAGES",
+      "phase": 7,
+      "title": "Paid packages / coupons / subscriptions (needs a payment provider)",
+      "status": "todo",
+      "priority": 5,
+      "blocked_on": "owner approval"
+    },
+    {
+      "id": "T-COPY-TRADING",
+      "phase": 7,
+      "title": "Copy trading and referral rewards (needs broker and legal setup)",
+      "status": "todo",
+      "priority": 5,
+      "blocked_on": "owner approval"
+    },
+    {
+      "id": "T-MULTI-ASSET-SIGNALS",
+      "phase": 7,
+      "title": "Forex / oil / crypto signals (engine work, VPS thread)",
+      "status": "todo",
+      "priority": 5,
+      "blocked_on": "owner approval"
+    },
+    {
+      "id": "T-PROFIT-LOCK",
+      "phase": 7,
+      "title": "Move stop to breakeven after partial profit (engine work, VPS thread)",
+      "status": "todo",
+      "priority": 5,
+      "blocked_on": "owner approval"
+    },
+    {
+      "id": "T-COMMUNITY-LINKS",
+      "phase": 7,
+      "title": "Community channel links on landing page (owner to supply)",
+      "status": "todo",
+      "priority": 5,
       "blocked_on": "owner approval"
     }
   ]

@@ -9,8 +9,10 @@ export const MAIN_NAV: NavItem[] = [
   { path: "/", label: "Home", icon: "home" },
   { path: "/autopilot", label: "Autopilot", icon: "agent" },
   { path: "/analysis", label: "Analysis", icon: "performance" },
+  { path: "/results", label: "Results", icon: "backtesting" },
   { path: "/practice", label: "Practice", icon: "practice" },
   { path: "/signals", label: "Signals", icon: "signals" },
+  { path: "/learn", label: "Learn", icon: "news" },
 ];
 
 export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
@@ -67,8 +69,8 @@ export const NAV_GROUPS: { title: string; items: NavItem[] }[] = [
 
 export const MOBILE_TABS: (NavItem & { short: string })[] = [
   { path: "/", label: "Home", short: "Home", icon: "home" },
-  { path: "/autopilot", label: "Autopilot", short: "Autopilot", icon: "agent" },
   { path: "/analysis", label: "Analysis", short: "Analysis", icon: "performance" },
+  { path: "/results", label: "Results", short: "Results", icon: "backtesting" },
   { path: "/practice", label: "Practice", short: "Practice", icon: "practice" },
 ];
 

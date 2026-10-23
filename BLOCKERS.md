@@ -8,3 +8,4 @@
 | Institutional data | Licensed COMEX futures / depth / COT data source | Institutional agent reports `available=false` until configured |
 | Telegram / WhatsApp / push credentials | Owner to put Telegram bot token + chat id in config.local.json (asked 2026-10-22); WhatsApp Business Cloud API token + phone id; push endpoint | Channels tested with mocked HTTP only |
 | Phone access to the VPS | Done: Tailscale on VPS and phone, `tailscale serve --bg 8001` (owner ran it 2026-10-22) | App reaches the dashboard; not yet tested beyond that |
+| Packages, copy trading, multi-asset signals, profit lock, community links | Owner decision (and a payment provider / broker programme where relevant) | Not built; the UI shows only the app's own data |

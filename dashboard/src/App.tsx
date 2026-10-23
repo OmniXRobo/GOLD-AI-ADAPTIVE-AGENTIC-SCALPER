@@ -1,8 +1,10 @@
-import { lazy, type ComponentType } from "react";
+import { lazy, useState, type ComponentType } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import { Empty, PageHeader } from "./components/ui";
+import LandingPage from "./pages/Landing";
 import LoginPage from "./pages/Login";
+import { nativeApp } from "./native";
 import { LiveProvider, useAuth } from "./state";
 
 // Each page group loads on first visit so the first screen paints quickly on phones.
@@ -20,6 +22,8 @@ const HomePage = page(() => import("./pages/Home"), "default");
 const AutopilotPage = page(() => import("./pages/Autopilot"), "default");
 const AnalysisPage = page(() => import("./pages/Analysis"), "default");
 const PracticePage = page(() => import("./pages/Practice"), "default");
+const ResultsPage = page(() => import("./pages/Results"), "default");
+const LearnPage = page(() => import("./pages/Learn"), "default");
 const BrokersPage = page(monitor, "BrokersPage");
 const MarketPage = page(monitor, "MarketPage");
 const AgentPage = page(monitor, "AgentPage");
@@ -55,7 +59,9 @@ function NotFound() {
 
 export default function App() {
   const { token } = useAuth();
-  if (!token) return <LoginPage />;
+  // The website shows a public front page first; the phone app goes straight to sign-in.
+  const [signIn, setSignIn] = useState(nativeApp.available());
+  if (!token) return signIn ? <LoginPage /> : <LandingPage onSignIn={() => setSignIn(true)} />;
   return (
     <LiveProvider>
       <Routes>
@@ -64,6 +70,8 @@ export default function App() {
           <Route path="autopilot" element={<AutopilotPage />} />
           <Route path="analysis" element={<AnalysisPage />} />
           <Route path="practice" element={<PracticePage />} />
+          <Route path="results" element={<ResultsPage />} />
+          <Route path="learn" element={<LearnPage />} />
           <Route path="overview" element={<OverviewPage />} />
           <Route path="brokers" element={<BrokersPage />} />
           <Route path="market" element={<MarketPage />} />
