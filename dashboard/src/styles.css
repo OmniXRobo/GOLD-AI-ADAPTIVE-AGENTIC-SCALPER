@@ -1541,6 +1541,208 @@ details summary {
   padding: 9px 10px;
 }
 
+/* ---------------------------------------------------------------- results / learn */
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: 12px;
+}
+.result-card {
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.result-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-weight: 650;
+}
+.result-head b {
+  font-size: 1.7rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+.result-pips {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.result-net {
+  margin-top: 4px;
+  font-size: 0.85rem;
+  color: var(--text-2);
+}
+.hist-row {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--grid);
+}
+.hist-row:last-child {
+  border-bottom: 0;
+}
+.hist-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.hist-pips {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.hist-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: var(--text-3);
+  font-variant-numeric: tabular-nums;
+}
+.hist-levels b {
+  color: var(--text);
+}
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.steps li {
+  display: flex;
+  gap: 12px;
+}
+.steps p {
+  margin: 4px 0 0;
+}
+.step-n {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  background: var(--gold-grad, var(--accent));
+  color: var(--accent-ink);
+}
+.faq details {
+  border-bottom: 1px solid var(--grid);
+  padding: 12px 0;
+}
+.faq summary {
+  font-weight: 650;
+  font-size: 0.95rem;
+  color: var(--text);
+  margin: 0;
+}
+.faq p {
+  margin: 8px 0 0;
+  color: var(--text-2);
+  font-size: 0.9rem;
+}
+
+/* ---------------------------------------------------------------- landing */
+.landing {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 16px 40px;
+}
+.landing-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  padding-top: max(16px, env(safe-area-inset-top));
+}
+.landing-nav nav {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.landing-nav nav a {
+  color: var(--text-2);
+  text-decoration: none;
+  font-size: 0.92rem;
+}
+.landing-hero {
+  text-align: center;
+  padding: 56px 0 40px;
+}
+.landing-hero h1 {
+  font-size: clamp(2rem, 6vw, 3.4rem);
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  max-width: 760px;
+  margin: 0 auto 16px;
+}
+.landing-hero p {
+  max-width: 640px;
+  margin: 0 auto;
+  color: var(--text-2);
+  font-size: 1.05rem;
+}
+.landing-cta {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 26px 0 14px;
+}
+.landing-cta .btn {
+  min-height: 46px;
+  padding: 10px 22px;
+  text-decoration: none;
+}
+.landing-note {
+  font-size: 0.8rem !important;
+  color: var(--text-3) !important;
+}
+.landing-section {
+  padding: 32px 0;
+}
+.landing-section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 18px;
+}
+.landing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 14px;
+}
+.landing-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: var(--shadow);
+}
+.landing-card p {
+  margin: 6px 0 0;
+  color: var(--text-2);
+  font-size: 0.9rem;
+}
+.landing-foot {
+  border-top: 1px solid var(--border);
+  margin-top: 24px;
+  padding-top: 18px;
+  font-size: 0.8rem;
+  color: var(--text-3);
+}
+@media (max-width: 600px) {
+  .landing-nav nav a {
+    display: none;
+  }
+  .landing-hero {
+    padding-top: 28px;
+  }
+}
+
 /* ---------------------------------------------------------------- mobile */
 @media (max-width: 900px) {
   .topbar .menu-btn {

@@ -65,3 +65,6 @@ All items below have code + passing tests unless noted.
 - Android app 1.1.0 (cream colours), same signing key as 1.0.0. docs/STRATEGY_IDEAS.md records the reference
   app's techniques and how they could fit, as owner-approved follow-up tasks.
 
+## Session 2d — 2026-10-23
+- Results page (win rate, pips, money by period; last 50 closed trades), Learn page (calculator, money guide, how it
+  works, FAQ), public landing page, nav updates. Android app 1.2.0.

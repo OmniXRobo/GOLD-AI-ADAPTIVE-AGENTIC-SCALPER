@@ -3,6 +3,13 @@
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No real-market performance exists yet.
 
+## Session 2d (ideas from a reference gold-signal site)
+- New dashboard pages: Results (win rate, pips won/lost, today / 7 days / month, trade history, virtual or real
+  account), Learn (how it works, lot size and risk calculator, money management, FAQ), and a public landing page
+  shown before sign-in. All figures come from the app's own recorded trades; no performance claims anywhere.
+- Not built, waiting for the owner: paid packages, copy trading/rewards, multi-asset signals, profit lock,
+  community links (TASK_QUEUE.json, NEXT_ACTIONS.md). Android app 1.2.0.
+
 ## Session 2c (simplified UI)
 - New default look (cream and gold) with Home, Autopilot, Analysis, Practice; older pages under Advanced.
 - Android app 1.1.0 built (same key as 1.0.0, installs as an update). Strategy ideas from the reference app are

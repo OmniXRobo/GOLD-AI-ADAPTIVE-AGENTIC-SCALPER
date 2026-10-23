@@ -1,6 +1,12 @@
 # Test results
 
 
+## 2026-10-23 — session 2d (cloud container)
+- `python -m pytest -q` → **173 passed, 1 skipped**.
+- Dashboard `tsc --noEmit` and build OK. Results, Learn and landing pages checked in Chromium at 390×844 and
+  1440×900 against a local preview server with synthetic placeholder values (layout check only).
+- Android 1.2.0 (versionCode 3): built and signed with the same key. Not yet run on a device.
+
 
 ## 2026-10-22 — session 2c (cloud container)
 - `python -m pytest -q` → **172 passed, 1 skipped** (adds tests/test_technical.py: RSI reference value from

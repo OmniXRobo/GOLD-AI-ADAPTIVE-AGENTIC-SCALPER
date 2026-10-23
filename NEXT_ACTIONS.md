@@ -14,3 +14,5 @@
 8. (Dev) T-TORCH-MODEL: optional PyTorch candidate model class behind the same ModelState interface.
 9. (Owner) Phone access: install Tailscale on the VPS and the phone, run `tailscale serve --bg 8001` on the VPS,
    install the APK and sign in (docs/ANDROID_APP.md, task T-ANDROID-DEVICE-TEST).
+10. (Owner) Decide on the reference-site features that need outside services or engine work: paid packages/coupons,
+    copy trading/rewards, forex/oil/crypto signals, profit lock to breakeven, community links (TASK_QUEUE.json, T-PACKAGES etc.).
