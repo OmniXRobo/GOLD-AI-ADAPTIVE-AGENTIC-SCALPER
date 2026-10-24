@@ -65,6 +65,9 @@ class Settings(BaseModel):
     # Instruments the live service analyses (signals + virtual trades only), canonical names; each is matched
     # to the broker's own symbol (e.g. EURUSD -> EURUSD.sd) and skipped if the broker does not offer it.
     symbols: list[str] = Field(default_factory=lambda: list(DEFAULT_SYMBOLS))
+    # Signal styles run for every instrument, each as its own virtual engine with separate memory:
+    # "scalp" (M1/M5/M15 bars, held up to 1 h) and "swing" (M15/H1/H4 bars, held up to 3 days).
+    trade_styles: list[str] = Field(default_factory=lambda: ["scalp", "swing"])
     # Per-symbol changes to gold_ai.instruments limits, e.g. {"BTCUSD": {"max_spread_pips": 40}}.
     instrument_overrides: dict[str, dict] = Field(default_factory=dict)
 

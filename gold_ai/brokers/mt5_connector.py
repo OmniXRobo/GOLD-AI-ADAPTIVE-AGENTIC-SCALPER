@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from ..domain import SymbolSpec, Tick
+from ..domain import Candle, SymbolSpec, Tick
 from .symbols import discover_gold_symbols, discover_instrument
 
 log = logging.getLogger(__name__)
@@ -244,4 +244,29 @@ class MT5ReadOnlyConnector:
                 continue  # MT5 emits last-only ticks with zero bid/ask
             out.append(Tick(self._to_utc(int(r["time_msc"])),
                             bid, ask, float(r["volume_real"]) if "volume_real" in r.dtype.names else 0.0))
+        return out
+
+    def rates(self, symbol: str, timeframe: str, count: int = 500) -> list[Candle]:
+        """The broker's most recent `count` bars (Bid based, like MT5 charts), oldest first, in UTC.
+
+        Read-only (copy_rates_from_pos). The newest bar is usually still forming; callers keep only bars
+        that have closed. Returns [] when the terminal cannot provide them or the server-time offset is
+        not known yet, so bars are never placed at the wrong time.
+        """
+        if not self.server_offset_known:
+            self.latest_tick(symbol)
+            if not self.server_offset_known:
+                return []
+        tf = getattr(self.mt5, f"TIMEFRAME_{timeframe}", None)
+        fn = getattr(self.mt5, "copy_rates_from_pos", None)
+        if tf is None or fn is None:
+            return []
+        arr = fn(symbol, tf, 0, count)
+        if arr is None:
+            log.warning("copy_rates_from_pos(%s, %s) failed: %s", symbol, timeframe, self.mt5.last_error())
+            return []
+        out = []
+        for r in arr:
+            out.append(Candle(self._to_utc(int(r["time"]) * 1000), float(r["open"]), float(r["high"]),
+                              float(r["low"]), float(r["close"]), int(r["tick_volume"])))
         return out

@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -51,18 +52,22 @@ class SignalService:
         self.max_retries, self.backoff_seconds = max_retries, backoff_seconds
         self.max_kept = max_kept
         self.sleep, self.clock = sleep, clock
+        # Every engine thread (one per instrument and style) writes the same stored signal and token maps;
+        # without this lock two signals at once could overwrite each other's read-modify-write.
+        self._lock = threading.RLock()
 
     # -- persistence -------------------------------------------------------------
     def _load(self) -> dict[str, dict]:
         return self.store.kv_get(SIGNALS_KEY, {}) or {}
 
     def _save(self, s: Signal) -> None:
-        data = self._load()
-        data[s.id] = s.to_dict()
-        if len(data) > self.max_kept:
-            for k in sorted(data, key=lambda k: data[k]["timestamp"])[: len(data) - self.max_kept]:
-                data.pop(k)
-        self.store.kv_set(SIGNALS_KEY, data)
+        with self._lock:
+            data = self._load()
+            data[s.id] = s.to_dict()
+            if len(data) > self.max_kept:
+                for k in sorted(data, key=lambda k: data[k]["timestamp"])[: len(data) - self.max_kept]:
+                    data.pop(k)
+            self.store.kv_set(SIGNALS_KEY, data)
 
     def get(self, signal_id: str) -> Signal | None:
         d = self._load().get(signal_id)
@@ -78,22 +83,25 @@ class SignalService:
         return self.store.kv_get(TOKENS_KEY, {}) or {}
 
     def _set_token(self, signal_id: str, token: str | None) -> None:
-        toks = self._tokens()
-        if token is None:
-            toks.pop(signal_id, None)
-        else:
-            toks[signal_id] = token
-        self.store.kv_set(TOKENS_KEY, dict(list(toks.items())[-self.max_kept:]))
+        with self._lock:
+            toks = self._tokens()
+            if token is None:
+                toks.pop(signal_id, None)
+            else:
+                toks[signal_id] = token
+            self.store.kv_set(TOKENS_KEY, dict(list(toks.items())[-self.max_kept:]))
 
     # -- create & deliver ------------------------------------------------------------
-    def create(self, proposal: TradeProposal, tick: Tick, broker: str, symbol: str = "XAUUSD") -> Signal:
+    def create(self, proposal: TradeProposal, tick: Tick, broker: str, symbol: str = "XAUUSD",
+               max_hold_seconds: int | None = None) -> Signal:
         now = self.clock()
-        s = Signal.from_proposal(proposal, tick, broker, symbol, now=now)
+        s = Signal.from_proposal(proposal, tick, broker, symbol, now=now, max_hold_seconds=max_hold_seconds)
         ttl = max(1, min(self.approval_ttl_seconds, int((s.expiry - now).total_seconds()) + 1))
         token = self.auth.issue_approval(s.id, ttl_seconds=ttl)
         self._set_token(s.id, token)
         self._save(s)
-        self.store.audit("signals", "signal_created", {"signal": s.id, "side": s.side, "broker": broker})
+        self.store.audit("signals", "signal_created", {"signal": s.id, "side": s.side, "broker": broker,
+                                                       "symbol": symbol, "style": s.style})
         self.deliver(s, token)
         return s
 

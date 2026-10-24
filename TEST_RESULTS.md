@@ -1,5 +1,16 @@
 # Test results
 
+## 2026-10-24 — session 2g (cloud container)
+- `python -m pytest -q` → **194 passed, 1 skipped** (adds tests/test_styles.py: scalp version ids unchanged,
+  swing hourly features, swing backtest holds longer, broker-bar seeding with server-time conversion, separate
+  memory and API style filter, promotion applied to the matching engine only and kept after restart, signal
+  style text, 12 concurrent signals all kept).
+- Dashboard `tsc --noEmit` and build OK. Android 1.4.0 source not compiled here (no signing key).
+- Smoke run with FakeMT5 and synthetic ticks (labeled synthetic, not stored): all 27 dashboard GET endpoints
+  and /ws/live return 200; no order calls. Says nothing about real markets.
+- VPS logs read (read-only): one websocket "send after close" crash (fixed); no other errors since 2026-10-23
+  17:24 UTC restart.
+
 ## 2026-10-23 — session 2f (cloud container)
 - `python -m pytest -q` → **183 passed, 1 skipped** (adds tests/test_instruments.py: symbol matching, pip→point
   limits, news by currency, crypto swap, signal text, one engine per instrument with FakeMT5, per-symbol offset).

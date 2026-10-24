@@ -1,7 +1,18 @@
-# Project status — 2026-10-23 (session 2, owner's Windows VPS)
+# Project status — 2026-10-24 (session 2, owner's Windows VPS)
 
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No real-market performance exists yet.
+
+## Session 2g (scalping and swing signals)
+- Each instrument now runs two virtual engines: **scalping** (M1/M5/M15, SL 1.5× M5 ATR, TP 1.5R, held ≤ 1 h)
+  and **swing** (M15/H1/H4, SL 1.5× H1 ATR, TP 2R, held ≤ 3 days). Separate virtual accounts, models, trade
+  history (Memory C `context.style`), signals and self-healing. Shown in Signals, Results, Autopilot and app
+  alerts (Android 1.4.0 source). See docs/TRADE_STYLES.md.
+- Engines seed higher-timeframe bars from the broker at warm-up, so new symbols have H1/H4/D1 history at once.
+- Fixed: an owner-promoted version was never loaded into the live engine (now applied and persisted, scoped to
+  its symbol and style); live-status websocket crashed when the phone disconnected; concurrent signals could
+  overwrite each other; dashboard reads moved the model's tick-acceleration input; empty Domain column on Signals.
+- No swing results exist yet. Signals and virtual only; nothing is executed.
 
 ## Session 2f (BTCUSD and major forex pairs)
 - Owner asked for BTCUSD and major currency pair signals. The live service now runs one collector, live virtual

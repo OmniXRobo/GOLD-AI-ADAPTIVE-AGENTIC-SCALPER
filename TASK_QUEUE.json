@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-23",
+  "updated": "2026-10-24",
   "real_money_execution": "DISABLED",
   "tasks": [
     {
@@ -366,6 +366,21 @@
       "status": "todo",
       "priority": 5,
       "blocked_on": "owner approval"
+    },
+    {
+      "id": "T-TRADE-STYLES",
+      "phase": 7,
+      "title": "Scalping and swing signal styles per instrument: separate engines, Memory C style tag, signals, dashboard, app alerts; broker-bar warm-up; promoted versions applied to the live engine",
+      "status": "done",
+      "priority": 1,
+      "notes": "docs/TRADE_STYLES.md. Needs VPS deploy and Android 1.4.0 build."
+    },
+    {
+      "id": "T-SWING-SELF-HEAL-WINDOW",
+      "phase": 7,
+      "title": "Self-healing test window for swing (2 days of ticks is short for 3-day holds; seed backtests with broker bars)",
+      "status": "todo",
+      "priority": 3
     }
   ]
 }

@@ -1,6 +1,7 @@
 import type { Signal } from "../api";
 import { canonical, instrumentLabel, priceDigits } from "../instruments";
 import { fmtNum, fmtTime } from "../lib";
+import { holdLimit, styleOf, StyleTag } from "../styles";
 
 export function signalTime(s: Signal): string | undefined {
   return (s.timestamp ?? s.time) as string | undefined;
@@ -17,11 +18,15 @@ export function SignalCard({ s, compact }: { s: Signal; compact?: boolean }) {
   const n = typeof s.digits === "number" ? s.digits : priceDigits(s.symbol);
   const label = instrumentLabel(s.symbol ?? "XAUUSD");
   const pips = (v: unknown) => (typeof v === "number" ? <small> {fmtNum(v, 1)} pips</small> : null);
+  const style = styleOf(s);
+  const hold = holdLimit(s.max_hold_seconds);
   return (
     <article className={`signal-card ${compact ? "signal-card-compact" : ""}`}>
       <header>
         <div>
-          <div className="signal-sym">{label}</div>
+          <div className="signal-sym">
+            {label} <StyleTag style={style} />
+          </div>
           <div className="signal-time">
             {canonical(s.symbol) && s.symbol !== label ? `${s.symbol} · ` : ""}
             {fmtTime(signalTime(s))}
@@ -51,6 +56,7 @@ export function SignalCard({ s, compact }: { s: Signal; compact?: boolean }) {
           <span>Confidence {typeof s.confidence === "number" ? `${Math.round(s.confidence * 100)}%` : "n/a"}</span>
           {typeof s.risk_reward === "number" && <span>R:R {fmtNum(s.risk_reward, 2)}</span>}
           {typeof lots === "number" && <span>{fmtNum(lots, 2)} lots</span>}
+          {hold && <span>Holds up to {hold}</span>}
           <span className={`signal-status status-${s.status ?? ""}`}>{s.status ?? "n/a"}</span>
         </footer>
       )}

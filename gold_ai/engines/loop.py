@@ -44,7 +44,7 @@ class TradingLoop:
         self.spec = spec
         self.agent = agent
         self.costs = CostModel(spec, settings.costs)
-        self.market = MarketIntelligenceAgent()
+        self.market = MarketIntelligenceAgent(timeframes=agent.params.timeframes)
         self.risk = risk or RiskEngine.create(settings.risk, spec, starting_equity)
         self.sim = PositionSimulator(self.costs, broker, account, max_open=settings.risk.max_open_positions,
                                      max_hold_seconds=agent.params.max_hold_seconds)
@@ -81,7 +81,7 @@ class TradingLoop:
         return closed
 
     def _decide(self, tick: Tick) -> None:
-        state = self.market.state()
+        state = self.market.state(advance=True)
         if not state.ready:
             return
         d = self.agent.decide(
@@ -95,10 +95,12 @@ class TradingLoop:
         if d.side != Side.WAIT and d.proposal is not None:
             self.stats.proposals += 1
             v = self.risk.evaluate(d.proposal, tick, self.equity, len(self.sim.positions))
-            verdict_info = {"approved": v.approved, "reasons": v.reasons, "lots": v.lots}
+            verdict_info = {"approved": v.approved, "reasons": v.reasons, "lots": v.lots,
+                            "style": self.agent.params.style}
             if v.approved:
                 d.proposal.lots = v.lots
                 ctx = {"regime": state.regime, "features": dict(d.features), "confidence": d.confidence,
+                       "style": self.agent.params.style,
                        "exploration": "[EXPLORATION]" in d.proposal.explanation}
                 self.pending = (d.proposal, ctx)
             else:

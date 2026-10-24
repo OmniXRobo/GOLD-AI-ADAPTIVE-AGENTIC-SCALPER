@@ -133,7 +133,9 @@ public class SignalWatchService extends Service {
     private void notifySignal(JSONObject s) {
         String side = s.optString("side", "").toUpperCase(Locale.US);
         int d = s.optInt("digits", 2);
-        String title = side + " " + s.optString("symbol", "XAUUSD") + " @ " + num(s, "entry", d);
+        // Older servers send no style; their signals are scalping.
+        String style = "swing".equals(s.optString("style", "scalp")) ? "Swing" : "Scalp";
+        String title = style + " " + side + " " + s.optString("symbol", "XAUUSD") + " @ " + num(s, "entry", d);
         String text = "SL " + num(s, "stop_loss", d) + " · TP " + num(s, "take_profit", d)
                 + " · conf " + Math.round(s.optDouble("confidence", 0) * 100) + "% · " + s.optString("broker", "");
         String more = text + "\n" + s.optString("reason", "") + "\nSignal only. Review it in the app before acting.";

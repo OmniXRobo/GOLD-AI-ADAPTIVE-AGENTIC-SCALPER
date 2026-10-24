@@ -166,14 +166,20 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             out.append(row)
         return out
 
-    def engine_for(symbol: str | None):
-        """Live engine for a broker symbol or canonical instrument name; the first (gold) engine by default."""
+    def style_of(e) -> str:
+        return getattr(e, "style", "scalp")
+
+    def engine_for(symbol: str | None, style: str = "scalp"):
+        """Live engine for a broker symbol or canonical instrument name and trade style; gold by default."""
         if not s.virtual_engines:
             raise HTTPException(503, "no live market engine running")
+        engines = [e for e in s.virtual_engines.values() if style_of(e) == style]
+        if not engines:
+            raise HTTPException(404, f"no {style} engine running")
         if not symbol:
-            return next(iter(s.virtual_engines.values()))
+            return engines[0]
         want = canonical(symbol) or symbol.upper()
-        for e in s.virtual_engines.values():
+        for e in engines:
             if e.spec.symbol == symbol or canonical(e.spec.symbol) == want:
                 return e
         raise HTTPException(404, f"no live engine for {symbol}")
@@ -181,8 +187,15 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
     @app.get("/api/instruments")
     def instruments(u: User = Depends(current_user)):
         """Instruments the live service analyses, with pip size and display digits for the apps."""
-        out = []
+        out, seen = [], {}
         for e in s.virtual_engines.values():
+            style = {"style": style_of(e), "ready": e.loop.market.ready, "open_positions": len(e.loop.sim.positions),
+                     "timeframes": list(e.agent.params.timeframes),
+                     "max_hold_seconds": e.agent.params.max_hold_seconds}
+            k = (e.spec.broker, e.spec.symbol)
+            if k in seen:   # one row per instrument; its trade styles are listed under "styles"
+                seen[k]["styles"].append(style)
+                continue
             inst = instrument_for(e.spec.symbol, s.settings)
             st = e.loop.market.state()
             lt = st.last_tick
@@ -197,21 +210,26 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
                         "trade_mode": e.spec.trade_mode, "ready": st.ready, "regime": st.regime,
                         "last_tick": None if lt is None else {"time": lt.time.isoformat(), "bid": lt.bid,
                                                               "ask": lt.ask, "spread": lt.spread},
-                        "open_positions": len(e.loop.sim.positions)})
+                        "open_positions": len(e.loop.sim.positions), "styles": [style]})
+            seen[k] = out[-1]
+        for row in out:
+            row["open_positions"] = sum(x["open_positions"] for x in row["styles"])
         return json_safe_any(out)
 
     @app.get("/api/market/state")
-    def market_state(symbol: str | None = None, u: User = Depends(current_user)):
-        eng = engine_for(symbol)
+    def market_state(symbol: str | None = None, style: str = Query("scalp", pattern="^(scalp|swing)$"),
+                     u: User = Depends(current_user)):
+        eng = engine_for(symbol, style)
         st = eng.loop.market.state()
         lt = st.last_tick
-        return {"broker": eng.spec.broker, "symbol": eng.spec.symbol, "ready": st.ready, "regime": st.regime,
+        return {"broker": eng.spec.broker, "symbol": eng.spec.symbol, "style": style_of(eng),
+                "timeframes": list(eng.agent.params.timeframes), "ready": st.ready, "regime": st.regime,
                 "features": st.features,
                 "last_tick": None if lt is None else {"time": lt.time.isoformat(), "bid": lt.bid, "ask": lt.ask,
                                                       "spread": lt.spread}}
 
     @app.get("/api/analysis/technical")
-    def technical_analysis(tf: str = Query("H1", pattern="^(M1|M5|M15|M30|H1|H4|D1)$"),
+    def technical_analysis(tf: str = Query("H1", pattern="^(M1|M5|M10|M15|M30|H1|H4|D1)$"),
                            symbol: str | None = None, u: User = Depends(current_user)):
         eng = engine_for(symbol)
         bars = list(eng.loop.market.mtf.bars.get(tf, []))
@@ -220,13 +238,17 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
     # -- memory ----------------------------------------------------------------
     @app.get("/api/trades/{domain}")
     def trades(domain: MemoryDomain, limit: int = Query(200, le=5000), broker: str | None = None,
-               symbol: str | None = None, u: User = Depends(current_user)):
-        """`symbol` is a broker symbol or a canonical instrument (EURUSD matches EURUSD.sd and EURUSDm)."""
+               symbol: str | None = None, style: str | None = Query(None, pattern="^(scalp|swing)$"),
+               u: User = Depends(current_user)):
+        """`symbol` is a broker symbol or a canonical instrument (EURUSD matches EURUSD.sd and EURUSDm).
+        `style` keeps only scalping or swing trades (trades recorded before styles existed are scalping)."""
         names = None
         if symbol:
             want = canonical(symbol)
             names = [x for x in s.store.trade_symbols(domain) if x == symbol or (want and canonical(x) == want)]
         ts = s.store.load_trades(domain, broker=broker, symbols=names)
+        if style:
+            ts = [t for t in ts if t.context.get("style", "scalp") == style]
         m = json_safe(compute_metrics(ts))
         rows = []
         for t in ts[-limit:]:
@@ -238,9 +260,10 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             d["instrument"] = inst.name if inst else t.symbol
             d["pip_size"] = inst.pip_size if inst else None
             d["context"] = {k: v for k, v in t.context.items() if k != "features"}
+            d["style"] = t.context.get("style", "scalp")
             rows.append(d)
         return {"domain": domain.value, "label": DOMAIN_LABELS[domain], "simulated": domain != MemoryDomain.REAL,
-                "symbol": symbol, "trades": rows, "metrics": m}
+                "symbol": symbol, "style": style, "trades": rows, "metrics": m}
 
     @app.get("/api/runs")
     def runs(domain: MemoryDomain | None = None, u: User = Depends(current_user)):
@@ -417,7 +440,9 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             while True:
                 await ws.send_json(json_safe_any({"type": "status", **overview_data()}))
                 await asyncio.sleep(2)
-        except WebSocketDisconnect:
+        except (WebSocketDisconnect, RuntimeError):
+            # RuntimeError: the phone or browser dropped the connection (app closed, network switch) and the
+            # server sends on a closed socket ("Unexpected ASGI message 'websocket.send'"). Nothing to do.
             return
 
     # -- static dashboard ----------------------------------------------------------------

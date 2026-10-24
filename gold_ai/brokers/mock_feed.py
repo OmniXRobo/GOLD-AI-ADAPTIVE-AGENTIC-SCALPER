@@ -54,14 +54,18 @@ class FakeMT5:
     """Minimal stand-in for the MetaTrader5 module used by connector tests."""
 
     COPY_TICKS_ALL = -1
+    TIMEFRAME_M1, TIMEFRAME_M5, TIMEFRAME_M10, TIMEFRAME_M15, TIMEFRAME_M30 = 1, 5, 10, 15, 30
+    TIMEFRAME_H1, TIMEFRAME_H4, TIMEFRAME_D1 = 16385, 16388, 16408
 
     class _Obj:
         def __init__(self, **kw):
             self.__dict__.update(kw)
 
     def __init__(self, symbols: list[dict], ticks: dict[str, Tick] | None = None, trade_mode: int = 0,
-                 server: str = "Exness-MT5Trial", company: str = "Exness Technologies Ltd"):
+                 server: str = "Exness-MT5Trial", company: str = "Exness Technologies Ltd",
+                 rates: dict[tuple[str, int], list[dict]] | None = None):
         self._symbols = symbols
+        self._rates = rates or {}   # (symbol, TIMEFRAME_x) -> bars as dicts with server-time "time" seconds
         self._ticks = ticks or {}
         self._trade_mode = trade_mode
         self._server = server
@@ -109,6 +113,13 @@ class FakeMT5:
         if t is None:
             return None
         return self._Obj(time_msc=int(t.time.timestamp() * 1000), bid=t.bid, ask=t.ask, volume_real=t.volume)
+
+    def copy_rates_from_pos(self, symbol, timeframe, start_pos, count):
+        bars = self._rates.get((symbol, timeframe))
+        if bars is None:
+            return []
+        end = len(bars) - start_pos
+        return bars[max(0, end - count):end]
 
     def order_send(self, request):  # pragma: no cover - must never be reached by read-only code
         self.order_send_calls += 1

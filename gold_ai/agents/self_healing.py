@@ -46,6 +46,10 @@ PARAM_BOUNDS: dict[str, tuple[float, float]] = {
     "reversion_distance_atr": (0.2, 1.5),
     "max_hold_seconds": (300, 4 * 3600),
 }
+# Swing trades are held for days, so their hold-time range differs; everything else is shared.
+STYLE_BOUNDS: dict[str, dict[str, tuple[float, float]]] = {
+    "swing": {"max_hold_seconds": (4 * 3600, 7 * 86400)},
+}
 MAX_RELATIVE_STEP = 0.25   # no single perturbation moves a parameter by more than 25%
 
 
@@ -187,8 +191,8 @@ def diagnose(report: DeteriorationReport) -> list[str]:
 
 
 # -- candidate generation ---------------------------------------------------------
-def _clip(name: str, value: float):
-    lo, hi = PARAM_BOUNDS[name]
+def _clip(name: str, value: float, style: str = "scalp"):
+    lo, hi = STYLE_BOUNDS.get(style, {}).get(name, PARAM_BOUNDS[name])
     v = min(hi, max(lo, value))
     return int(round(v)) if name == "max_hold_seconds" else round(v, 4)
 
@@ -197,7 +201,7 @@ def _perturb(base: StrategyParams, changes: dict[str, float]) -> StrategyParams:
     d = asdict(base)
     for k, factor in changes.items():
         factor = max(1 - MAX_RELATIVE_STEP, min(1 + MAX_RELATIVE_STEP, factor))
-        d[k] = _clip(k, d[k] * factor)
+        d[k] = _clip(k, d[k] * factor, base.style)
     # Never increase exploration (it only ever applies in simulation anyway).
     d["exploration_rate"] = min(d["exploration_rate"], base.exploration_rate)
     # Confidence floor may only rise.
@@ -274,6 +278,19 @@ def _json(x):
     return x
 
 
+def model_scope(m: dict) -> tuple[str | None, str | None, str]:
+    """(broker, symbol, style) a registered model was validated for, read from its evidence notes.
+    Models registered before trade styles existed have no symbol and count as scalping."""
+    try:
+        n = json.loads(m.get("notes") or "{}")
+    except (TypeError, ValueError):
+        n = {}
+    if not isinstance(n, dict):
+        n = {}
+    style = n.get("style") or (m.get("params") or {}).get("style") or "scalp"
+    return n.get("broker"), n.get("symbol"), style
+
+
 class SelfHealingAgent:
     def __init__(self, settings: Settings, spec: SymbolSpec, store: MemoryStore, *,
                  thresholds: DeteriorationThresholds | None = None, min_backtest_trades: int = 5,
@@ -286,6 +303,7 @@ class SelfHealingAgent:
         self.persist_runs = persist_runs
         self._bt = backtest_fn
         self._wf = walkforward_fn
+        self._style = "scalp"
 
     # -- history -----------------------------------------------------------------
     def _append_history(self, entry: dict, actor: str, action: str) -> None:
@@ -307,6 +325,7 @@ class SelfHealingAgent:
                   actor: str = "self_healing", feed_ticks: list[Tick] | None = None) -> HealingCycleResult:
         # feed_ticks: the window checked for data gaps / staleness (default: recent_ticks). The scheduled
         # cycle passes only the last minutes so normal daily/weekend market closures are not flagged.
+        self._style = incumbent.style
         rep = detect_deterioration(baseline_trades, recent_trades,
                                    ticks=recent_ticks if feed_ticks is None else feed_ticks, now=now,
                                    error_counters=error_counters, thresholds=self.thresholds)
@@ -356,7 +375,8 @@ class SelfHealingAgent:
                 version = f"heal-{cand.version()[6:]}-{uuid.uuid4().hex[:6]}"
                 state = (bt.final_model.to_dict() if getattr(bt, "final_model", None) is not None
                          else (model or ModelState()).to_dict())
-                evidence = {"cycle": cycle.cycle_id, "diagnosis": diag, "backtest": ev.backtest_metrics,
+                evidence = {"cycle": cycle.cycle_id, "broker": self.spec.broker, "symbol": self.spec.symbol,
+                            "style": cand.style, "diagnosis": diag, "backtest": ev.backtest_metrics,
                             "walkforward": {"verdict": wf.verdict, "oos_expectancy": wf.oos_expectancy,
                                             "oos_trades": wf.oos_trades, "run_ids": list(wf.run_ids)},
                             "incumbent": cycle.incumbent_walkforward}
@@ -370,7 +390,8 @@ class SelfHealingAgent:
 
     def _record(self, c: HealingCycleResult, actor: str) -> None:
         self._append_history({
-            "cycle_id": c.cycle_id, "broker": self.spec.broker, "symbol": self.spec.symbol, "outcome": c.action, "findings": [asdict(f) for f in c.deterioration.findings],
+            "cycle_id": c.cycle_id, "broker": self.spec.broker, "symbol": self.spec.symbol,
+            "style": self._style, "outcome": c.action, "findings": [asdict(f) for f in c.deterioration.findings],
             "diagnosis": c.diagnosis, "incumbent": c.incumbent_version,
             "incumbent_walkforward": c.incumbent_walkforward,
             "candidates": [{"strategy_version": e.strategy_version, "passed": e.passed, "reasons": e.reasons,
@@ -384,8 +405,12 @@ class SelfHealingAgent:
         if getattr(user, "role", None) != "owner":
             raise PermissionError("only the owner can change the approved model")
 
-    def _approved(self) -> list[str]:
-        return [m["version"] for m in self.store.list_models() if m["stage"] == "approved"]
+    def _approved(self, like: dict | None = None) -> list[str]:
+        """Approved versions; with `like`, only those for the same symbol and trade style (one approved
+        strategy per engine, so promoting a gold swing version does not retire the BTCUSD scalping one)."""
+        scope = model_scope(like) if like else None
+        return [m["version"] for m in self.store.list_models()
+                if m["stage"] == "approved" and (scope is None or model_scope(m) == scope)]
 
     def promote(self, version: str, owner_user) -> dict:
         """Owner-only: validated -> approved. The previous approved model is retired.
@@ -396,7 +421,7 @@ class SelfHealingAgent:
             raise KeyError(version)
         if m["stage"] != "validated":
             raise ValueError(f"only 'validated' models can be promoted (stage is {m['stage']!r})")
-        previous = self._approved()
+        previous = self._approved(m)
         for v in previous:
             self.store.set_model_stage(v, "retired", owner_user.username, f"superseded by {version}")
         self.store.set_model_stage(version, "approved", owner_user.username, "owner promotion")
@@ -413,7 +438,7 @@ class SelfHealingAgent:
             raise KeyError(to_version)
         if m["stage"] not in ("retired", "validated", "approved"):
             raise ValueError(f"cannot roll back to a model in stage {m['stage']!r}")
-        previous = [v for v in self._approved() if v != to_version]
+        previous = [v for v in self._approved(m) if v != to_version]
         for v in previous:
             self.store.set_model_stage(v, "retired", owner_user.username, f"rollback to {to_version}")
         if m["stage"] != "approved":

@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import datetime, timedelta, timezone
 from typing import Protocol
 
@@ -35,8 +35,11 @@ class LiveVirtualEngine:
         if hasattr(source, "order_send"):
             raise TypeError("live virtual engine must be given a read-only quote source")
         self.settings, self.spec, self.source, self.store = settings, spec, source, store
-        self.key = f"virtual:{spec.broker}:{spec.symbol}"
         params = params or StrategyParams()
+        self.style = params.style
+        # Scalping keeps the original key, so its learning from before trade styles existed carries on.
+        self.key = f"virtual:{spec.broker}:{spec.symbol}" + ("" if self.style == "scalp" else f":{self.style}")
+        params = self._restore_params(params)
         model = self._restore_model()
         self.agent = TradingDecisionAgent(params, model)
         equity = store.kv_get(f"{self.key}:equity", starting_equity)
@@ -54,6 +57,33 @@ class LiveVirtualEngine:
         self.signal_hook = None
 
     # -- persistence -------------------------------------------------------------
+    def _restore_params(self, default: StrategyParams) -> StrategyParams:
+        """The owner-promoted strategy for this engine, if one was applied; else `default`."""
+        d = self.store.kv_get(f"{self.key}:params")
+        if d:
+            try:
+                p = StrategyParams(**d)
+                if p.style == self.style:
+                    # Exploration is an engine setting, not part of a promoted strategy.
+                    return replace(p, exploration_rate=default.exploration_rate)
+            except (TypeError, ValueError) as e:
+                log.warning("could not restore promoted strategy for %s (%s); using default", self.key, e)
+        return default
+
+    def apply_params(self, params: StrategyParams, version: str | None = None) -> None:
+        """Switch to an owner-promoted strategy. The learned model is kept (learning continues), and open
+        virtual positions keep the stops they were opened with."""
+        if params.style != self.style:
+            raise ValueError(f"strategy is for {params.style} trades, this engine trades {self.style}")
+        params = replace(params, exploration_rate=self.agent.params.exploration_rate)
+        self.agent.params = params
+        self.loop.sim.max_hold_seconds = params.max_hold_seconds
+        d = asdict(params)
+        d["timeframes"] = list(params.timeframes)
+        self.store.kv_set(f"{self.key}:params", d)
+        self.store.kv_set(f"{self.key}:params_version", version)
+        log.info("%s: now trading strategy %s (%s)", self.key, params.version(), version or "unnamed")
+
     def _restore_model(self) -> ModelState:
         d = self.store.kv_get(f"{self.key}:model")
         if d:
@@ -102,30 +132,54 @@ class LiveVirtualEngine:
         self._persist()
 
     # -- running --------------------------------------------------------------------
-    def warm_up(self, lookback: timedelta = timedelta(days=7), now: datetime | None = None,
+    def warm_up(self, lookback: timedelta | None = None, now: datetime | None = None,
                 chunk: timedelta = timedelta(hours=6)) -> int:
         """Rebuild market state (multi-timeframe bars, features) from ticks already stored for this broker/symbol.
 
         Market state only: no decisions, fills or learning happen on these ticks, so a restart does
         not have to wait for 20 live M5 bars, and H1/H4 analysis has history. Loaded in `chunk`
         slices to bound memory (~0.5 M ticks per trading day). Returns the number of ticks replayed.
+
+        When the quote source can supply the broker's own bars (`rates`), bars older than the first
+        replayed tick are seeded from it first, so a symbol collected for only a few hours still has
+        H1/H4/D1 history. Swing replays 2 days of ticks (its bars come from the broker), scalping 7.
         """
         now = now or datetime.now(timezone.utc)
+        if lookback is None:
+            lookback = timedelta(days=7) if self.style == "scalp" else timedelta(days=2)
         n, first, last = 0, None, None
         t = now - lookback
         while t < now:
             stop = min(t + chunk, now)
             ticks = self.store.load_ticks(self.spec.broker, self.spec.symbol, t, stop)
+            if ticks and first is None:
+                self._seed_bars(ticks[0].time)
             for x in ticks:
                 self.loop.market.on_tick(x)
                 first, last = first or x, x
                 n += 1
             t = stop
+        if first is None:
+            self._seed_bars(now)
         if last is not None:
             self._last_tick_time = last.time
             log.info("virtual engine warmed up from %d stored ticks (%s .. %s), ready=%s", n,
-                     first.time.isoformat(), last.time.isoformat(), self.loop.market.state().ready)
+                     first.time.isoformat(), last.time.isoformat(), self.loop.market.ready)
         return n
+
+    def _seed_bars(self, before: datetime) -> int:
+        rates = getattr(self.source, "rates", None)
+        if rates is None:
+            return 0
+        mtf, added = self.loop.market.mtf, 0
+        for tf in mtf.bars:
+            try:
+                added += mtf.seed(tf, rates(self.spec.symbol, tf, mtf.max_bars), before)
+            except Exception as e:   # bars are a convenience; ticks alone still work
+                log.warning("%s: could not load broker %s bars (%s)", self.key, tf, e)
+        if added:
+            log.info("%s: seeded %d broker bars older than %s", self.key, added, before.isoformat())
+        return added
 
     def poll_once(self) -> Tick | None:
         tick = self.source.latest_tick(self.spec.symbol)
@@ -168,7 +222,9 @@ class LiveVirtualEngine:
 
     def status(self) -> dict:
         return {
-            "broker": self.spec.broker, "symbol": self.spec.symbol, "equity": self.loop.equity,
+            "broker": self.spec.broker, "symbol": self.spec.symbol, "style": self.style,
+            "timeframes": list(self.agent.params.timeframes), "strategy_version": self.agent.params.version(),
+            "ready": self.loop.market.ready, "equity": self.loop.equity,
             "open_positions": len(self.loop.sim.positions), "ticks_processed": self.loop.stats.ticks,
             "decisions": self.loop.stats.decisions, "model_version": self.agent.model.version(),
             "learning_started": self.store.kv_get(f"{self.key}:learning_started"),

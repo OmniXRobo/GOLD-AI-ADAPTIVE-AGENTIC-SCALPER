@@ -4,6 +4,7 @@ import { useTrades } from "../components/domain";
 import { Card, DataView, DomainBadge, Empty, PageHeader } from "../components/ui";
 import { fmtMoney, fmtNum, humanize, signClass } from "../lib";
 import { canonical, instrumentChoices, instrumentLabel, pipText, priceDigits, SymbolChips, useInstruments } from "../instruments";
+import { STYLE_INFO, StyleChips, styleOf, StyleTag, type TradeStyle } from "../styles";
 import { holdTime, inPeriod, periodStats, PERIODS, tradePips, type Period, type PeriodStats } from "../results";
 
 function shortTime(iso: string): string {
@@ -56,6 +57,7 @@ function History({ trades }: { trades: Trade[] }) {
             <div className="hist-top">
               <span className={`signal-side ${side === "BUY" ? "buy" : "sell"}`}>{side}</span>
               <b>{instrumentLabel(t.symbol)}</b>
+              <StyleTag style={styleOf(t)} />
               <span className="muted small">{t.symbol}</span>
               <b className={`hist-pips ${signClass(p)}`}>{p === null ? "n/a" : `${p > 0 ? "+" : ""}${fmtNum(p, 0)} pips`}</b>
             </div>
@@ -91,12 +93,16 @@ export default function ResultsPage() {
   const [domain, setDomain] = useState<Domain>("virtual");
   const [period, setPeriod] = useState<Period>("week");
   const [sym, setSym] = useState<string | null>(null);
+  const [style, setStyle] = useState<TradeStyle | null>(null);
   const st = useTrades(domain, 5000, 60000);
   const running = useInstruments(60000);
   const choices = useMemo(() => instrumentChoices(running.data, (st.data?.trades ?? []).map((t) => t.symbol)), [running.data, st.data]);
   const trades = useMemo(
-    () => (st.data ? inPeriod(st.data.trades, period).filter((t) => sym === null || canonical(t.symbol) === sym) : []),
-    [st.data, period, sym],
+    () =>
+      st.data
+        ? inPeriod(st.data.trades, period).filter((t) => (sym === null || canonical(t.symbol) === sym) && (style === null || styleOf(t) === style))
+        : [],
+    [st.data, period, sym, style],
   );
   const label = PERIODS.find(([k]) => k === period)?.[1] ?? "";
   const pipNote = sym ? `${pipText(sym)}.` : "Pips are counted in each trade's own instrument (gold $0.10, Bitcoin $1, forex 0.0001, JPY pairs 0.01), so the all-markets total mixes instruments.";
@@ -111,6 +117,7 @@ export default function ResultsPage() {
         ))}
       </div>
       <SymbolChips choices={choices} value={sym} onChange={setSym} allLabel="All markets" />
+      <StyleChips value={style} onChange={setStyle} />
       <div className="chips chips-scroll">
         {PERIODS.map(([k, l]) => (
           <button key={k} className={`chip ${period === k ? "active" : ""}`} onClick={() => setPeriod(k)}>
@@ -118,7 +125,7 @@ export default function ResultsPage() {
           </button>
         ))}
       </div>
-      <Card title={`${sym ? `${instrumentLabel(sym)} · ` : ""}${label} · ${DOMAIN_TITLE[domain]}`} badge={<DomainBadge domain={domain} />}>
+      <Card title={`${sym ? `${instrumentLabel(sym)} · ` : ""}${style ? `${STYLE_INFO[style].label} · ` : ""}${label} · ${DOMAIN_TITLE[domain]}`} badge={<DomainBadge domain={domain} />}>
         <DataView state={st}>{() => <Summary s={periodStats(trades)} />}</DataView>
         <p className="muted small">
           {pipNote} Win rate counts a trade as won only if it made money after costs.{" "}

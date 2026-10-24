@@ -110,4 +110,20 @@ class MultiTimeframeBuilder:
         return closed
 
 
+    def seed(self, timeframe: str, candles: list[Candle], before: datetime) -> int:
+        """Prepend closed broker bars that end at or before `before` (the first tick about to be replayed),
+        so higher timeframes have history without waiting days for ticks. Returns the number added."""
+        if timeframe not in self.bars:
+            return 0
+        secs = TIMEFRAMES[timeframe]
+        have = self.bars[timeframe]
+        first = have[0].time if have else None
+        old = [c for c in candles if c.time.timestamp() + secs <= before.timestamp()
+               and (first is None or c.time < first)]
+        old.sort(key=lambda c: c.time)
+        merged = old + have
+        self.bars[timeframe] = merged[-self.max_bars:]
+        return len(old)
+
+
 __all__ = ["TIMEFRAMES", "CandleBuilder", "build_candles", "resample", "MultiTimeframeBuilder", "bar_open"]

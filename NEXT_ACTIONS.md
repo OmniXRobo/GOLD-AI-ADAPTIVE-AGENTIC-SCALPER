@@ -1,5 +1,9 @@
 # Next actions
 
+00. (VPS thread) After the trade-styles PR is merged: `git pull`, `npm ci && npm run build` in `dashboard/`, restart
+   GoldAI-Equiti (keep `--symbol XAUUSD.sd`), check the log for `seeded ... broker bars` and `:swing` engines, then
+   confirm BTCUSD swing shows ready on the weekend. Build Android 1.4.0 with the existing key.
+
 0. (VPS thread) After the multi-instrument PR is merged: `git pull`, `npm ci && npm run build` in `dashboard/`, restart
    the GoldAI-Equiti task, check the log for `EURUSD -> EURUSD.sd` lines and disk use; build Android 1.3.0 with the
    existing key. New instruments warm up for ~100 minutes of quotes before they can signal.
