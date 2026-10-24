@@ -54,10 +54,20 @@ class MarketState:
 
 
 class MarketIntelligenceAgent:
-    """Consumes ticks, maintains multi-timeframe bars, emits a feature vector."""
+    """Consumes ticks, maintains multi-timeframe bars, emits a feature vector.
 
-    def __init__(self, tick_window: int = 300, warmup_m5_bars: int = 20):
+    `timeframes` are the (fast, base, slow) bars the bar features use. Feature names keep the scalping
+    timeframes (mom_m1_5 = fast, mom_m5_3 / atr_m5 = base, mom_m15_3 = slow) so every trade style shares
+    one model schema; a swing agent with ("M15", "H1", "H4") reads atr_m5 as the hourly ATR.
+    """
+
+    def __init__(self, tick_window: int = 300, warmup_m5_bars: int = 20,
+                 timeframes: tuple[str, str, str] = ("M1", "M5", "M15")):
         self.mtf = MultiTimeframeBuilder()
+        missing = [tf for tf in timeframes if tf not in self.mtf.bars]
+        if len(timeframes) != 3 or missing:
+            raise ValueError(f"need three known timeframes (fast, base, slow), got {timeframes}")
+        self.timeframes = tuple(timeframes)
         self.ticks: deque[Tick] = deque(maxlen=tick_window)
         self.spreads: deque[float] = deque(maxlen=2000)
         self.warmup_m5_bars = warmup_m5_bars
@@ -68,11 +78,17 @@ class MarketIntelligenceAgent:
         self.spreads.append(tick.spread)
         return self.mtf.update(tick)
 
-    def state(self) -> MarketState:
+    @property
+    def ready(self) -> bool:
+        return len(self.mtf.bars[self.timeframes[1]]) >= self.warmup_m5_bars and len(self.ticks) >= 30
+
+    def state(self, advance: bool = False) -> MarketState:
+        """Current features. Only the trading loop passes advance=True: tick_accel is the change in tick
+        velocity since the previous decision, so a dashboard read must not move that reference point."""
         bars = self.mtf.bars
-        m1, m5, m15 = bars["M1"], bars["M5"], bars["M15"]
+        m1, m5, m15 = (bars[tf] for tf in self.timeframes)   # fast, base, slow
         last = self.ticks[-1] if self.ticks else None
-        ready = len(m5) >= self.warmup_m5_bars and len(self.ticks) >= 30
+        ready = self.ready
         f = dict.fromkeys(FEATURE_NAMES, 0.0)
         if not ready or last is None:
             return MarketState(f, "unknown", False, last)
@@ -85,7 +101,8 @@ class MarketIntelligenceAgent:
         vel = (win[-1].mid - win[0].mid) / dt / scale
         f["tick_velocity"] = vel
         f["tick_accel"] = vel - self._prev_velocity
-        self._prev_velocity = vel
+        if advance:
+            self._prev_velocity = vel
 
         rets = [b.mid - a.mid for a, b in zip(ticks, ticks[1:])]
         short = rets[-50:]

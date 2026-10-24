@@ -7,6 +7,7 @@ from datetime import datetime
 from enum import Enum
 
 from ..domain import Tick, TradeProposal, utcnow
+from ..agents.decision import STYLE_LABELS
 from ..instruments import instrument_for
 
 
@@ -40,15 +41,18 @@ class Signal:
     deliveries: list[dict] = field(default_factory=list)
     acted_by: str | None = None
     acted_at: datetime | None = None
+    style: str = "scalp"                 # scalp | swing (signals stored before styles existed are scalping)
+    max_hold_seconds: int | None = None
 
     @classmethod
     def from_proposal(cls, p: TradeProposal, tick: Tick, broker: str, symbol: str = "XAUUSD",
-                      now: datetime | None = None) -> "Signal":
+                      now: datetime | None = None, max_hold_seconds: int | None = None) -> "Signal":
         return cls(
             id=uuid.uuid4().hex[:12], broker=broker, symbol=symbol, side=p.side.value, entry=p.entry,
             stop_loss=p.stop_loss, take_profit=p.take_profit, risk_reward=round(p.risk_reward, 4),
             suggested_lots=p.lots, spread=round(tick.spread, 6), estimated_costs=p.expected_cost,
             confidence=p.confidence, reason=p.explanation, timestamp=now or utcnow(), expiry=p.valid_until,
+            style=p.style, max_hold_seconds=max_hold_seconds,
         )
 
     def is_expired(self, now: datetime) -> bool:
@@ -70,6 +74,7 @@ class Signal:
                  pip_size=inst.pip_size if inst else None, digits=self.digits,
                  sl_pips=self.pips(self.entry - self.stop_loss), tp_pips=self.pips(self.take_profit - self.entry))
         d["status"] = self.status.value
+        d["style_label"] = STYLE_LABELS.get(self.style, self.style)
         for k in ("timestamp", "expiry", "acted_at"):
             d[k] = d[k].isoformat() if d[k] else None
         return d
@@ -83,6 +88,15 @@ class Signal:
         return cls(**d)
 
 
+def _duration(seconds: int) -> str:
+    if seconds >= 86400 and seconds % 86400 == 0:
+        return f"{seconds // 86400} day{'s' if seconds >= 172800 else ''}"
+    if seconds >= 3600:
+        h = seconds / 3600
+        return f"{h:g} hour{'s' if h != 1 else ''}"
+    return f"{seconds // 60} min"
+
+
 def format_signal(s: Signal) -> str:
     """Plain-text message used by every channel. Always labeled signal-only."""
     exp = s.expiry.strftime("%H:%M:%S UTC")
@@ -90,13 +104,14 @@ def format_signal(s: Signal) -> str:
     sl_p, tp_p = s.pips(s.entry - s.stop_loss), s.pips(s.take_profit - s.entry)
     sl_txt = f" ({sl_p:.1f} pips)" if sl_p is not None else ""
     tp_txt = f" ({tp_p:.1f} pips)" if tp_p is not None else ""
+    hold = f" | holds up to {_duration(s.max_hold_seconds)}" if s.max_hold_seconds else ""
     return (
         "SIGNAL ONLY — no order placed\n"
-        f"{s.side} {s.symbol} @ {s.entry:.{n}f} ({s.broker})\n"
+        f"{STYLE_LABELS.get(s.style, s.style).upper()} {s.side} {s.symbol} @ {s.entry:.{n}f} ({s.broker})\n"
         f"SL {s.stop_loss:.{n}f}{sl_txt} | TP {s.take_profit:.{n}f}{tp_txt} | R:R {s.risk_reward:.2f}\n"
         f"Suggested lots {s.suggested_lots:.2f} | spread {s.spread:.{n}f} | est. costs {s.estimated_costs:.2f}\n"
         f"Confidence {s.confidence:.0%} (calibrated)\n"
         f"Reason: {s.reason}\n"
-        f"Valid until {exp} | id {s.id}\n"
+        f"Valid until {exp}{hold} | id {s.id}\n"
         "Approving records your decision only; it does not execute a trade."
     )

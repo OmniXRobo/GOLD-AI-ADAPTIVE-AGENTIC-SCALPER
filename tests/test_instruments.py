@@ -109,9 +109,11 @@ def test_runtime_runs_one_engine_per_instrument(settings, store):
     app, supervisor = build_runtime(settings, store, use_mt5=True,
                                     connector_factory=lambda: MT5ReadOnlyConnector(fake, server_utc_offset_hours=0))
     st = app.state.gold
-    assert [e.spec.symbol for e in st.virtual_engines.values()] == ["XAUUSD.sd", "BTCUSD.sd", "EURUSD.sd",
-                                                                     "USDJPY.sd"]
-    assert {"collector", "live_virtual", "collector:EURUSD.sd", "live_virtual:BTCUSD.sd"} <= set(supervisor.status())
+    assert [(e.spec.symbol, e.style) for e in st.virtual_engines.values()] == [
+        (sym, style) for sym in ("XAUUSD.sd", "BTCUSD.sd", "EURUSD.sd", "USDJPY.sd") for style in ("scalp", "swing")]
+    assert {"collector", "live_virtual", "live_virtual:swing", "collector:EURUSD.sd", "live_virtual:BTCUSD.sd",
+            "live_virtual:swing:BTCUSD.sd"} <= set(supervisor.status())
+    assert st.virtual_engines["equiti:EURUSD.sd:swing"].key == "virtual:equiti:EURUSD.sd:swing"
     eur = st.virtual_engines["equiti:EURUSD.sd"]
     assert eur.key == "virtual:equiti:EURUSD.sd" and eur.loop.risk.cfg.max_spread_points == 20
     assert eur.poll_once() is not None
@@ -127,6 +129,7 @@ def test_runtime_runs_one_engine_per_instrument(settings, store):
     h = {"Authorization": f"Bearer {tok}"}
     inst = c.get("/api/instruments", headers=h).json()
     assert [i["instrument"] for i in inst] == ["XAUUSD", "BTCUSD", "EURUSD", "USDJPY"]
+    assert [x["style"] for x in inst[0]["styles"]] == ["scalp", "swing"]
     assert inst[2]["pip_size"] == 0.0001 and inst[2]["digits"] == 5
     rows = c.get("/api/trades/virtual?symbol=EURUSD", headers=h).json()["trades"]
     assert [r["symbol"] for r in rows] == ["EURUSD.sd"] and rows[0]["pip_size"] == 0.0001
@@ -140,7 +143,7 @@ def test_runtime_symbols_setting_limits_instruments(settings, store):
     fake = FakeMT5(SYMS, {}, server="Equiti-Demo", company="Equiti")
     app, _ = build_runtime(settings, store, use_mt5=True,
                            connector_factory=lambda: MT5ReadOnlyConnector(fake, server_utc_offset_hours=0))
-    assert list(app.state.gold.virtual_engines) == ["equiti:EURUSD"]   # no gold suffix to prefer
+    assert list(app.state.gold.virtual_engines) == ["equiti:EURUSD", "equiti:EURUSD:swing"]   # no gold suffix
     assert instrument_for("EURUSD").name == "EURUSD"
 
 

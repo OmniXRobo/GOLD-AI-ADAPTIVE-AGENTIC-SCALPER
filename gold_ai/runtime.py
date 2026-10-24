@@ -18,11 +18,11 @@ from typing import Callable
 
 from fastapi import HTTPException
 
-from .agents.decision import StrategyParams
+from .agents.decision import STYLES, StrategyParams, style_params
 from .agents.health import HeartbeatRegistry, Supervisor, SystemHealthAgent
 from .agents.institutional import InstitutionalFlowAgent
 from .agents.maturity import assess, assess_all_brokers
-from .agents.self_healing import SelfHealingAgent
+from .agents.self_healing import SelfHealingAgent, model_scope
 from .api.app import AppState, create_app, json_safe_any
 from .backup import BackupService
 from .brokers.mock_feed import synthetic_spec
@@ -108,18 +108,32 @@ def register_services(state: AppState, *, news: NewsAgent | None = None,
         if user.role != "owner":
             raise HTTPException(403, "owner only")
 
+    def apply_to_engine(version: str) -> dict:
+        """Load an approved version's strategy into the live virtual engine it was validated for."""
+        m = s.store.get_model(version) or {}
+        broker, symbol, style = model_scope(m)
+        engine = next((e for e in s.virtual_engines.values() if e.style == style
+                       and (symbol is None or e.spec.symbol == symbol)
+                       and (broker is None or e.spec.broker == broker)), None)
+        if engine is None:
+            return {"applied": False, "reason": f"no running {style} engine for {symbol or 'this model'}"}
+        engine.apply_params(StrategyParams(**m["params"]), version)
+        return {"applied": True, "engine": engine.key, "strategy_version": engine.agent.params.version()}
+
     def promote(version, user):
         owner_only(user)
         try:
-            return json_safe_any(healer.promote(version, user))
-        except (KeyError, ValueError, PermissionError) as e:
+            out = healer.promote(version, user)
+            return json_safe_any({**out, "live_engine": apply_to_engine(version)})
+        except (KeyError, ValueError, PermissionError, TypeError) as e:
             raise HTTPException(400, str(e))
 
     def rollback(version, user):
         owner_only(user)
         try:
-            return json_safe_any(healer.rollback(version, user))
-        except (KeyError, ValueError, PermissionError) as e:
+            out = healer.rollback(version, user)
+            return json_safe_any({**out, "live_engine": apply_to_engine(version)})
+        except (KeyError, ValueError, PermissionError, TypeError) as e:
             raise HTTPException(400, str(e))
 
     def backup_list():
@@ -175,12 +189,14 @@ def scheduled_self_healing(engine, healer: SelfHealingAgent, store: MemoryStore,
     from .domain import MemoryDomain
     from .engines.walkforward import WalkForwardConfig
     now = now or datetime.now(timezone.utc)
-    key = f"self_healing:last_cycle:{engine.spec.broker}:{engine.spec.symbol}"
+    style = getattr(engine, "style", "scalp")
+    key = f"self_healing:last_cycle:{engine.spec.broker}:{engine.spec.symbol}" + ("" if style == "scalp" else f":{style}")
     last = store.kv_get(key)
     if last and now - datetime.fromisoformat(last) < interval:
         return None
-    trades = [t for t in store.load_trades(MemoryDomain.VIRTUAL, broker=engine.spec.broker)
-              if t.symbol == engine.spec.symbol and t.exit_time is not None]
+    trades = [t for t in store.load_trades(MemoryDomain.VIRTUAL, broker=engine.spec.broker,
+                                           symbols=[engine.spec.symbol])
+              if t.exit_time is not None and t.context.get("style", "scalp") == style]
     trades.sort(key=lambda t: t.exit_time)
     recent, baseline = trades[-SELF_HEAL_RECENT_TRADES:], trades[:-SELF_HEAL_RECENT_TRADES][-200:]
     ticks = store.load_ticks(engine.spec.broker, engine.spec.symbol, now - timedelta(days=2), now)
@@ -293,21 +309,32 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
             collector = TickCollector(conn, store, spec.broker, spec.symbol)
             collectors[spec.symbol] = collector
             supervisor.register(f"collector{tag}", collector.run)
-            engine = LiveVirtualEngine(settings, spec, conn, store, params=StrategyParams(exploration_rate=0.2),
-                                       account=f"virtual-{acct.login}")
-            state.virtual_engines[f"{spec.broker}:{spec.symbol}"] = engine
-            engines.append(engine)
-            supervisor.register(f"live_virtual{tag}", _engine_worker(engine, heartbeats, f"live_virtual{tag}"))
+            # One engine per trade style: scalping (M1/M5/M15, held up to 1 h) and swing (M15/H1/H4, up to
+            # 3 days). Each has its own virtual account, open position, learning model and trade history.
+            for style in settings.trade_styles:
+                if style not in STYLES:
+                    log.warning("unknown trade style %s in settings.trade_styles; supported: %s", style,
+                                ", ".join(STYLES))
+                    continue
+                engine = LiveVirtualEngine(settings, spec, conn, store,
+                                           params=style_params(style, exploration_rate=0.2),
+                                           account=f"virtual-{acct.login}")
+                sfx = "" if style == "scalp" else f":{style}"
+                state.virtual_engines[f"{spec.broker}:{spec.symbol}{sfx}"] = engine
+                engines.append(engine)
+                name = f"live_virtual{sfx}{tag}"
+                supervisor.register(name, _engine_worker(engine, heartbeats, name))
 
     svc = register_services(state, heartbeats=heartbeats, supervisor=supervisor)
     if engines:
         news: NewsAgent = svc["news"]
         signals: SignalService = svc["signals"]
-        healers = {e.spec.symbol: (svc["healer"] if i == 0 else SelfHealingAgent(settings, e.spec, store))
+        healers = {e.key: (svc["healer"] if i == 0 else SelfHealingAgent(settings, e.spec, store))
                    for i, e in enumerate(engines)}
         for engine in engines:
             engine.signal_hook = (lambda p, tick, e=engine:
-                                  signals.create(p, tick, e.spec.broker, e.spec.symbol))
+                                  signals.create(p, tick, e.spec.broker, e.spec.symbol,
+                                                 max_hold_seconds=e.agent.params.max_hold_seconds))
 
         def news_sync(stop: threading.Event) -> None:
             while True:   # refresh at start, then every 5 minutes
@@ -330,10 +357,10 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
             while not stop.wait(delay):
                 for e in engines:
                     try:
-                        scheduled_self_healing(e, healers[e.spec.symbol], store,
+                        scheduled_self_healing(e, healers[e.key], store,
                                                error_counters={"collector": collectors[e.spec.symbol].errors})
                     except Exception:
-                        log.exception("self-healing check failed for %s", e.spec.symbol)
+                        log.exception("self-healing check failed for %s", e.key)
                 delay = 600
         supervisor.register("self_healing", self_healing)
     app = create_app(state, dashboard_dir)

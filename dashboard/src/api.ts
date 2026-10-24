@@ -47,6 +47,10 @@ export interface Health {
 export interface VirtualEngineStatus {
   broker: string;
   symbol: string;
+  /** "scalp" or "swing"; each style is its own engine with its own virtual account and memory. */
+  style?: string;
+  timeframes?: string[];
+  ready?: boolean;
   equity?: number;
   open_positions?: number;
   ticks_processed?: number;
@@ -142,6 +146,8 @@ export interface Instrument {
   regime: string | null;
   last_tick: LastTick | null;
   open_positions: number;
+  /** Trade styles running on this instrument. */
+  styles?: { style: string; ready: boolean; open_positions: number; timeframes: string[]; max_hold_seconds: number }[];
 }
 
 export interface Trade {
@@ -175,6 +181,8 @@ export interface Trade {
   is_estimated_fill?: boolean;
   context?: Record<string, unknown>;
   explanation?: string;
+  /** "scalp" or "swing" (older trades are scalping). */
+  style?: string;
   [k: string]: unknown;
 }
 
@@ -358,6 +366,9 @@ export interface Signal {
   digits?: number;
   sl_pips?: number | null;
   tp_pips?: number | null;
+  style?: string;
+  style_label?: string;
+  max_hold_seconds?: number | null;
   [k: string]: unknown;
 }
 

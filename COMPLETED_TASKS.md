@@ -78,3 +78,7 @@ All items below have code + passing tests unless noted.
   per-instrument decimals and SL/TP pips, server-time offset tracked per symbol (BTC streams through weekends).
   Dashboard market filters and Android 1.3.0 source. Tests: tests/test_instruments.py.
 
+## Session 2g — 2026-10-24
+- Scalping and swing signal styles per instrument (separate engines, memory, signals, self-healing); dashboard
+  style chips and tags; Android 1.4.0 alert label; broker-bar warm-up; promoted versions applied to live engines.
+- Fixes: websocket send-after-close crash, signal store race, state reads moving tick_accel, Signals Domain column.

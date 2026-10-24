@@ -60,7 +60,8 @@ def test_virtual_engine_warms_up_from_stored_ticks(settings, store):
     app, supervisor = build_runtime(settings, store, use_mt5=True,
                                     connector_factory=lambda: MT5ReadOnlyConnector(fake))
     eng = next(iter(app.state.gold.virtual_engines.values()))
-    assert set(supervisor.status()) == {"collector", "live_virtual", "news_sync", "self_healing"}
+    assert set(supervisor.status()) == {"collector", "live_virtual", "live_virtual:swing", "news_sync",
+                                        "self_healing"}
     supervisor.start()                                 # warm-up runs in the live_virtual worker
     try:
         for _ in range(1000):

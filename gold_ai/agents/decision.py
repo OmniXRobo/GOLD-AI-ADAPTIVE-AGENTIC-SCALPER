@@ -41,10 +41,45 @@ class StrategyParams:
     use_mean_reversion: bool = True
     momentum_threshold: float = 0.3
     reversion_distance_atr: float = 0.5
+    # Trade style and the (fast, base, slow) bar timeframes the features are computed on. Scalping reads
+    # M1/M5/M15; swing reads M15/H1/H4, so its ATR, SL/TP and support/resistance are hourly-scale.
+    style: str = "scalp"
+    timeframes: tuple[str, str, str] = ("M1", "M5", "M15")
+
+    def __post_init__(self) -> None:
+        self.timeframes = tuple(self.timeframes)   # JSON/API params arrive as lists
+        if self.style not in STYLES:
+            raise ValueError(f"unknown trade style {self.style!r}; expected one of {', '.join(STYLES)}")
 
     def version(self) -> str:
-        blob = json.dumps(asdict(self), sort_keys=True).encode()
+        d = asdict(self)
+        # Fields added after the first versions are left out at their defaults, so scalping strategy
+        # versions recorded before trade styles existed keep the same id.
+        for k in ("style", "timeframes"):
+            if d[k] == _DEFAULTS[k]:
+                d.pop(k)
+        blob = json.dumps(d, sort_keys=True).encode()
         return "strat-" + hashlib.sha256(blob).hexdigest()[:10]
+
+
+STYLES = ("scalp", "swing")
+STYLE_LABELS = {"scalp": "Scalping", "swing": "Swing"}
+_DEFAULTS = {"style": "scalp", "timeframes": ("M1", "M5", "M15")}
+
+
+def style_params(style: str, **overrides) -> StrategyParams:
+    """Starting strategy for a trade style. Swing holds for up to 3 days with stops on the hourly ATR and
+    a 2R target; it trades far less often, so it is allowed to signal after 30 closed trades per direction
+    instead of 50 (the confidence, expectancy and risk gates are the same)."""
+    if style == "scalp":
+        base: dict = {}
+    elif style == "swing":
+        base = dict(style="swing", timeframes=("M15", "H1", "H4"), sl_atr_mult=1.5, risk_reward=2.0,
+                    trailing_start_r=1.2, trailing_distance_r=1.0, max_hold_seconds=3 * 86400,
+                    signal_validity_seconds=300, min_samples=30)
+    else:
+        raise ValueError(f"unknown trade style {style!r}")
+    return StrategyParams(**{**base, **overrides})
 
 
 class OnlineLogistic:
@@ -217,7 +252,7 @@ class TradingDecisionAgent:
             expected_cost=cost,
             explanation=f"{side.value}: {why}; regime={state.regime}; calibrated conf={conf:.2f}; "
                         f"EV={ev_r:.2f}R{' [EXPLORATION]' if exploring else ''}",
-            strategy_version=p.version(), model_version=self.model.version(),
+            strategy_version=p.version(), model_version=self.model.version(), style=p.style,
         )
         return Decision(side, conf, prop.explanation, prop, f)
 

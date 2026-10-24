@@ -125,6 +125,7 @@ class TradeProposal:
     explanation: str = ""
     strategy_version: str = ""
     model_version: str = ""
+    style: str = "scalp"                  # scalp | swing
 
     @property
     def risk_reward(self) -> float:

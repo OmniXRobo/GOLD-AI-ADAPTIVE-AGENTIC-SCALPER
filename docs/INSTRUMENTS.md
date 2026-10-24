@@ -41,10 +41,12 @@ Each instrument's live virtual engine stores its model, equity, open positions a
 `virtual:<broker>:<symbol>:*`, so one market never learns from another. Its trades go to Memory C with their own
 symbol, and the Results, Signals, Home and Analysis pages filter by instrument. Self-healing runs per instrument.
 Ticks are collected per symbol and warm-up replays each symbol's own stored ticks, so new instruments start
-"warming up" until they have about 20 M5 bars (roughly 100 minutes of quotes).
+"warming up" until they have about 20 M5 bars (roughly 100 minutes of quotes). Since 2026-10-24 the engines
+also load the broker's own recent bars at start, so this wait is usually gone.
 
 ## Load on the VPS
-Nine symbols means nine collectors and nine engines polling the terminal. Tick storage grows with the number of
+Nine symbols means nine collectors and eighteen engines (scalping and swing, docs/TRADE_STYLES.md) polling the
+terminal; set `"trade_styles": ["scalp"]` to run scalping only. Tick storage grows with the number of
 symbols (forex majors and BTC are busy). Watch disk use in System → Health; reduce `symbols` if needed.
 
 ## Backtests for other instruments
