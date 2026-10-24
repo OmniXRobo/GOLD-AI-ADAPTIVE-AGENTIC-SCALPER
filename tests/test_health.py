@@ -113,3 +113,21 @@ def test_supervisor_gives_up_after_max_restarts(store):
 def test_backoff_is_exponential_and_capped():
     sup = Supervisor(base_backoff=1, max_backoff=10)
     assert [sup.backoff(k) for k in (1, 2, 3, 4, 5, 6)] == [1, 2, 4, 8, 10, 10]
+
+
+def test_long_running_supervised_worker_is_not_reported_as_stale_heartbeat():
+    """The supervisor beats worker:<name> only at (re)start; hours later the worker is still healthy."""
+    hb = HeartbeatRegistry()
+    sup = Supervisor(heartbeats=hb)
+    sup.register("collector", lambda stop: stop.wait())
+    sup.start()
+    try:
+        assert wait_for(lambda: sup.status()["collector"]["state"] == "running")
+        hb.beat("live_virtual")
+        later = utcnow() + timedelta(seconds=10)
+        names = {c.name: c.status for c in SystemHealthAgent(heartbeats=hb, supervisor=sup).check_heartbeats(later)}
+        assert "agent:worker:collector" not in names and names["agent:live_virtual"] == Status.OK
+        old = SystemHealthAgent(heartbeats=hb).check_heartbeats(later + timedelta(hours=2))
+        assert {c.name for c in old} >= {"agent:worker:collector"}   # without a supervisor it is still checked
+    finally:
+        sup.stop()

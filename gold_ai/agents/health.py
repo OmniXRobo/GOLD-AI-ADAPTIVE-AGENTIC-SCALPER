@@ -211,6 +211,10 @@ class SystemHealthAgent:
 
     def check_heartbeats(self, now: datetime) -> list[CheckResult]:
         snap = self.heartbeats.snapshot() if self.heartbeats else {}
+        if self.supervisor is not None:
+            # The supervisor beats "worker:<name>" only when it (re)starts a worker, so its age says nothing
+            # about a long-running worker; check_workers reports those threads' real state instead.
+            snap = {k: v for k, v in snap.items() if not k.startswith("worker:")}
         out = []
         for name in sorted(set(snap) | set(self.expected_agents)):
             last = snap.get(name)
