@@ -103,6 +103,12 @@
   USDJPY.sd, AUDUSD.sd, NZDUSD.sd, USDCAD.sd — none skipped. First start hit 6 `database is locked` errors while
   nine collectors back-filled at once; SQLite busy timeout raised from 5 s to 30 s, after which a restart showed
   0 errors and all nine symbols storing ticks.
+- **PR #7 (scalp + swing styles) deployed 2026-10-24 03:12 UTC (weekend; only BTCUSD trading):** tests 194 passed,
+  dashboard built, 9 symbols × 2 styles = 18 engines, no tracebacks. Found: at a weekend start the broker's
+  server-time offset is unknown until a quote moves, so the first engines to warm up (BTCUSD swing and scalp/swing
+  of several forex pairs) got no broker bars and stayed not ready. Seeding is now retried from `poll_once` once
+  the shared connector knows the offset. After restart: 18 of 18 engines seeded broker bars; a read-only check
+  of BTCUSD.lv showed scalp and swing both ready (H1 499 bars, H4 498, D1 499). Tests **195 passed, 1 skipped**.
 
 
 ## 2026-10-22 — session 1 (Linux cloud container, Python 3.13, Node 22)

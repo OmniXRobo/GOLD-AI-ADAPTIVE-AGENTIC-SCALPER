@@ -53,6 +53,8 @@ class LiveVirtualEngine:
         self._stop = threading.Event()
         self._last_tick_time: datetime | None = None
         self.stale_polls = 0
+        self._seed_pending = False
+        self._seed_before: datetime | None = None
         # Called with (proposal, tick) for risk-approved, non-exploratory proposals (signal-only mode).
         self.signal_hook = None
 
@@ -153,6 +155,7 @@ class LiveVirtualEngine:
             stop = min(t + chunk, now)
             ticks = self.store.load_ticks(self.spec.broker, self.spec.symbol, t, stop)
             if ticks and first is None:
+                self._seed_before = ticks[0].time
                 self._seed_bars(ticks[0].time)
             for x in ticks:
                 self.loop.market.on_tick(x)
@@ -160,6 +163,7 @@ class LiveVirtualEngine:
                 n += 1
             t = stop
         if first is None:
+            self._seed_before = now
             self._seed_bars(now)
         if last is not None:
             self._last_tick_time = last.time
@@ -171,6 +175,12 @@ class LiveVirtualEngine:
         rates = getattr(self.source, "rates", None)
         if rates is None:
             return 0
+        if not getattr(self.source, "server_offset_known", True):
+            # Bars need the broker's UTC offset, measured from a moving quote. At a weekend start only
+            # some markets move (BTC), so retry from poll_once once the shared connector knows it.
+            self._seed_pending = True
+            return 0
+        self._seed_pending = False
         mtf, added = self.loop.market.mtf, 0
         for tf in mtf.bars:
             try:
@@ -182,6 +192,8 @@ class LiveVirtualEngine:
         return added
 
     def poll_once(self) -> Tick | None:
+        if self._seed_pending and getattr(self.source, "server_offset_known", True):
+            self._seed_bars(self._seed_before)
         tick = self.source.latest_tick(self.spec.symbol)
         if tick is None:
             self.stale_polls += 1

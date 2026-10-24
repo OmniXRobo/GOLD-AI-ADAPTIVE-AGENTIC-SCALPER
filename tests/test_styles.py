@@ -210,3 +210,24 @@ def test_concurrent_signals_are_all_kept(settings, store):
     for t in threads:
         t.join()
     assert len(svc.list(limit=100)) == 12
+
+
+def test_swing_seeding_retried_once_server_offset_is_known(settings, store):
+    """Weekend start: the offset is unknown during warm-up, so bars are seeded on a later poll."""
+    now = datetime.now(timezone.utc).replace(microsecond=0)
+    h1 = now.replace(minute=0, second=0) - timedelta(hours=100)
+    fake = FakeMT5([BTC], {"BTCUSD.sd": Tick(now, 108_000.0, 108_015.0)}, server="Equiti-Demo", company="Equiti",
+                   rates={("BTCUSD.sd", FakeMT5.TIMEFRAME_H1): _rates(h1, 100, 3600),
+                          ("BTCUSD.sd", FakeMT5.TIMEFRAME_H4): _rates(h1, 25, 14400),
+                          ("BTCUSD.sd", FakeMT5.TIMEFRAME_M15): _rates(now - timedelta(hours=20), 80, 900)})
+    conn = MT5ReadOnlyConnector(fake)                      # auto offset: unknown until a quote moves
+    spec = conn.symbol_spec("BTCUSD.sd", "equiti")
+    store.save_ticks("equiti", "BTCUSD.sd", [Tick(t.time, t.mid * 45 - 7.5, t.mid * 45 + 7.5) for t in
+                                             synthetic_ticks(2_400, start=now - timedelta(minutes=40))], "mt5")
+    eng = LiveVirtualEngine(settings, spec, conn, store, params=style_params("swing"))
+    eng.warm_up(now=now)
+    assert not eng.loop.market.ready and len(eng.loop.market.mtf.bars["H1"]) < 5
+    conn.server_offset_s = 0                               # another symbol's moving quote measured it
+    eng.poll_once()
+    assert len(eng.loop.market.mtf.bars["H1"]) >= 95 and eng.loop.market.ready
+    assert not eng._seed_pending and fake.order_send_calls == 0
