@@ -109,6 +109,13 @@
   of several forex pairs) got no broker bars and stayed not ready. Seeding is now retried from `poll_once` once
   the shared connector knows the offset. After restart: 18 of 18 engines seeded broker bars; a read-only check
   of BTCUSD.lv showed scalp and swing both ready (H1 499 bars, H4 498, D1 499). Tests **195 passed, 1 skipped**.
+- **System Health "critical" fixed (2026-10-24):** every `agent:worker:*` check was critical because the
+  Supervisor beats `worker:<name>` only when it starts a worker; the health agent now skips those when a
+  supervisor reports the workers directly. CPU and memory were "warn" because psutil was missing on Windows
+  (no `/proc`, no `getloadavg`); psutil added to requirements. Measured with 18 engines: CPU ~7-10%, RAM ~52%.
+  Tests **196 passed, 1 skipped**. BTCUSD keeps evaluating on weekend quotes (~13 ticks/min); its virtual
+  history is 18 trades (17 before styles, 1 scalp at 04:06 UTC), net +39.18 USD. No signals yet: real signals
+  need 50 (scalp) / 30 (swing) closed trades per direction first.
 
 
 ## 2026-10-22 — session 1 (Linux cloud container, Python 3.13, Node 22)
