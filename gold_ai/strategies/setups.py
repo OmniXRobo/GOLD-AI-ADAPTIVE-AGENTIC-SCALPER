@@ -25,6 +25,10 @@ class SetupContext:
     features: dict[str, float]           # MarketIntelligenceAgent features (legacy setups use them)
     regime: str
     _cache: dict = field(default_factory=dict)
+    trigger_tf: str = "M1"               # bars the setup's trigger and structure are read from (M1 or M5)
+
+    def trigger(self) -> list[Candle]:
+        return self.tf(self.trigger_tf)
 
     def tf(self, name: str) -> list[Candle]:
         return self.bars.get(name, [])
@@ -90,7 +94,7 @@ class TrendPullback(Setup):
         self.touch_atr, self.stop_lookback, self.stop_buffer_atr = touch_atr, stop_lookback, stop_buffer_atr
 
     def evaluate(self, ctx: SetupContext) -> SetupSignal | None:
-        m1, a5 = ctx.tf("M1"), ctx.atr("M5")
+        m1, a5 = ctx.trigger(), ctx.atr("M5")
         slope = ema_slope(ctx.closes("M15"), self.ema_slow, 5)
         d = ctx.adx("M15")
         e5 = ema(ctx.closes("M5"), self.ema_fast)
@@ -125,7 +129,7 @@ class Breakout(Setup):
         self.range_m1, self.max_bw_pctile, self.buffer_atr, self.stop_frac = range_m1, max_bw_pctile, buffer_atr, stop_frac
 
     def evaluate(self, ctx: SetupContext) -> SetupSignal | None:
-        m1, a5 = ctx.tf("M1"), ctx.atr("M5")
+        m1, a5 = ctx.trigger(), ctx.atr("M5")
         if len(m1) < self.range_m1 + 2 or a5 <= 0:
             return None
         bb = bollinger_stats(ctx.closes("M5"))
@@ -152,7 +156,7 @@ class FailedBreakout(Setup):
         self.range_m1, self.k, self.min_pierce_atr, self.stop_buffer_atr = range_m1, k, min_pierce_atr, stop_buffer_atr
 
     def evaluate(self, ctx: SetupContext) -> SetupSignal | None:
-        m1, a5 = ctx.tf("M1"), ctx.atr("M5")
+        m1, a5 = ctx.trigger(), ctx.atr("M5")
         if len(m1) < self.range_m1 + self.k + 1 or a5 <= 0:
             return None
         box = m1[-self.range_m1 - self.k:-self.k]
@@ -180,7 +184,7 @@ class RangeReversion(Setup):
         self.adx_max, self.bb_n, self.bb_k, self.lookback, self.stop_buffer_atr = adx_max, bb_n, bb_k, lookback, stop_buffer_atr
 
     def evaluate(self, ctx: SetupContext) -> SetupSignal | None:
-        m1, a5 = ctx.tf("M1"), ctx.atr("M5")
+        m1, a5 = ctx.trigger(), ctx.atr("M5")
         d = ctx.adx("M15")
         bb = bollinger(ctx.closes("M5"), self.bb_n, self.bb_k)
         if d is None or bb is None or a5 <= 0 or len(m1) < self.lookback + 1 or d["adx"] >= self.adx_max:
@@ -209,7 +213,7 @@ class LiquiditySweep(Setup):
         self.min_wick_atr, self.stop_buffer_atr = min_wick_atr, stop_buffer_atr
 
     def evaluate(self, ctx: SetupContext) -> SetupSignal | None:
-        m1, a5 = ctx.tf("M1"), ctx.atr("M5")
+        m1, a5 = ctx.trigger(), ctx.atr("M5")
         if a5 <= 0:
             return None
         sw = detect_sweep(m1[-(self.max_age + self.left + self.right + 2):], self.left, self.right, self.max_age)

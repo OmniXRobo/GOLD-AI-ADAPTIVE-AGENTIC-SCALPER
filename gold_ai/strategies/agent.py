@@ -31,17 +31,26 @@ class RuleParams:
     signal_validity_seconds: int = 60
     style: str = "scalp"
     timeframes: tuple[str, str, str] = ("M1", "M5", "M15")
+    # Bars the setup triggers on and takes its structural stop from; bar counts in setup params are in these bars.
+    trigger_tf: str = "M1"
+    # Trade only when M5 ATR is at least this many spreads (0 = off): costs are small relative to the move.
+    min_atr_spread: float = 0.0
 
     def __post_init__(self) -> None:
         self.timeframes = tuple(self.timeframes)
+        if self.trigger_tf not in ("M1", "M5"):
+            raise ValueError(f"trigger_tf must be M1 or M5, got {self.trigger_tf!r}")
 
     def version(self) -> str:
-        blob = json.dumps(asdict(self), sort_keys=True, default=str).encode()
+        d = asdict(self)
+        for k, default in (("trigger_tf", "M1"), ("min_atr_spread", 0.0)):   # keep earlier version ids
+            if d[k] == default:
+                d.pop(k)
+        blob = json.dumps(d, sort_keys=True, default=str).encode()
         return f"rule-{self.setup}-" + hashlib.sha256(blob).hexdigest()[:8]
 
 
 class RuleAgent:
-    decide_on_bar_close = "M1"
 
     def __init__(self, params: RuleParams, setup: Setup | None = None, cache: dict | None = None):
         """`cache` may be shared by agents that see the same bars (research lanes), so indicators are
@@ -51,6 +60,10 @@ class RuleAgent:
         self.cache = cache if cache is not None else {}
         self.signals = 0
         self.rejected: dict[str, int] = {}
+
+    @property
+    def decide_on_bar_close(self) -> str:
+        return self.params.trigger_tf
 
     def _reject(self, why: str, f: dict) -> Decision:
         self.rejected[why.split(" (")[0]] = self.rejected.get(why.split(" (")[0], 0) + 1
@@ -71,12 +84,16 @@ class RuleAgent:
         if self.cache.get("_bar") != bar_key:
             self.cache.clear()
             self.cache["_bar"] = bar_key
-        ctx = SetupContext(tick, state.bars, f, state.regime, self.cache)
+        p = self.params
+        if p.min_atr_spread > 0 and tick.spread > 0:
+            ratio = atr(state.bars.get("M5", [])) / tick.spread
+            if ratio < p.min_atr_spread:
+                return self._reject(f"volatility too low for the spread ({ratio:.1f} < {p.min_atr_spread:g} spreads)", f)
+        ctx = SetupContext(tick, state.bars, f, state.regime, self.cache, p.trigger_tf)
         sig = self.setup.evaluate(ctx)
         if sig is None:
             return Decision(Side.WAIT, 0.0, f"{NO_TRADE}: no {self.setup.name} setup", features=f)
         self.signals += 1
-        p = self.params
         a5 = atr(state.bars.get("M5", []))
         entry = tick.ask if sig.side == Side.BUY else tick.bid
         sl_d = entry - sig.stop if sig.side == Side.BUY else sig.stop - entry
