@@ -1,5 +1,11 @@
 # Test results
 
+## 2026-10-25 — session 3b
+- First real-data research (VPS, Equiti XAUUSD.sd, 3,285,567 ticks, 2026-10-18 → 2026-10-23): every setup
+  insufficient_data (0–11 test trades of 30 required). Report and interpretation: docs/research/.
+- Cloud container: `python -m pytest -q` → **241 passed, 1 skipped** (adds streamed-research equivalence and
+  tick-order tests).
+
 ## 2026-10-25 — session 3 (cloud container, Python 3.13)
 - `python -m pytest -q` → **239 passed, 1 skipped** (adds tests/test_risk_v2.py: 21 rule tests incl. Dubai
   18:00-19:00 = 14:00-15:00 UTC; tests/test_research.py: 21 tests for indicators, setups, rule agent

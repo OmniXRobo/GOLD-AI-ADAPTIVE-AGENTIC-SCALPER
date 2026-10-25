@@ -20,10 +20,11 @@ import statistics
 import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from typing import Iterable
 
 from ..config import Settings
 from ..domain import MemoryDomain, SimTrade, SymbolSpec, Tick
-from ..engines.loop import TradingLoop, data_hash
+from ..engines.loop import TradingLoop
 from ..engines.metrics import json_safe
 from ..instruments import settings_for
 from ..market.features import MarketIntelligenceAgent
@@ -32,6 +33,7 @@ from ..risk.engine import NewsEvent, RiskEngine
 from ..strategies.agent import RuleAgent, RuleParams
 from ..strategies.setups import RESEARCH_SETUPS, SETUPS, RandomBaseline
 from .stats import r_summary
+from .stream import Meter, TickStream
 
 SPLITS = ("train", "validation", "test")
 
@@ -83,8 +85,8 @@ class ResearchReport:
         return json_safe(asdict(self))
 
 
-def split_bounds(ticks: list[Tick], cfg: ResearchConfig) -> dict[str, tuple[datetime, datetime]]:
-    a, z = ticks[0].time, ticks[-1].time
+def split_bounds(ticks: "list[Tick] | TickStream", cfg: ResearchConfig) -> dict[str, tuple[datetime, datetime]]:
+    a, z = (ticks.start, ticks.end) if isinstance(ticks, TickStream) else (ticks[0].time, ticks[-1].time)
     span = z - a
     v = a + span * cfg.train_frac
     t = v + span * cfg.validation_frac
@@ -106,7 +108,7 @@ def _r(t: SimTrade) -> float:
 RESEARCH_BAR_TIMEFRAMES = ("M1", "M5", "M15", "H1")
 
 
-def run_lanes(settings: Settings, spec: SymbolSpec, ticks: list[Tick],
+def run_lanes(settings: Settings, spec: SymbolSpec, ticks: Iterable[Tick],
               lanes: list[tuple[RuleParams, object | None]], *, news: list[NewsEvent] | None = None,
               starting_equity: float = 10_000.0) -> list[tuple[list[SimTrade], RuleAgent]]:
     """Run several independent rule lanes in one pass over the ticks. Lanes share the market agent (bars and
@@ -172,30 +174,30 @@ def verdict(test: dict, validation: dict, baseline: dict, cfg: ResearchConfig) -
                          "needs walk-forward and forward virtual confirmation"]
 
 
-def evaluate_setups(settings: Settings, spec: SymbolSpec, ticks: list[Tick], cfg: ResearchConfig | None = None, *,
-                    news: list[NewsEvent] | None = None, store: MemoryStore | None = None,
-                    data_source: str = "unknown", progress=None) -> ResearchReport:
+def evaluate_setups(settings: Settings, spec: SymbolSpec, ticks: "list[Tick] | TickStream",
+                    cfg: ResearchConfig | None = None, *, news: list[NewsEvent] | None = None,
+                    store: MemoryStore | None = None, data_source: str = "unknown", progress=None) -> ResearchReport:
+    """`ticks` is a list or a re-iterable `TickStream` (read twice: setups, then matched baselines)."""
     cfg = cfg or ResearchConfig()
-    if not ticks:
-        raise ValueError("no ticks supplied")
-    if any(b.time < a.time for a, b in zip(ticks, ticks[1:])):
-        raise ValueError("ticks must be time-ordered")
-    b = split_bounds(ticks, cfg)
-    m1_bars = len({int(t.time.timestamp()) // 60 for t in ticks})
-    dh = data_hash(ticks)
+    stream = ticks if isinstance(ticks, TickStream) else TickStream.from_list(ticks)
+    b = split_bounds(stream, cfg)
     reports: list[SetupReport] = []
     for name in cfg.setups:
         if name not in SETUPS:
             raise ValueError(f"unknown setup {name}")
     grid = [(name, rr) for name in cfg.setups for rr in cfg.risk_rewards]
     if progress:
-        progress(f"pass 1: {len(grid)} setup variants over {len(ticks):,} ticks")
-    results = run_lanes(settings, spec, ticks,
+        progress(f"pass 1: {len(grid)} setup variants, {stream.start} -> {stream.end}")
+    meter = Meter(stream)
+    results = run_lanes(settings, spec, meter,
                         [(RuleParams(setup=n, risk_reward=rr, max_hold_seconds=cfg.max_hold_seconds), None)
                          for n, rr in grid], news=news, starting_equity=cfg.starting_equity)
     by_setup: dict[str, dict[float, tuple[RuleParams, dict[str, list[SimTrade]], RuleAgent]]] = {}
     for (name, rr), (trades, agent) in zip(grid, results):
         by_setup.setdefault(name, {})[rr] = (agent.params, _by_split(trades, b), agent)
+    m1_bars, dh, n_ticks = meter.m1_bars, meter.data_hash, meter.count
+    if n_ticks == 0:
+        raise ValueError("no ticks supplied")
     chosen: dict[str, tuple[float, list[str], dict]] = {}
     for name in cfg.setups:
         runs = by_setup[name]
@@ -227,7 +229,7 @@ def evaluate_setups(settings: Settings, spec: SymbolSpec, ticks: list[Tick], cfg
                                          sl_atr=statistics.median(sl_atrs) if sl_atrs else 1.0, seed=cfg.seed)))
     if progress:
         progress(f"pass 2: {len(baselines)} matched random baselines")
-    bl_results = run_lanes(settings, spec, ticks, baselines, news=news, starting_equity=cfg.starting_equity)
+    bl_results = run_lanes(settings, spec, stream, baselines, news=news, starting_equity=cfg.starting_equity)
 
     for name, (bl_trades, _) in zip(cfg.setups, bl_results):
         cls = SETUPS[name]
@@ -253,7 +255,7 @@ def evaluate_setups(settings: Settings, spec: SymbolSpec, ticks: list[Tick], cfg
             store.save_trades(MemoryDomain.HISTORICAL, all_trades, run_id)
             store.save_run(run_id=run_id, domain=MemoryDomain.HISTORICAL.value, kind="research",
                            broker=spec.broker, symbol=spec.symbol, data_source=data_source, data_hash=dh,
-                           period_start=ticks[0].time, period_end=ticks[-1].time,
+                           period_start=stream.start, period_end=stream.end,
                            strategy_version=params.version(), model_version_start="none",
                            model_version_end="none", params=asdict(params),
                            metrics=json_safe({"verdict": v, "test": test, "validation": validation,
@@ -265,9 +267,9 @@ def evaluate_setups(settings: Settings, spec: SymbolSpec, ticks: list[Tick], cfg
         if progress:
             progress(f"{name}: verdict {v}")
     return ResearchReport(spec.symbol, spec.broker, data_source,
-                          (ticks[0].time.isoformat(), ticks[-1].time.isoformat()),
+                          (stream.start.isoformat(), stream.end.isoformat()),
                           {k: (a.isoformat(), z.isoformat()) for k, (a, z) in b.items()},
-                          len(ticks), m1_bars, reports, dh)
+                          n_ticks, m1_bars, reports, dh)
 
 
 def _fmt_ci(ci) -> str:

@@ -256,3 +256,25 @@ def test_cli_research_writes_report(tmp_path, spec):
     assert len(reports) == 1
     text = reports[0].read_text()
     assert "Data: synthetic" in text and "Feature evaluation" in text
+
+
+def test_streamed_research_matches_in_memory(settings, spec, store):
+    from gold_ai.engines.loop import data_hash
+    from gold_ai.research.stream import TickStream
+    tk = ticks(30_000)
+    store.save_ticks(spec.broker, spec.symbol, tk, source=SYNTHETIC_SOURCE)
+    stream = TickStream.from_store(store, spec.broker, spec.symbol)
+    assert stream.start == tk[0].time and stream.end == tk[-1].time
+    cfg = ResearchConfig(setups=("legacy_momentum",), risk_rewards=(1.5,), min_test_trades=5)
+    a = evaluate_setups(settings, spec, tk, cfg)
+    b = evaluate_setups(settings, spec, stream, cfg)
+    assert (a.ticks, a.m1_bars, a.data_hash) == (b.ticks, b.m1_bars, b.data_hash) == (len(tk), a.m1_bars, data_hash(tk))
+    assert a.setups[0].test == b.setups[0].test and a.setups[0].baseline_test == b.setups[0].baseline_test
+    assert evaluate_features(tk, spec)["rows"] == evaluate_features(stream, spec)["rows"]
+
+
+def test_stream_rejects_out_of_order_ticks():
+    from gold_ai.research.stream import TickStream
+    tk = ticks(100)
+    with pytest.raises(ValueError):
+        list(TickStream(lambda: [tk[1], tk[0]], tk[0].time, tk[1].time))

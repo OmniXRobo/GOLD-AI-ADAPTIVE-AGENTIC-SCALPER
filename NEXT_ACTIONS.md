@@ -1,6 +1,9 @@
 # Next actions
 
-A. (VPS thread) After the agentic-redesign PR is merged: `git pull`, `pip install -r requirements.txt` (adds tzdata),
+0. (VPS thread) After the streaming-research PR is merged: `git pull`, check free disk (roughly 1 GB per 10 M ticks in
+   SQLite), then `backfill-ticks --terminal-path "C:\Program Files\MT5_2" --symbol XAUUSD.sd --days 30` (it extends
+   history backwards from the earliest stored tick) and re-run `research`; share the report as-is.
+A. (Done 2026-10-25) After the agentic-redesign PR is merged: `git pull`, `pip install -r requirements.txt` (adds tzdata),
    restart GoldAI-Equiti. Note that risk engine v2 now also limits the virtual engines (20 trades/day, cooldowns,
    no re-entry 5 min after a loss), so fewer virtual trades is expected. Then run
    `python -m gold_ai --config config.local.json research --broker equiti --symbol XAUUSD.sd` on the stored ticks

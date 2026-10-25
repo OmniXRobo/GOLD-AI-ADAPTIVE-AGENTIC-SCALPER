@@ -18,6 +18,7 @@ from __future__ import annotations
 import math
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
+from typing import Iterable
 
 from ..domain import Candle, SymbolSpec, Tick
 from ..market.candles import build_candles, resample
@@ -25,6 +26,7 @@ from ..market.features import atr, efficiency_ratio
 from ..market.indicators import (adx, bollinger_stats, ema, ema_slope, last_swings, macd, rsi, session_start_utc,
                                  tick_volume_profile, tick_vwap)
 from .stats import mean, spearman
+from .stream import TickStream
 
 FEATURES = ("ema20_m5_dist", "ema50_m15_slope", "adx_m15", "di_diff_m15", "rsi_m5", "macd_hist_m5",
             "bb_pctb_m5", "bb_bw_pctile_m5", "vwap_dist", "poc_dist", "swing_high_dist", "swing_low_dist",
@@ -127,7 +129,7 @@ def bracket_outcome(future: list[Candle], side: str, stop_d: float, rr: float, s
     return (entry - (future[-1].close + future[-1].spread_avg)) / stop_d - cost_r
 
 
-def build_dataset(ticks: list[Tick], spec: SymbolSpec, cfg: FeatureEvalConfig) -> list[dict]:
+def build_dataset(ticks: Iterable[Tick], spec: SymbolSpec, cfg: FeatureEvalConfig) -> list[dict]:
     m1 = build_candles(ticks, "M1")
     m5 = resample(m1, "M5")
     m15 = resample(m1, "M15")
@@ -154,12 +156,13 @@ def _sig(rho: float | None, n: int, z: float) -> bool:
     return rho is not None and n > 3 and abs(rho) * math.sqrt(n - 1) >= z
 
 
-def evaluate_features(ticks: list[Tick], spec: SymbolSpec, cfg: FeatureEvalConfig | None = None) -> dict:
+def evaluate_features(ticks: "list[Tick] | TickStream", spec: SymbolSpec, cfg: FeatureEvalConfig | None = None) -> dict:
     cfg = cfg or FeatureEvalConfig()
-    rows = build_dataset(ticks, spec, cfg)
+    stream = ticks if isinstance(ticks, TickStream) else TickStream.from_list(ticks)
+    rows = build_dataset(stream, spec, cfg)
     if not rows:
         return {"rows": 0, "features": [], "kept": [], "note": "not enough bars for any feature row"}
-    a, z = ticks[0].time, ticks[-1].time
+    a, z = stream.start, stream.end
     v_start = a + (z - a) * cfg.train_frac
     t_start = v_start + (z - a) * cfg.validation_frac
     train = [r for r in rows if r["time"] < v_start]
