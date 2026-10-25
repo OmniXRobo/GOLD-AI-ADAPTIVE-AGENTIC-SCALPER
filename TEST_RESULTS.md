@@ -116,6 +116,15 @@
   Tests **196 passed, 1 skipped**. BTCUSD keeps evaluating on weekend quotes (~13 ticks/min); its virtual
   history is 18 trades (17 before styles, 1 scalp at 04:06 UTC), net +39.18 USD. No signals yet: real signals
   need 50 (scalp) / 30 (swing) closed trades per direction first.
+- **Virtual results and owner-requested strategy update (2026-10-25):** Memory C holds 168 closed virtual
+  trades, all learning (exploration) trades, net **-533.99 USD** across engines (each engine starts at 10,000).
+  BTCUSD scalp 93 trades, 44.1% wins, -179.05, PF 0.71; BTCUSD swing 6 trades, -211.34; XAUUSD scalp 47 trades,
+  51.1% wins, -91.17, PF 0.90; forex pairs 2-4 trades each (Friday only). Daily self-healing ran 39 times, all
+  "insufficient trades". A forced cycle (owner request) on 5 days of real ticks: BTCUSD scalp flagged
+  expectancy and win-rate drops; 4 candidate settings tested, none beat the current backtest (current: 73 trades,
+  PF 0.64, -260.56) and walk-forward was insufficient_data for all; XAUUSD scalp: 4 candidates, none beat the
+  current backtest (15 trades, PF 0.45, -214.26), walk-forward insufficient_data. **No version registered or
+  promoted.** No edge shown yet.
 
 
 ## 2026-10-22 — session 1 (Linux cloud container, Python 3.13, Node 22)
