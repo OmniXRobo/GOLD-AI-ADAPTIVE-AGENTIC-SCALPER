@@ -130,6 +130,8 @@ def main(argv: list[str] | None = None) -> int:
     bf.add_argument("--symbol", default=None, help="broker symbol to copy (default: the discovered gold symbol)")
     bf.add_argument("--instrument", default=None, help="discover the broker symbol for this instrument, e.g. EURUSD")
     bf.add_argument("--days", type=float, default=5)
+    bf.add_argument("--offset-from", default=None,
+                    help="measure the broker's server-time offset on this symbol (one that is quoting now)")
 
     for name in ("backtest", "walkforward"):
         p = sub.add_parser(name)
@@ -220,12 +222,16 @@ def main(argv: list[str] | None = None) -> int:
         symbol = a.symbol or (found or [None])[0]
         if not symbol:
             sys.exit("no symbol validated from broker metadata; pass --symbol")
+        # The server-time offset is measured from live ticks; when this market is closed (gold at the
+        # weekend), --offset-from measures it on a symbol that is still quoting (e.g. BTCUSD.lv).
+        probe = a.offset_from or symbol
         deadline = _time.monotonic() + 60
         while not conn.server_offset_known and _time.monotonic() < deadline:
-            conn.latest_tick(symbol)            # measures the server-time offset from live ticks
+            conn.latest_tick(probe)
             _time.sleep(0.25)
         if not conn.server_offset_known:
-            sys.exit("server time offset unknown (market closed?); try again while quotes are moving")
+            sys.exit("server time offset unknown (market closed?); try again while quotes are moving, "
+                     "or pass --offset-from <a symbol that is quoting, e.g. BTCUSD.lv>")
         now = datetime.now(timezone.utc)
         n = backfill_history(conn, store, acct.broker, symbol, now - timedelta(days=a.days))
         store.audit("cli", "backfill_ticks", {"broker": acct.broker, "symbol": symbol, "days": a.days, "stored": n,
