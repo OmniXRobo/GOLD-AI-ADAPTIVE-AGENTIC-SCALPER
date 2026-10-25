@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-24",
+  "updated": "2026-10-25",
   "real_money_execution": "DISABLED",
   "tasks": [
     {
@@ -381,6 +381,65 @@
       "title": "Self-healing test window for swing (2 days of ticks is short for 3-day holds; seed backtests with broker bars)",
       "status": "todo",
       "priority": 3
+    },
+    {
+      "id": "T-AGENTIC-DESIGN",
+      "phase": 11,
+      "title": "Agentic XAUUSD redesign: gap analysis, architecture, data sources, DB, research plan, risk spec, degraded mode, staged plan (docs/AGENTIC_REDESIGN.md)",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-STAGE1-EVIDENCE",
+      "phase": 11,
+      "title": "Stage 1: indicator + setup library, research harness with baselines and verdicts, feature evaluation, risk engine v2, EV after costs, Dubai sessions, CLI research",
+      "status": "done",
+      "priority": 1,
+      "notes": "Tested on synthetic data only. No real-data research result exists yet."
+    },
+    {
+      "id": "T-STAGE1-REAL-RESEARCH",
+      "phase": 11,
+      "title": "Run `python -m gold_ai research` on stored Equiti XAUUSD.sd ticks on the VPS and commit the report as-is",
+      "status": "todo",
+      "priority": 1,
+      "notes": "Needs the VPS (ticks live in its DB). Report every verdict, including failures."
+    },
+    {
+      "id": "T-STAGE2-PLANNER-SIGNALS",
+      "phase": 11,
+      "title": "Stage 2: trade planner from research champions, entry range, TP1/TP2/TP3 + break-even, signal lifecycle, executed/skipped, decision trail tables",
+      "status": "todo",
+      "priority": 2
+    },
+    {
+      "id": "T-STAGE3-NEWS-VERIFY",
+      "phase": 11,
+      "title": "Stage 3: news provenance + verification/corroboration, official RSS, optional licensed headlines/X API, event studies, cross-market relationships",
+      "status": "todo",
+      "priority": 2
+    },
+    {
+      "id": "T-STAGE4-VALIDATED-LEARNING",
+      "phase": 11,
+      "title": "Stage 4: OOS calibration (Brier/ECE), drift detection, champion/challenger horizons, reduce-only automatic actions",
+      "status": "todo",
+      "priority": 2
+    },
+    {
+      "id": "T-RISK-STATE-PERSIST",
+      "phase": 11,
+      "title": "Persist RiskState (cooldowns, weekly equity, trade counts) across restarts for live engines",
+      "status": "todo",
+      "priority": 2
+    },
+    {
+      "id": "T-LIVE-RISK-SETTINGS",
+      "phase": 11,
+      "title": "Propose live risk settings",
+      "status": "blocked",
+      "blocked_on": "owner: account size and risk tolerance",
+      "priority": 5
     }
   ]
 }

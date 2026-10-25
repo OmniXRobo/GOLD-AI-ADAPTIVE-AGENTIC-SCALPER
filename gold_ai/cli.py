@@ -5,6 +5,7 @@ Commands
   import-ticks    load an MT5 tick export / CSV into persistent storage
   backtest        Engine A on stored ticks
   walkforward     Engine B on stored ticks
+  research        evaluate every setup and feature on stored ticks (chronological splits, baselines, costs)
   serve           start the API/dashboard (+ MT5 collector and live virtual engine with --mt5)
 """
 from __future__ import annotations
@@ -56,6 +57,49 @@ def _dt(s: str | None) -> datetime | None:
     return datetime.fromisoformat(s) if s else None
 
 
+def _research(a, settings, store: MemoryStore) -> int:
+    import os
+    from pathlib import Path
+
+    from .news.agent import NewsAgent
+    from .news.sources import CalendarFileSource
+    from .research.features import evaluate_features, features_markdown
+    from .research.setup_eval import ResearchConfig, evaluate_setups, to_markdown
+    from .strategies.setups import RESEARCH_SETUPS
+
+    spec = _spec_from_store(store, a.broker, a.symbol)
+    ticks = store.load_ticks(a.broker, a.symbol, _dt(a.start), _dt(a.end))
+    if not ticks:
+        sys.exit("no stored ticks for that broker/symbol/period")
+    sources = {r["source"] for r in store.tick_stats() if r["broker"] == a.broker and r["symbol"] == a.symbol}
+    data_source = ",".join(sorted(sources)) or "stored"
+    news = NewsAgent(sources=[CalendarFileSource(os.path.expandvars(p), name=Path(p).name)
+                              for p in settings.news_calendar_files])
+    news.refresh(ticks[0].time - timedelta(days=1), ticks[-1].time + timedelta(days=1))
+    cfg = ResearchConfig(setups=tuple(x.strip() for x in a.setups.split(",")) if a.setups else RESEARCH_SETUPS,
+                         risk_rewards=tuple(float(x) for x in a.rr.split(",")), min_test_trades=a.min_test_trades)
+    log.info("research on %d ticks %s -> %s (%s), %d calendar events", len(ticks), ticks[0].time, ticks[-1].time,
+             data_source, len(news.events))
+    rep = evaluate_setups(settings, spec, ticks, cfg, news=news.risk_events(), store=store, data_source=data_source,
+                          progress=lambda m: log.info("research: %s", m))
+    md = to_markdown(rep)
+    out = {"report": rep.to_dict()}
+    if not a.no_features:
+        feats = evaluate_features(ticks, spec)
+        md += "\n" + features_markdown(feats)
+        out["features"] = json_safe(feats)
+    dest = Path(a.out or Path(settings.data_dir) / "research")
+    dest.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    (dest / f"research-{a.symbol}-{stamp}.md").write_text(md, encoding="utf-8")
+    (dest / f"research-{a.symbol}-{stamp}.json").write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
+    store.audit("cli", "research", {"broker": a.broker, "symbol": a.symbol, "ticks": len(ticks),
+                                    "verdicts": {s.setup: s.verdict for s in rep.setups}})
+    print(md)
+    print(f"report written to {dest}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     ap = argparse.ArgumentParser(prog="gold_ai")
@@ -96,6 +140,18 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--validation-days", type=float, default=7)
             p.add_argument("--test-days", type=float, default=7)
             p.add_argument("--anchored", action="store_true")
+
+    rs = sub.add_parser("research", help="evaluate every strategy setup and indicator on stored ticks; "
+                                         "writes a report to <data_dir>/research and runs to Memory A")
+    rs.add_argument("--broker", required=True)
+    rs.add_argument("--symbol", required=True)
+    rs.add_argument("--start")
+    rs.add_argument("--end")
+    rs.add_argument("--setups", default=None, help="comma-separated setup names (default: all research setups)")
+    rs.add_argument("--rr", default="1.0,1.5,2.0", help="reward:risk grid, chosen on the validation split")
+    rs.add_argument("--min-test-trades", type=int, default=30)
+    rs.add_argument("--no-features", action="store_true", help="skip the indicator evaluation")
+    rs.add_argument("--out", default=None, help="report directory (default <data_dir>/research)")
 
     bk = sub.add_parser("backup", help="owner-authenticated database backup with checksum manifest")
     bk.add_argument("--owner", default="owner")
@@ -188,6 +244,9 @@ def main(argv: list[str] | None = None) -> int:
             print(json.dumps({"label": rep.label, "verdict": rep.verdict, "oos_trades": rep.oos_trades,
                               "oos_net": rep.oos_net, "flags": rep.overfit_flags}, indent=2))
         return 0
+
+    if a.cmd == "research":
+        return _research(a, settings, store)
 
     if a.cmd == "backup":
         from .backup import BackupService

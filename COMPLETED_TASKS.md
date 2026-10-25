@@ -82,3 +82,10 @@ All items below have code + passing tests unless noted.
 - Scalping and swing signal styles per instrument (separate engines, memory, signals, self-healing); dashboard
   style chips and tags; Android 1.4.0 alert label; broker-bar warm-up; promoted versions applied to live engines.
 - Fixes: websocket send-after-close crash, signal store race, state reads moving tick_accel, Signals Domain column.
+
+## Session 3 — 2026-10-25 (agentic redesign)
+- docs/AGENTIC_REDESIGN.md: gap analysis, architecture, data sources/costs, DB design, research plan, risk spec,
+  degraded mode, staged plan with acceptance criteria.
+- Stage 1: indicator library, strategy setup library, rule agent (simulation-only), research harness + CLI
+  `research`, feature evaluation, EV after costs in the decision agent, risk engine v2, Dubai-time sessions,
+  day-rollover fix. Tested on synthetic data only.

@@ -17,6 +17,8 @@ Read this first in every session, then PROJECT_STATUS.md, TASK_QUEUE.json and RE
 - `gold_ai/instruments.py` XAUUSD, BTCUSD, 7 forex majors: pip, per-symbol limits/sessions/news (docs/INSTRUMENTS.md)
 - `gold_ai/brokers/` symbol discovery, read-only MT5 connector, synthetic feed + FakeMT5
 - `gold_ai/market/` candles (M1..D1 + M10), features/regimes (Market Intelligence Agent), tick ingestion/validation
+- `gold_ai/market/indicators.py` EMA/ADX/Bollinger/tick-VWAP/tick-volume profile/swings/sweeps
+- `gold_ai/strategies/` setup library + rule agent · `gold_ai/research/` setup harness, feature evaluation (docs/AGENTIC_REDESIGN.md)
 - `gold_ai/agents/` decision (adaptive model + calibration), institutional, maturity, self_healing, health
 - `gold_ai/engines/` simulator, loop, backtest (A), walkforward (B), live_virtual (C), metrics
 - `gold_ai/risk/engine.py` independent risk veto · `gold_ai/security/auth.py` auth, roles, owner grant, approvals
@@ -29,6 +31,7 @@ Read this first in every session, then PROJECT_STATUS.md, TASK_QUEUE.json and RE
 - Tests: `python -m pytest -q`
 - Dashboard: `cd dashboard && npm ci && npx tsc --noEmit && npm run build`
 - Android APK: `ANDROID_JAR=... ./android/build.sh` (see docs/ANDROID_APP.md; signing key is not in the repo)
+- Research: `python -m gold_ai --config config.local.json research --broker equiti --symbol XAUUSD.sd`
 - Run API: `python -m gold_ai --config config.local.json serve` (add `--mt5` on Windows with a logged-in terminal)
 
 ## Checkpoint protocol

@@ -1,5 +1,14 @@
 # Test results
 
+## 2026-10-25 — session 3 (cloud container, Python 3.13)
+- `python -m pytest -q` → **239 passed, 1 skipped** (adds tests/test_risk_v2.py: 21 rule tests incl. Dubai
+  18:00-19:00 = 14:00-15:00 UTC; tests/test_research.py: 21 tests for indicators, setups, rule agent
+  simulation-only, no look-ahead (results on a prefix identical to the full run), lane independence, verdicts,
+  Memory A only, feature evaluation never reading the test split, EV after costs, CLI report; one execution test
+  for the start-up observation window).
+- Research harness speed on synthetic ticks: 30,000 ticks × 28 lanes (7 setups × 3 R:R + 7 baselines) in 3.3 s.
+- Synthetic runs only; they say nothing about real markets and no real-data research result exists yet.
+
 ## 2026-10-24 — session 2g (cloud container)
 - `python -m pytest -q` → **194 passed, 1 skipped** (adds tests/test_styles.py: scalp version ids unchanged,
   swing hourly features, swing backtest holds longer, broker-bar seeding with server-time conversion, separate

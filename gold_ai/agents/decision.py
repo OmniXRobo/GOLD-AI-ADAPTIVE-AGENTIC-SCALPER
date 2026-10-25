@@ -200,32 +200,41 @@ class TradingDecisionAgent:
                 out.append((Side.SELL, f"rejection near resistance ({f['dist_res_atr']:.2f} ATR)"))
         return out
 
-    def decide(self, state: MarketState, equity: float, lot_sizer, cost_fn, simulation: bool) -> Decision:
-        """lot_sizer(entry, sl) -> lots ; cost_fn(lots) -> expected round-trip cost (money)."""
+    def decide(self, state: MarketState, equity: float, lot_sizer, cost_fn, simulation: bool,
+               risk_money=None) -> Decision:
+        """lot_sizer(entry, sl) -> lots ; cost_fn(lots) -> expected round-trip cost (money) ;
+        risk_money(entry, sl, lots) -> money lost at the stop. Expected value is computed after costs:
+        EV = p*(RR - c) - (1 - p)*(1 + c) in R, where c = round-trip cost / money at risk."""
         f = state.features
         if not state.ready or state.last_tick is None:
-            return Decision(Side.WAIT, 0.0, "insufficient market history (warming up)", features=f)
+            return Decision(Side.WAIT, 0.0, "NO TRADE: insufficient market history (warming up)", features=f)
         atr5 = f["atr_m5"]
         if atr5 <= 0:
-            return Decision(Side.WAIT, 0.0, "zero volatility estimate", features=f)
+            return Decision(Side.WAIT, 0.0, "NO TRADE: zero volatility estimate", features=f)
         cands = self.candidates(f)
         if not cands:
-            return Decision(Side.WAIT, 0.0, f"no setup in regime '{state.regime}'", features=f)
+            return Decision(Side.WAIT, 0.0, f"NO TRADE: no setup in regime '{state.regime}'", features=f)
 
         p = self.params
+        tick = state.last_tick
+        sl_d = p.sl_atr_mult * atr5 + tick.spread
         x = _vec(f)
-        best: tuple[float, Side, str, float, bool] | None = None
+        best = None
         for side, why in cands:
+            entry = tick.ask if side == Side.BUY else tick.bid
+            sl = entry - sl_d if side == Side.BUY else entry + sl_d
+            lots = lot_sizer(entry, sl)
+            cost = cost_fn(lots) if lots > 0 else 0.0
+            at_risk = risk_money(entry, sl, lots) if risk_money and lots > 0 else 0.0
+            cost_r = cost / at_risk if at_risk > 0 else 0.0
             model = self.model.buy if side == Side.BUY else self.model.sell
-            raw = model.predict(x)
-            conf = self.model.calibrator.calibrate(raw)
+            conf = self.model.calibrator.calibrate(model.predict(x))
             mature = model.n_updates >= p.min_samples
-            # expected value in R units: conf*RR - (1-conf)
-            ev_r = conf * p.risk_reward - (1 - conf)
+            ev_r = conf * (p.risk_reward - cost_r) - (1 - conf) * (1 + cost_r)
             if best is None or ev_r > best[0]:
-                best = (ev_r, side, why, conf, mature)
+                best = (ev_r, side, why, conf, mature, entry, sl, lots, cost, cost_r)
         assert best is not None
-        ev_r, side, why, conf, mature = best
+        ev_r, side, why, conf, mature, entry, sl, lots, cost, cost_r = best
         exploring = False
         if not mature or conf < p.min_confidence or ev_r <= 0:
             if simulation and self.rng.random() < p.exploration_rate:
@@ -233,26 +242,22 @@ class TradingDecisionAgent:
             else:
                 reason = ("model immature" if not mature else
                           f"confidence {conf:.2f} below {p.min_confidence}" if conf < p.min_confidence else
-                          f"non-positive expectancy {ev_r:.2f}R")
-                return Decision(Side.WAIT, conf, f"{why}; WAIT: {reason}", features=f)
+                          f"non-positive expectancy after costs {ev_r:.2f}R (costs {cost_r:.2f}R)")
+                return Decision(Side.WAIT, conf, f"{why}; NO TRADE: {reason}", features=f)
 
-        tick = state.last_tick
-        entry = tick.ask if side == Side.BUY else tick.bid
-        sl_d = p.sl_atr_mult * atr5 + tick.spread
-        sl = entry - sl_d if side == Side.BUY else entry + sl_d
-        tp = entry + sl_d * p.risk_reward if side == Side.BUY else entry - sl_d * p.risk_reward
-        lots = lot_sizer(entry, sl)
         if lots <= 0:
-            return Decision(Side.WAIT, conf, f"{why}; WAIT: position size below broker minimum", features=f)
-        cost = cost_fn(lots)
+            return Decision(Side.WAIT, conf, f"{why}; NO TRADE: position size below broker minimum", features=f)
+        tp = entry + sl_d * p.risk_reward if side == Side.BUY else entry - sl_d * p.risk_reward
         prop = TradeProposal(
             side=side, entry=entry, stop_loss=sl, take_profit=tp, lots=lots, confidence=conf,
             valid_until=tick.time + timedelta(seconds=p.signal_validity_seconds),
             trailing_start=p.trailing_start_r * sl_d, trailing_distance=p.trailing_distance_r * sl_d,
             expected_cost=cost,
             explanation=f"{side.value}: {why}; regime={state.regime}; calibrated conf={conf:.2f}; "
-                        f"EV={ev_r:.2f}R{' [EXPLORATION]' if exploring else ''}",
+                        f"EV after costs={ev_r:.2f}R (costs {cost_r:.2f}R)"
+                        f"{' [EXPLORATION]' if exploring else ''}",
             strategy_version=p.version(), model_version=self.model.version(), style=p.style,
+            ev_after_cost_r=ev_r,
         )
         return Decision(side, conf, prop.explanation, prop, f)
 
