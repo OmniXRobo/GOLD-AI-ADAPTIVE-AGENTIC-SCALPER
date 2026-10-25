@@ -51,6 +51,8 @@ class MarketState:
     regime: str
     ready: bool
     last_tick: Tick | None
+    # Closed bars per timeframe (a live reference to the builder's lists; read-only for consumers).
+    bars: dict[str, list[Candle]] | None = None
 
 
 class MarketIntelligenceAgent:
@@ -62,8 +64,9 @@ class MarketIntelligenceAgent:
     """
 
     def __init__(self, tick_window: int = 300, warmup_m5_bars: int = 20,
-                 timeframes: tuple[str, str, str] = ("M1", "M5", "M15")):
-        self.mtf = MultiTimeframeBuilder()
+                 timeframes: tuple[str, str, str] = ("M1", "M5", "M15"), bar_timeframes: tuple[str, ...] | None = None):
+        # bar_timeframes limits which bars are built (research speed); default builds M1..D1 for the dashboard.
+        self.mtf = MultiTimeframeBuilder(bar_timeframes) if bar_timeframes else MultiTimeframeBuilder()
         missing = [tf for tf in timeframes if tf not in self.mtf.bars]
         if len(timeframes) != 3 or missing:
             raise ValueError(f"need three known timeframes (fast, base, slow), got {timeframes}")
@@ -131,7 +134,7 @@ class MarketIntelligenceAgent:
         f["efficiency_m5"] = efficiency_ratio(m5)
         f["atr_m1"] = a1
         f["atr_m5"] = a5
-        return MarketState(f, classify_regime(f, m5), True, last)
+        return MarketState(f, classify_regime(f, m5), True, last, bars)
 
 
 def classify_regime(f: dict[str, float], m5: list[Candle]) -> str:

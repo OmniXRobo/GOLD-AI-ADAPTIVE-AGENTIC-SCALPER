@@ -89,6 +89,9 @@ class MT5ExecutionAdapter:
         self.deviation = deviation_points if deviation_points is not None else risk.cfg.max_slippage_points
         self.symbol = symbol or risk.spec.symbol
         self.actor = actor
+        # Start-up observation window (RiskConfig.observation_minutes): no demo/real entry right after start.
+        if risk.mode != mode or risk.started_at is None:
+            risk.start(mode, utcnow())
 
     def c(self, name: str) -> int:
         return getattr(self.mt5, name, _MT5_DEFAULTS[name])

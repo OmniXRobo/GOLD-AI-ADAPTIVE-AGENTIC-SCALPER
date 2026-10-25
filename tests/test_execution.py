@@ -89,6 +89,7 @@ def make(tmp_path, *, trade_mode=0, mode="demo", fake_kw=None, **settings_kw):
     tick = Tick(now, 2400.00, 2400.20)
     mt5 = FakeTradeMT5(trade_mode=trade_mode, tick=tick, **(fake_kw or {}))
     adapter = MT5ExecutionAdapter(mt5, auth, risk, store, mode=mode)
+    risk.start(mode, now - timedelta(minutes=10))   # start-up observation window already elapsed
     snap = AccountSnapshot("exness", "Exness-MT5Trial", LOGIN, "USD",
                            {0: "demo", 2: "real"}[trade_mode], True, 10_000.0, 10_000.0, 500)
     return adapter, mt5, store, auth, snap, tick
@@ -280,3 +281,12 @@ def test_trailing_stop_only_tightens(tmp_path):
     assert r.executed and r.request["action"] == FakeTradeMT5.TRADE_ACTION_SLTP
     assert r.request["position"] == pos.ticket and r.request["tp"] == pytest.approx(pos.tp)
     assert mt5.positions[0].sl == pytest.approx(r.request["sl"])
+
+
+def test_no_order_during_startup_observation_window(tmp_path):
+    adapter, mt5, store, auth, snap, tick = make(tmp_path, demo_execution_enabled=True)
+    adapter.risk.start("demo", tick.time)          # just started: observation only
+    res = adapter.execute(proposal(tick), snap, tick, now=tick.time)
+    assert not res.executed and res.stage == "risk"
+    assert any("observation window" in r for r in res.reasons)
+    assert mt5.sent == []

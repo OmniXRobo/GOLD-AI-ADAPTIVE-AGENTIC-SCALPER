@@ -38,13 +38,15 @@ class TradingLoop:
                  simulation: bool = True, decision_every_n_ticks: int = 5,
                  risk: RiskEngine | None = None,
                  on_decision: Callable[[Decision, dict], None] | None = None,
-                 on_close: Callable[[SimTrade], None] | None = None):
+                 on_close: Callable[[SimTrade], None] | None = None,
+                 market: MarketIntelligenceAgent | None = None):
         settings = settings_for(settings, spec)   # per-instrument spread/slippage/session/news limits
         self.settings = settings
         self.spec = spec
         self.agent = agent
         self.costs = CostModel(spec, settings.costs)
-        self.market = MarketIntelligenceAgent(timeframes=agent.params.timeframes)
+        # A shared market agent (research lanes) is fed by the caller, which then calls `process`.
+        self.market = market or MarketIntelligenceAgent(timeframes=agent.params.timeframes)
         self.risk = risk or RiskEngine.create(settings.risk, spec, starting_equity)
         self.sim = PositionSimulator(self.costs, broker, account, max_open=settings.risk.max_open_positions,
                                      max_hold_seconds=agent.params.max_hold_seconds)
@@ -59,9 +61,17 @@ class TradingLoop:
         self.last_tick: Tick | None = None
 
     def step(self, tick: Tick) -> list[SimTrade]:
+        return self.process(tick, self.market.on_tick(tick))
+
+    def process(self, tick: Tick, new_bars: dict, state=None) -> list[SimTrade]:
+        """Everything after the market agent has seen `tick`. `state` lets lanes that share one market agent
+        reuse a single feature computation."""
         self.stats.ticks += 1
         self.last_tick = tick
-        self.market.on_tick(tick)
+        if self.risk.state.day != tick.time.date():
+            # Day (and week) limits roll over on the first tick of a new day, not only when a trade closes;
+            # otherwise a daily block would persist until some trade closed.
+            self.risk.on_equity(self.equity, tick.time)
         closed = self.sim.on_tick(tick)
 
         # Fill the order decided on the previous tick (if still valid).
@@ -69,19 +79,23 @@ class TradingLoop:
             prop, ctx = self.pending
             self.pending = None
             if tick.time <= prop.valid_until:
-                self.sim.open(prop, tick, ctx)
+                if self.sim.open(prop, tick, ctx) is not None:
+                    self.risk.on_trade_opened(tick.time, prop)
             else:
                 self.stats.expired_signals += 1
 
         for t in closed:
             self._after_close(t)
 
-        if self.stats.ticks % self.every == 0 and self.sim.can_open():
-            self._decide(tick)
+        # Rule agents decide once per closed bar of their trigger timeframe; the adaptive agent every n ticks.
+        gate = getattr(self.agent, "decide_on_bar_close", None)
+        due = gate in new_bars if gate else self.stats.ticks % self.every == 0
+        if due and self.sim.can_open():
+            self._decide(tick, state)
         return closed
 
-    def _decide(self, tick: Tick) -> None:
-        state = self.market.state(advance=True)
+    def _decide(self, tick: Tick, state=None) -> None:
+        state = state or self.market.state(advance=True)
         if not state.ready:
             return
         d = self.agent.decide(
@@ -89,19 +103,22 @@ class TradingLoop:
             lot_sizer=lambda e, sl: self.risk.position_size(self.equity, e, sl),
             cost_fn=lambda lots: self.costs.estimated_round_trip(lots, tick),
             simulation=self.simulation,
+            risk_money=lambda e, sl, lots: abs(e - sl) * self.spec.money_per_price_unit(lots),
         )
         self.stats.decisions += 1
         verdict_info: dict = {}
         if d.side != Side.WAIT and d.proposal is not None:
             self.stats.proposals += 1
-            v = self.risk.evaluate(d.proposal, tick, self.equity, len(self.sim.positions))
+            market = {"vol_ratio": state.features.get("vol_ratio"), "spread_z": state.features.get("spread_z")}
+            v = self.risk.evaluate(d.proposal, tick, self.equity, len(self.sim.positions), market=market)
             verdict_info = {"approved": v.approved, "reasons": v.reasons, "lots": v.lots,
-                            "style": self.agent.params.style}
+                            "style": self.agent.params.style, "risk_rule_version": v.rule_version}
             if v.approved:
                 d.proposal.lots = v.lots
                 ctx = {"regime": state.regime, "features": dict(d.features), "confidence": d.confidence,
                        "style": self.agent.params.style,
-                       "exploration": "[EXPLORATION]" in d.proposal.explanation}
+                       "exploration": "[EXPLORATION]" in d.proposal.explanation,
+                       "ev_after_cost_r": d.proposal.ev_after_cost_r, **d.proposal.meta}
                 self.pending = (d.proposal, ctx)
             else:
                 self.stats.risk_rejections += 1
@@ -114,7 +131,7 @@ class TradingLoop:
 
     def _after_close(self, t: SimTrade) -> None:
         self.equity += t.net_pnl
-        self.risk.on_trade_closed(t.net_pnl)
+        self.risk.on_trade_closed(t.net_pnl, t.exit_time)
         self.risk.on_equity(self.equity, t.exit_time)
         if self.learn and "features" in t.context:
             self.agent.learn(t.context["features"], t.side, t.net_pnl > 0)

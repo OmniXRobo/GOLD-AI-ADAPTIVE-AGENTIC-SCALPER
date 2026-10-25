@@ -28,10 +28,28 @@ class RiskConfig(BaseModel):
     min_confidence: float = 0.55
     block_minutes_before_high_impact: int = 15
     block_minutes_after_high_impact: int = 15
-    allowed_sessions_utc: list[tuple[int, int]] = Field(default_factory=lambda: [(0, 24)])
+    allowed_sessions_utc: list[tuple[float, float]] = Field(default_factory=lambda: [(0, 24)])
     max_tick_age_seconds: float = 10.0
     # High-impact events in these currencies black out trading; empty = every currency (gold default).
     news_currencies: list[str] = Field(default_factory=list)
+    # --- risk engine v2 (docs/AGENTIC_REDESIGN.md §5). Values are illustrative research defaults, not live
+    # recommendations: live settings wait for the owner's account size and risk tolerance.
+    max_weekly_loss_pct: float = 4.0
+    max_consecutive_losses: int = 3            # then cool down
+    loss_cooldown_minutes: float = 60.0
+    reentry_after_loss_minutes: float = 5.0    # no immediate re-entry after any loss (revenge trading)
+    max_trades_per_day: int = 20               # overtrading cap
+    min_minutes_between_entries: float = 2.0
+    max_latency_ms: float = 1500.0             # applied when execution latency is measured
+    max_vol_ratio: float = 3.0                 # short/long tick volatility; above = abnormal volatility
+    max_spread_z: float = 4.0                  # spread z-score vs recent spreads; above = abnormal widening
+    min_ev_after_cost_r: float = 0.05          # model proposals need this expectancy after costs (R)
+    max_margin_use_pct: float = 30.0           # required margin / free margin, when margin data is known
+    duplicate_window_seconds: float = 60.0
+    observation_minutes: float = 5.0           # after start, demo/real execution waits; virtual is allowed
+    # Owner-preferred sessions in local time (empty = no local restriction), e.g. [["18:00", "19:00"]].
+    local_timezone: str = "Asia/Dubai"
+    allowed_sessions_local: list[tuple[str, str]] = Field(default_factory=list)
 
 
 class CostConfig(BaseModel):

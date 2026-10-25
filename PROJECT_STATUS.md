@@ -1,8 +1,28 @@
-# Project status — 2026-10-24 (session 2, owner's Windows VPS)
+# Project status — 2026-10-25 (session 3, agentic redesign)
 
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
-No real-market performance exists yet.
+No strategy has shown an edge after costs (168 virtual trades, net -533.99 USD; all exploration trades).
 
+## Session 3 (agentic XAUUSD redesign, cloud container)
+- Owner asked for a genuine evidence-driven agentic gold scalper. Design written: docs/AGENTIC_REDESIGN.md
+  (gap analysis of what exists, architecture and agent roles, data sources with licensing/latency/indicative
+  costs, database design, research and validation plan, risk-engine spec R1-R23, degraded operation, six stages
+  with acceptance criteria). Live risk settings stay illustrative until the owner gives account size and risk
+  tolerance.
+- Stage 1 built and tested on synthetic data only: indicator library (EMA, ADX/DI, Bollinger %B/bandwidth,
+  tick-volume VWAP and profile, swings, liquidity sweeps); strategy library (trend pullback, breakout, failed
+  breakout, range mean reversion, liquidity sweep, the two incumbent candidates, random baseline); research
+  harness (`python -m gold_ai research`) with chronological train/validation/test, the same fills/costs/risk
+  as the engines, matched random-entry baselines, bootstrap intervals and conservative verdicts, results in
+  Memory A (`kind=research`); feature evaluation (out-of-sample information, redundancy pruning).
+- Decision agent: expected value is now computed after round-trip costs; WAIT reasons start with "NO TRADE".
+- Risk engine v2 (applies to every engine, including the live virtual engines after deploy): weekly loss limit,
+  3-loss cooldown, no re-entry for 5 min after a loss, 20 trades/day and 2 min spacing, abnormal volatility and
+  spread filters, latency and margin checks, EV-after-cost gate, start-up observation window for demo/real,
+  duplicate prevention, reconciliation after reconnect, stop may only tighten, manual overrides recorded but never
+  applied, owner sessions in Dubai time, rule-set version on every verdict. Fixed: daily limits now roll over on
+  the first tick of a new day (before, a daily block lasted until some trade closed).
+- Not done yet: real-data research run (needs the VPS), Stages 2-6. No live behaviour was enabled.
 ## Session 2g (scalping and swing signals)
 - Each instrument now runs two virtual engines: **scalping** (M1/M5/M15, SL 1.5× M5 ATR, TP 1.5R, held ≤ 1 h)
   and **swing** (M15/H1/H4, SL 1.5× H1 ATR, TP 2R, held ≤ 3 days). Separate virtual accounts, models, trade
@@ -74,5 +94,5 @@ No real-market performance exists yet.
 - Backup copy: git bundle in the project files folder `gold-ai-scalper/gold-ai-scalper.bundle`.
 
 ## Next task
-First `todo` in TASK_QUEUE.json: **T-NEWS-FEATURES**. Owner-blocked tasks with priority 1:
+First `todo` in TASK_QUEUE.json by priority: **T-STAGE1-REAL-RESEARCH** (VPS), then Stage 2. Owner-blocked tasks with priority 1:
 T-VERIFY-BROKERS and T-REAL-DATA-RESEARCH.

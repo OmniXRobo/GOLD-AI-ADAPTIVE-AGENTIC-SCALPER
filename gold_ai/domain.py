@@ -126,6 +126,8 @@ class TradeProposal:
     strategy_version: str = ""
     model_version: str = ""
     style: str = "scalp"                  # scalp | swing
+    ev_after_cost_r: float | None = None  # model expectancy in R after round-trip costs (None = no model)
+    meta: dict = field(default_factory=dict)   # setup name, stop in ATR, evidence; copied into trade context
 
     @property
     def risk_reward(self) -> float:

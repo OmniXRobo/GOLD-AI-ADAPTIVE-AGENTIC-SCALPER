@@ -9,3 +9,5 @@
 | Telegram / WhatsApp / push credentials | Owner to put Telegram bot token + chat id in config.local.json (asked 2026-10-22); WhatsApp Business Cloud API token + phone id; push endpoint | Channels tested with mocked HTTP only |
 | Phone access to the VPS | Done: Tailscale on VPS and phone, `tailscale serve --bg 8001` (owner ran it 2026-10-22) | App reaches the dashboard; not yet tested beyond that |
 | Packages, copy trading, oil signals, profit lock, community links | Owner decision (and a payment provider / broker programme where relevant) | Not built; the UI shows only the app's own data |
+| Account size and risk tolerance | Owner to state them | Live risk settings are not proposed; all risk values are illustrative and real trading stays disabled |
+| Licensed headline feed / X API | Owner decision on provider and budget (docs/AGENTIC_REDESIGN.md §2) | Stage 3 uses free official sources and the MT5 calendar only |

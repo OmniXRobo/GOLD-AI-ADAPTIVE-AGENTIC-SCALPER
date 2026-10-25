@@ -1,5 +1,13 @@
 # Next actions
 
+A. (VPS thread) After the agentic-redesign PR is merged: `git pull`, `pip install -r requirements.txt` (adds tzdata),
+   restart GoldAI-Equiti. Note that risk engine v2 now also limits the virtual engines (20 trades/day, cooldowns,
+   no re-entry 5 min after a loss), so fewer virtual trades is expected. Then run
+   `python -m gold_ai --config config.local.json research --broker equiti --symbol XAUUSD.sd` on the stored ticks
+   and commit the report from `data/research/` as-is (task T-STAGE1-REAL-RESEARCH).
+B. (Owner) Give account size and risk tolerance before any live risk settings are proposed (T-LIVE-RISK-SETTINGS).
+C. (Dev) Stage 2 per docs/AGENTIC_REDESIGN.md §7: planner from research champions, TP1-3, signal lifecycle.
+
 00. (VPS thread) After the trade-styles PR is merged: `git pull`, `npm ci && npm run build` in `dashboard/`, restart
    GoldAI-Equiti (keep `--symbol XAUUSD.sd`), check the log for `seeded ... broker bars` and `:swing` engines, then
    confirm BTCUSD swing shows ready on the weekend. Build Android 1.4.0 with the existing key.

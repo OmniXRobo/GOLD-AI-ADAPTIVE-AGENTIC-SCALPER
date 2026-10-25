@@ -32,22 +32,27 @@ class CandleBuilder:
 
     def update(self, tick: Tick) -> Candle | None:
         """Feed one tick; returns the previous bar when it closes."""
-        start = bar_open(tick.time, self.seconds)
         price = tick.bid
+        c = self._cur
+        ts = tick.time.timestamp()
+        if c is not None and c["t0"] <= ts < c["t1"]:     # fast path: same bar
+            if price > c["high"]:
+                c["high"] = price
+            elif price < c["low"]:
+                c["low"] = price
+            c["close"] = price
+            c["n"] += 1
+            c["spread_sum"] += tick.ask - tick.bid
+            return None
+        start = bar_open(tick.time, self.seconds)
         closed = None
-        if self._cur is not None and start != self._cur["time"]:
-            if start < self._cur["time"]:
+        if c is not None:
+            if start < c["time"]:
                 raise ValueError("ticks out of order")
             closed = self._finish()
-        if self._cur is None:
-            self._cur = {"time": start, "open": price, "high": price, "low": price,
-                         "close": price, "n": 0, "spread_sum": 0.0}
-        c = self._cur
-        c["high"] = max(c["high"], price)
-        c["low"] = min(c["low"], price)
-        c["close"] = price
-        c["n"] += 1
-        c["spread_sum"] += tick.spread
+        t0 = start.timestamp()
+        self._cur = {"time": start, "t0": t0, "t1": t0 + self.seconds, "open": price, "high": price,
+                     "low": price, "close": price, "n": 1, "spread_sum": tick.spread}
         return closed
 
     def _finish(self) -> Candle:
