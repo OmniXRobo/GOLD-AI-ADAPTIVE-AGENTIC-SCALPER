@@ -38,11 +38,21 @@ from .stream import Meter, TickStream
 SPLITS = ("train", "validation", "test")
 
 
+# Named variant grids for the CLI (avoids JSON quoting in PowerShell).
+VARIANT_PRESETS: dict[str, tuple[dict, ...]] = {
+    "plain": ({},),
+    "cost-round2": ({}, {"min_atr_spread": 10}, {"trigger_tf": "M5"}, {"trigger_tf": "M5", "min_atr_spread": 10}),
+}
+
+
 @dataclass
 class ResearchConfig:
     train_frac: float = 0.5
     validation_frac: float = 0.25          # test = the rest
     risk_rewards: tuple[float, ...] = (1.0, 1.5, 2.0)
+    # Extra RuleParams overrides crossed with the R:R grid, e.g. {"min_atr_spread": 10} or {"trigger_tf": "M5"}.
+    # Every combination is a variant; the choice among them is made on validation like the R:R choice.
+    variants: tuple[dict, ...] = ({},)
     setups: tuple[str, ...] = RESEARCH_SETUPS
     min_test_trades: int = 30
     min_validation_trades: int = 10
@@ -65,6 +75,7 @@ class SetupReport:
     verdict: str
     notes: list[str] = field(default_factory=list)
     run_id: str | None = None
+    selected_key: str = ""
 
 
 @dataclass
@@ -128,10 +139,10 @@ def run_lanes(settings: Settings, spec: SymbolSpec, ticks: Iterable[Tick],
                                  starting_equity=starting_equity, learn=False, simulation=True, risk=risk,
                                  market=market))
     trades: list[list[SimTrade]] = [[] for _ in loops]
-    gate = RuleAgent.decide_on_bar_close
+    gates = {lp.agent.decide_on_bar_close for lp in loops}
     for tick in ticks:
         new_bars = market.on_tick(tick)
-        state = market.state(advance=True) if gate in new_bars else None
+        state = market.state(advance=True) if any(g in new_bars for g in gates) else None
         for i, lp in enumerate(loops):
             trades[i].extend(lp.process(tick, new_bars, state))
     out = []
@@ -185,32 +196,32 @@ def evaluate_setups(settings: Settings, spec: SymbolSpec, ticks: "list[Tick] | T
     for name in cfg.setups:
         if name not in SETUPS:
             raise ValueError(f"unknown setup {name}")
-    grid = [(name, rr) for name in cfg.setups for rr in cfg.risk_rewards]
+    grid = [(name, variant_key(rr, ov), RuleParams(setup=name, max_hold_seconds=cfg.max_hold_seconds,
+                                                   **{**ov, "risk_reward": rr}))
+            for name in cfg.setups for ov in cfg.variants for rr in cfg.risk_rewards]
     if progress:
         progress(f"pass 1: {len(grid)} setup variants, {stream.start} -> {stream.end}")
     meter = Meter(stream)
-    results = run_lanes(settings, spec, meter,
-                        [(RuleParams(setup=n, risk_reward=rr, max_hold_seconds=cfg.max_hold_seconds), None)
-                         for n, rr in grid], news=news, starting_equity=cfg.starting_equity)
-    by_setup: dict[str, dict[float, tuple[RuleParams, dict[str, list[SimTrade]], RuleAgent]]] = {}
-    for (name, rr), (trades, agent) in zip(grid, results):
-        by_setup.setdefault(name, {})[rr] = (agent.params, _by_split(trades, b), agent)
+    results = run_lanes(settings, spec, meter, [(params, None) for _, _, params in grid], news=news,
+                        starting_equity=cfg.starting_equity)
+    by_setup: dict[str, dict[str, tuple[RuleParams, dict[str, list[SimTrade]], RuleAgent]]] = {}
+    for (name, key, _), (trades, agent) in zip(grid, results):
+        by_setup.setdefault(name, {})[key] = (agent.params, _by_split(trades, b), agent)
     m1_bars, dh, n_ticks = meter.m1_bars, meter.data_hash, meter.count
     if n_ticks == 0:
         raise ValueError("no ticks supplied")
-    chosen: dict[str, tuple[float, list[str], dict]] = {}
+    chosen: dict[str, tuple[str, list[str], dict]] = {}
     for name in cfg.setups:
         runs = by_setup[name]
-        variants = {f"{rr:g}": {s: r_summary([_r(t) for t in parts[s]], cfg.seed) for s in SPLITS}
-                    for rr, (_, parts, _) in runs.items()}
+        variants = {key: {s: r_summary([_r(t) for t in parts[s]], cfg.seed) for s in SPLITS}
+                    for key, (_, parts, _) in runs.items()}
         # choose on validation only (enough trades); fall back to train and say so
-        eligible = [rr for rr in cfg.risk_rewards
-                    if variants[f"{rr:g}"]["validation"]["trades"] >= cfg.min_validation_trades]
+        eligible = [k for k in variants if variants[k]["validation"]["trades"] >= cfg.min_validation_trades]
         notes: list[str] = []
         if eligible:
-            best = max(eligible, key=lambda rr: variants[f"{rr:g}"]["validation"]["expectancy_r"])
+            best = max(eligible, key=lambda k: variants[k]["validation"]["expectancy_r"])
         else:
-            best = max(cfg.risk_rewards, key=lambda rr: variants[f"{rr:g}"]["train"]["expectancy_r"])
+            best = max(variants, key=lambda k: variants[k]["train"]["expectancy_r"])
             notes.append(f"fewer than {cfg.min_validation_trades} validation trades for every variant; "
                          "chosen on train")
         chosen[name] = (best, notes, variants)
@@ -219,11 +230,11 @@ def evaluate_setups(settings: Settings, spec: SymbolSpec, ticks: "list[Tick] | T
     baselines = []
     for name in cfg.setups:
         best = chosen[name][0]
-        parts = by_setup[name][best][1]
+        best_params, parts, _ = by_setup[name][best]
         all_trades = [t for s in SPLITS for t in parts[s]]
         sl_atrs = [t.context.get("sl_atr") for t in all_trades if t.context.get("sl_atr")]
         prob = len(all_trades) / max(1, m1_bars)
-        baselines.append((RuleParams(setup="random_baseline", risk_reward=best, min_stop_atr=0.0,
+        baselines.append((RuleParams(setup="random_baseline", risk_reward=best_params.risk_reward, min_stop_atr=0.0,
                                      max_hold_seconds=cfg.max_hold_seconds),
                           RandomBaseline(probability=min(1.0, max(prob, 1e-4)),
                                          sl_atr=statistics.median(sl_atrs) if sl_atrs else 1.0, seed=cfg.seed)))
@@ -237,8 +248,8 @@ def evaluate_setups(settings: Settings, spec: SymbolSpec, ticks: "list[Tick] | T
         params, parts, agent = by_setup[name][best]
         test_trades = parts["test"]
         all_trades = [t for s in SPLITS for t in parts[s]]
-        test = variants[f"{best:g}"]["test"]
-        validation = variants[f"{best:g}"]["validation"]
+        test = variants[best]["test"]
+        validation = variants[best]["validation"]
         baseline = r_summary([_r(t) for t in _by_split(bl_trades, b)["test"]], cfg.seed)
         regimes: dict[str, dict] = {}
         for t in test_trades:
@@ -263,13 +274,18 @@ def evaluate_setups(settings: Settings, spec: SymbolSpec, ticks: "list[Tick] | T
                                               "splits": {k: [a.isoformat(), z.isoformat()] for k, (a, z) in b.items()},
                                               "notes": notes}))
         reports.append(SetupReport(name, cls.family, cls.regime, asdict(params), variants, test, baseline,
-                                   regimes, dict(agent.rejected), v, notes, run_id))
+                                   regimes, dict(agent.rejected), v, notes, run_id, best))
         if progress:
             progress(f"{name}: verdict {v}")
     return ResearchReport(spec.symbol, spec.broker, data_source,
                           (stream.start.isoformat(), stream.end.isoformat()),
                           {k: (a.isoformat(), z.isoformat()) for k, (a, z) in b.items()},
                           n_ticks, m1_bars, reports, dh)
+
+
+def variant_key(rr: float, overrides: dict) -> str:
+    extra = ",".join(f"{k}={v}" for k, v in sorted(overrides.items()) if k != "risk_reward")
+    return f"rr={rr:g}" + (f",{extra}" if extra else "")
 
 
 def _fmt_ci(ci) -> str:
@@ -281,12 +297,12 @@ def to_markdown(r: ResearchReport) -> str:
              f"Data: {r.data_source}, {r.ticks:,} ticks, {r.m1_bars:,} M1 bars, {r.period[0]} → {r.period[1]}",
              f"Splits: " + "; ".join(f"{k} {a[:16]} → {z[:16]}" for k, (a, z) in r.splits.items()),
              f"Data hash: `{r.data_hash}`", "", f"_{r.label}_", "",
-             "| Setup | Verdict | RR | Test trades | Test exp. (R) | 90% CI | PF | Max DD (R) | Random baseline (R) | Val. exp. (R) |",
+             "| Setup | Verdict | Variant | Test trades | Test exp. (R) | 90% CI | PF | Max DD (R) | Random baseline (R) | Val. exp. (R) |",
              "|---|---|---|---|---|---|---|---|---|---|"]
     for s in r.setups:
         t, bl = s.test, s.baseline_test
-        rr = s.selected["risk_reward"] if s.selected else "-"
-        val = s.variants[f"{rr:g}"]["validation"]["expectancy_r"] if s.selected else 0.0
+        rr = s.selected_key or "-"
+        val = s.variants[s.selected_key]["validation"]["expectancy_r"] if s.selected_key else 0.0
         pf = f"{t['profit_factor']:.2f}" if t.get("profit_factor") else "n/a"
         lines.append(f"| {s.setup} | **{s.verdict}** | {rr} | {t['trades']} | {t['expectancy_r']:+.3f} | "
                      f"{_fmt_ci(t['ci90'])} | {pf} | {t['max_drawdown_r']:.1f} | {bl['expectancy_r']:+.3f} "

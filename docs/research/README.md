@@ -29,3 +29,17 @@ What follows from it
 2. Cost is the first obstacle: the next research round should test trading only when volatility is large
    relative to spread, and stops on M5/M15 structure rather than M1, before any new entry idea.
 3. Nothing here changes the live virtual engines, and no setup is promoted.
+
+## Round 2 grid (prepared 2026-10-25, not yet run on real data)
+`research` now takes `--variants`, a preset name or a JSON list of rule overrides crossed with the R:R grid; the variant is chosen on
+validation like R:R. Round 2 tests the two cost ideas above against the plain setups:
+
+```
+python -m gold_ai --config config.local.json research --broker equiti --symbol XAUUSD.sd --rr 1.5,2.0 --variants cost-round2
+```
+
+- `min_atr_spread: 10` trades only when M5 ATR is at least 10 spreads (about 2.7 USD on Equiti's ~0.27 spread).
+- `trigger_tf: M5` triggers on M5 closes and takes the structural stop from M5 bars (wider stops, costs a smaller
+  share of the risk). Bar counts in setup parameters are then M5 bars.
+- 7 setups × 2 R:R × 4 variants = 56 lanes plus 7 baselines. Choosing among more variants raises the chance that the
+  best one looks good by luck, which is why the test split and the random baseline still decide the verdict.

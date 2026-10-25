@@ -251,11 +251,14 @@ def test_cli_research_writes_report(tmp_path, spec):
     st.kv_set(f"spec:{spec.broker}:{spec.symbol}", asdict(spec))
     st.save_ticks(spec.broker, spec.symbol, ticks(30_000), source=SYNTHETIC_SOURCE)
     assert main(["--config", str(cfg), "research", "--broker", spec.broker, "--symbol", spec.symbol,
-                 "--setups", "legacy_momentum", "--rr", "1.5", "--min-test-trades", "5"]) == 0
+                 "--setups", "legacy_momentum", "--rr", "1.5", "--min-test-trades", "5",
+                 "--variants", "cost-round2"]) == 0
     reports = list((tmp_path / "research").glob("research-*.md"))
     assert len(reports) == 1
     text = reports[0].read_text()
     assert "Data: synthetic" in text and "Feature evaluation" in text
+    data = json.loads(next((tmp_path / "research").glob("research-*.json")).read_text())
+    assert len(data["report"]["setups"][0]["variants"]) == 4
 
 
 def test_streamed_research_matches_in_memory(settings, spec, store):
@@ -278,3 +281,18 @@ def test_stream_rejects_out_of_order_ticks():
     tk = ticks(100)
     with pytest.raises(ValueError):
         list(TickStream(lambda: [tk[1], tk[0]], tk[0].time, tk[1].time))
+
+
+def test_variant_grid_cost_gate_and_m5_trigger(settings, spec):
+    tk = ticks(60_000)
+    cfg = ResearchConfig(setups=("legacy_momentum",), risk_rewards=(1.5,), min_test_trades=5,
+                         variants=({}, {"min_atr_spread": 1e6}, {"trigger_tf": "M5"}))
+    rep = evaluate_setups(settings, spec, tk, cfg)
+    keys = set(rep.setups[0].variants)
+    assert keys == {"rr=1.5", "rr=1.5,min_atr_spread=1000000.0", "rr=1.5,trigger_tf=M5"}
+    assert rep.setups[0].selected_key in keys
+    gated, agent = run_rules(settings, spec, tk, RuleParams(setup="legacy_momentum", min_atr_spread=1e6))
+    assert gated == [] and any("volatility too low" in k for k in agent.rejected)
+    m5, _ = run_rules(settings, spec, tk, RuleParams(setup="legacy_momentum", trigger_tf="M5"))
+    assert m5 and all(t.entry_time.minute % 5 == 0 for t in m5)        # decided only on M5 closes
+    assert RuleParams(setup="breakout").version() == RuleParams(setup="breakout", trigger_tf="M1").version()

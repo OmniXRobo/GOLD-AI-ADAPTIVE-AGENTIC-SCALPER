@@ -64,7 +64,7 @@ def _research(a, settings, store: MemoryStore) -> int:
     from .news.agent import NewsAgent
     from .news.sources import CalendarFileSource
     from .research.features import evaluate_features, features_markdown
-    from .research.setup_eval import ResearchConfig, evaluate_setups, to_markdown
+    from .research.setup_eval import VARIANT_PRESETS, ResearchConfig, evaluate_setups, to_markdown
     from .strategies.setups import RESEARCH_SETUPS
 
     from .research.stream import TickStream
@@ -79,7 +79,8 @@ def _research(a, settings, store: MemoryStore) -> int:
                               for p in settings.news_calendar_files])
     news.refresh(ticks.start - timedelta(days=1), ticks.end + timedelta(days=1))
     cfg = ResearchConfig(setups=tuple(x.strip() for x in a.setups.split(",")) if a.setups else RESEARCH_SETUPS,
-                         risk_rewards=tuple(float(x) for x in a.rr.split(",")), min_test_trades=a.min_test_trades)
+                         risk_rewards=tuple(float(x) for x in a.rr.split(",")), min_test_trades=a.min_test_trades,
+                         variants=VARIANT_PRESETS.get(a.variants) or tuple(json.loads(a.variants)))
     log.info("research on ticks %s -> %s (%s), %d calendar events", ticks.start, ticks.end, data_source,
              len(news.events))
     rep = evaluate_setups(settings, spec, ticks, cfg, news=news.risk_events(), store=store, data_source=data_source,
@@ -151,6 +152,9 @@ def main(argv: list[str] | None = None) -> int:
     rs.add_argument("--end")
     rs.add_argument("--setups", default=None, help="comma-separated setup names (default: all research setups)")
     rs.add_argument("--rr", default="1.0,1.5,2.0", help="reward:risk grid, chosen on the validation split")
+    rs.add_argument("--variants", default="plain",
+                    help='preset name (plain, cost-round2) or a JSON list of rule overrides crossed with --rr, '
+                         'e.g. \'[{}, {"min_atr_spread": 10}]\'')
     rs.add_argument("--min-test-trades", type=int, default=30)
     rs.add_argument("--no-features", action="store_true", help="skip the indicator evaluation")
     rs.add_argument("--out", default=None, help="report directory (default <data_dir>/research)")
