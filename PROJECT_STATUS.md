@@ -3,6 +3,16 @@
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No strategy has shown an edge after costs (168 virtual trades, net -533.99 USD; all exploration trades).
 
+## Session 3b (first real-data research, 2026-10-25)
+- Stage 1 deployed on the VPS (239 tests pass). `research` ran on 3,285,567 real Equiti XAUUSD.sd ticks
+  (2026-10-18 → 2026-10-23, ~5 trading days). Report committed as-is in docs/research/ with an interpretation.
+- Result: every setup `insufficient_data` (0–11 test trades, 30 needed); no champion, nothing promoted. The most
+  common rejection was round-trip costs above 0.25R of the stop; only spread/ATR and Bollinger bandwidth
+  percentile carried stable information. The +0.91R of the incumbent S/R rejection on 11 test trades flipped
+  sign from validation (−0.44R) and is not evidence.
+- Research now streams ticks from the database in 6-hour chunks, so weeks of history can be evaluated.
+  Next: backfill weeks of ticks on the VPS, then test cost-aware variants (volatility-to-spread filter, M5/M15 stops).
+
 ## Session 3 (agentic XAUUSD redesign, cloud container)
 - Owner asked for a genuine evidence-driven agentic gold scalper. Design written: docs/AGENTIC_REDESIGN.md
   (gap analysis of what exists, architecture and agent roles, data sources with licensing/latency/indicative

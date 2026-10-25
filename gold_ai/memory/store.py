@@ -8,9 +8,9 @@ The model registry and audit log are append-only.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Iterator
 
 from sqlalchemy import (JSON, Boolean, DateTime, Float, Integer, String, Text, create_engine, event, func,
                         select)
@@ -268,6 +268,28 @@ class MemoryStore:
             q = q.where(TickRow.source == source)
         with self.Session() as s:
             return [Tick(_aware(r.time), r.bid, r.ask, r.volume) for r in s.scalars(q)]
+
+    def iter_ticks(self, broker: str, symbol: str, start: datetime, end: datetime,
+                   chunk: timedelta = timedelta(hours=6)) -> Iterator[Tick]:
+        """Ticks in [start, end) loaded a chunk at a time, so weeks of history never sit in memory at once."""
+        t = start
+        while t < end:
+            stop = min(t + chunk, end)
+            yield from self.load_ticks(broker, symbol, t, stop)
+            t = stop
+
+    def tick_range(self, broker: str, symbol: str, start: datetime | None = None,
+                   end: datetime | None = None) -> tuple[datetime, datetime] | None:
+        """Time of the first and last stored tick within the optional bounds."""
+        q = select(func.min(TickRow.time), func.max(TickRow.time)).where(TickRow.broker == broker,
+                                                                          TickRow.symbol == symbol)
+        if start:
+            q = q.where(TickRow.time >= start)
+        if end:
+            q = q.where(TickRow.time < end)
+        with self.Session() as s:
+            a, z = s.execute(q).one()
+        return (_aware(a), _aware(z)) if a else None
 
     def first_tick_time(self, broker: str, symbol: str) -> datetime | None:
         with self.Session() as s:

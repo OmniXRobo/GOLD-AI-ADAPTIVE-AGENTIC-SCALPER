@@ -67,19 +67,21 @@ def _research(a, settings, store: MemoryStore) -> int:
     from .research.setup_eval import ResearchConfig, evaluate_setups, to_markdown
     from .strategies.setups import RESEARCH_SETUPS
 
+    from .research.stream import TickStream
+
     spec = _spec_from_store(store, a.broker, a.symbol)
-    ticks = store.load_ticks(a.broker, a.symbol, _dt(a.start), _dt(a.end))
-    if not ticks:
+    ticks = TickStream.from_store(store, a.broker, a.symbol, _dt(a.start), _dt(a.end))   # read in 6 h chunks
+    if ticks is None:
         sys.exit("no stored ticks for that broker/symbol/period")
     sources = {r["source"] for r in store.tick_stats() if r["broker"] == a.broker and r["symbol"] == a.symbol}
     data_source = ",".join(sorted(sources)) or "stored"
     news = NewsAgent(sources=[CalendarFileSource(os.path.expandvars(p), name=Path(p).name)
                               for p in settings.news_calendar_files])
-    news.refresh(ticks[0].time - timedelta(days=1), ticks[-1].time + timedelta(days=1))
+    news.refresh(ticks.start - timedelta(days=1), ticks.end + timedelta(days=1))
     cfg = ResearchConfig(setups=tuple(x.strip() for x in a.setups.split(",")) if a.setups else RESEARCH_SETUPS,
                          risk_rewards=tuple(float(x) for x in a.rr.split(",")), min_test_trades=a.min_test_trades)
-    log.info("research on %d ticks %s -> %s (%s), %d calendar events", len(ticks), ticks[0].time, ticks[-1].time,
-             data_source, len(news.events))
+    log.info("research on ticks %s -> %s (%s), %d calendar events", ticks.start, ticks.end, data_source,
+             len(news.events))
     rep = evaluate_setups(settings, spec, ticks, cfg, news=news.risk_events(), store=store, data_source=data_source,
                           progress=lambda m: log.info("research: %s", m))
     md = to_markdown(rep)
@@ -93,7 +95,7 @@ def _research(a, settings, store: MemoryStore) -> int:
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     (dest / f"research-{a.symbol}-{stamp}.md").write_text(md, encoding="utf-8")
     (dest / f"research-{a.symbol}-{stamp}.json").write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
-    store.audit("cli", "research", {"broker": a.broker, "symbol": a.symbol, "ticks": len(ticks),
+    store.audit("cli", "research", {"broker": a.broker, "symbol": a.symbol, "ticks": rep.ticks,
                                     "verdicts": {s.setup: s.verdict for s in rep.setups}})
     print(md)
     print(f"report written to {dest}")

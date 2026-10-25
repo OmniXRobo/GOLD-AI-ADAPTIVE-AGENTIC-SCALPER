@@ -89,3 +89,4 @@ All items below have code + passing tests unless noted.
 - Stage 1: indicator library, strategy setup library, rule agent (simulation-only), research harness + CLI
   `research`, feature evaluation, EV after costs in the decision agent, risk engine v2, Dubai-time sessions,
   day-rollover fix. Tested on synthetic data only.
+- 2026-10-25: first real-data research run committed (docs/research/); research streams ticks from the DB.

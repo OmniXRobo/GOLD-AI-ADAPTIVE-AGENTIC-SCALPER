@@ -401,9 +401,9 @@
       "id": "T-STAGE1-REAL-RESEARCH",
       "phase": 11,
       "title": "Run `python -m gold_ai research` on stored Equiti XAUUSD.sd ticks on the VPS and commit the report as-is",
-      "status": "todo",
+      "status": "done",
       "priority": 1,
-      "notes": "Needs the VPS (ticks live in its DB). Report every verdict, including failures."
+      "notes": "docs/research/: 3.29M Equiti ticks, 5 trading days; every setup insufficient_data (0-11 test trades). Costs dominate rejections; only spread_atr and bb_bw_pctile_m5 informative."
     },
     {
       "id": "T-STAGE2-PLANNER-SIGNALS",
@@ -440,6 +440,27 @@
       "status": "blocked",
       "blocked_on": "owner: account size and risk tolerance",
       "priority": 5
+    },
+    {
+      "id": "T-RESEARCH-STREAM",
+      "phase": 11,
+      "title": "Stream research ticks from the DB in chunks (weeks of history without loading into memory)",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-BACKFILL-WEEKS",
+      "phase": 11,
+      "title": "VPS: backfill weeks of Equiti XAUUSD.sd tick history (check disk first) and re-run research",
+      "status": "todo",
+      "priority": 1
+    },
+    {
+      "id": "T-COST-AWARE-SETUPS",
+      "phase": 11,
+      "title": "Research round 2: volatility-to-spread filter and M5/M15 structure stops, judged on the longer history",
+      "status": "todo",
+      "priority": 1
     }
   ]
 }
