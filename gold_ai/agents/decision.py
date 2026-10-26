@@ -150,6 +150,45 @@ class Calibrator:
         return c
 
 
+class Payoff:
+    """Realized outcome sizes for one direction, in R after costs, shrunk toward the planned bracket.
+
+    The model estimates P(trade closes with a profit). Winners do not all reach the full target: trailing
+    stops and time exits close many of them early, so expectancy must use the size wins and losses actually
+    have, not the planned reward:risk. With no closed trades this is exactly the planned bracket.
+    """
+
+    def __init__(self, prior_n: float = 10.0, win_sum: float = 0.0, win_n: int = 0, loss_sum: float = 0.0,
+                 loss_n: int = 0):
+        self.prior_n, self.win_sum, self.win_n, self.loss_sum, self.loss_n = prior_n, win_sum, win_n, loss_sum, loss_n
+
+    def win_r(self, planned: float) -> float:
+        return (self.prior_n * planned + self.win_sum) / (self.prior_n + self.win_n)
+
+    def loss_r(self, planned: float) -> float:
+        return (self.prior_n * planned + self.loss_sum) / (self.prior_n + self.loss_n)
+
+    def update(self, r: float) -> None:
+        if r > 0:
+            self.win_sum += r
+            self.win_n += 1
+        else:
+            self.loss_sum += -r
+            self.loss_n += 1
+
+    @property
+    def n(self) -> int:
+        return self.win_n + self.loss_n
+
+    def to_dict(self) -> dict:
+        return {"prior_n": self.prior_n, "win_sum": self.win_sum, "win_n": self.win_n, "loss_sum": self.loss_sum,
+                "loss_n": self.loss_n}
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "Payoff":
+        return cls(**d)
+
+
 def _vec(features: dict[str, float]) -> list[float]:
     # Squash to keep SGD stable on heavy-tailed market features.
     return [math.tanh(features.get(k, 0.0) / 3.0) for k in _LEARN_FEATURES]
@@ -160,21 +199,32 @@ class ModelState:
     buy: OnlineLogistic = field(default_factory=lambda: OnlineLogistic(len(_LEARN_FEATURES)))
     sell: OnlineLogistic = field(default_factory=lambda: OnlineLogistic(len(_LEARN_FEATURES)))
     calibrator: Calibrator = field(default_factory=Calibrator)
+    buy_payoff: Payoff = field(default_factory=Payoff)
+    sell_payoff: Payoff = field(default_factory=Payoff)
+
+    def payoff(self, side: Side) -> Payoff:
+        return self.buy_payoff if side == Side.BUY else self.sell_payoff
 
     def version(self) -> str:
         blob = json.dumps(self.to_dict(), sort_keys=True).encode()
         return "model-" + hashlib.sha256(blob).hexdigest()[:10]
 
     def to_dict(self) -> dict:
-        return {"features": list(_LEARN_FEATURES), "buy": self.buy.to_dict(), "sell": self.sell.to_dict(),
-                "calibrator": self.calibrator.to_dict()}
+        d = {"features": list(_LEARN_FEATURES), "buy": self.buy.to_dict(), "sell": self.sell.to_dict(),
+             "calibrator": self.calibrator.to_dict()}
+        if self.buy_payoff.n or self.sell_payoff.n:   # left out until used, so earlier model versions keep their ids
+            d["payoff"] = {"buy": self.buy_payoff.to_dict(), "sell": self.sell_payoff.to_dict()}
+        return d
 
     @classmethod
     def from_dict(cls, d: dict) -> "ModelState":
         if d.get("features") != list(_LEARN_FEATURES):
             raise ValueError("model feature schema mismatch")
+        pay = d.get("payoff") or {}
         return cls(OnlineLogistic.from_dict(d["buy"]), OnlineLogistic.from_dict(d["sell"]),
-                   Calibrator.from_dict(d["calibrator"]))
+                   Calibrator.from_dict(d["calibrator"]),
+                   Payoff.from_dict(pay["buy"]) if "buy" in pay else Payoff(),
+                   Payoff.from_dict(pay["sell"]) if "sell" in pay else Payoff())
 
 
 class TradingDecisionAgent:
@@ -204,7 +254,9 @@ class TradingDecisionAgent:
                risk_money=None) -> Decision:
         """lot_sizer(entry, sl) -> lots ; cost_fn(lots) -> expected round-trip cost (money) ;
         risk_money(entry, sl, lots) -> money lost at the stop. Expected value is computed after costs:
-        EV = p*(RR - c) - (1 - p)*(1 + c) in R, where c = round-trip cost / money at risk."""
+        EV = p*W - (1 - p)*L in R, where W and L are the realized average win and loss of this direction
+        (Payoff), shrunk toward the planned bracket W0 = RR - c and L0 = 1 + c, c = round-trip cost / money
+        at risk. p is the calibrated probability that a trade closes with a profit."""
         f = state.features
         if not state.ready or state.last_tick is None:
             return Decision(Side.WAIT, 0.0, "NO TRADE: insufficient market history (warming up)", features=f)
@@ -230,7 +282,8 @@ class TradingDecisionAgent:
             model = self.model.buy if side == Side.BUY else self.model.sell
             conf = self.model.calibrator.calibrate(model.predict(x))
             mature = model.n_updates >= p.min_samples
-            ev_r = conf * (p.risk_reward - cost_r) - (1 - conf) * (1 + cost_r)
+            pay = self.model.payoff(side)
+            ev_r = conf * pay.win_r(p.risk_reward - cost_r) - (1 - conf) * pay.loss_r(1 + cost_r)
             if best is None or ev_r > best[0]:
                 best = (ev_r, side, why, conf, mature, entry, sl, lots, cost, cost_r)
         assert best is not None
@@ -262,8 +315,11 @@ class TradingDecisionAgent:
         return Decision(side, conf, prop.explanation, prop, f)
 
     # -- learning ------------------------------------------------------------
-    def learn(self, features: dict[str, float], side: Side, won: bool) -> None:
+    def learn(self, features: dict[str, float], side: Side, won: bool, r: float | None = None) -> None:
+        """`won`: closed with a net profit. `r`: the realized net outcome in R, which sizes wins and losses."""
         x = _vec(features)
+        if r is not None:
+            self.model.payoff(side).update(r)
         model = self.model.buy if side == Side.BUY else self.model.sell
         raw = model.predict(x)
         self.model.calibrator.update(raw, won)

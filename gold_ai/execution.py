@@ -25,6 +25,7 @@ from .domain import ExitReason, MemoryDomain, Side, SimTrade, Tick, TradeProposa
 from .memory.store import MemoryStore
 from .risk.engine import RiskEngine
 from .security.auth import AuthService
+from .strategies import investigation
 
 log = logging.getLogger(__name__)
 
@@ -181,6 +182,11 @@ class MT5ExecutionAdapter:
         # 1. emergency stop
         if (why := self._emergency()) is not None:
             return self._refuse("emergency_stop", [why], "unknown")
+
+        # 1b. strategies under a root-cause investigation never reach a broker
+        if (b := investigation.blocking(self.store, proposal.strategy_version)) is not None:
+            return self._refuse("investigation", [f"strategy {proposal.strategy_version} is under investigation "
+                                                  f"({b['target']})"], "unknown")
 
         # 2. account real/demo detection
         acct_mode, problems = self._detect_account(snap)

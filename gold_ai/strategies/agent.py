@@ -123,5 +123,5 @@ class RuleAgent:
         )
         return Decision(sig.side, 0.0, expl, prop, f)
 
-    def learn(self, features: dict, side: Side, won: bool) -> None:
+    def learn(self, features: dict, side: Side, won: bool, r: float | None = None) -> None:
         """Rules do not learn online; their outcomes are measured by the research harness."""

@@ -65,7 +65,7 @@ class PositionSimulator:
             spread_cost=self.costs.spread_cost(lots, tick),
             slippage_cost=abs(fill - quoted) * mpu,
             initial_risk_money=abs(fill - p.stop_loss) * mpu,
-            context=dict(context or {}), explanation=p.explanation,
+            context={**(context or {}), "initial_stop_loss": p.stop_loss}, explanation=p.explanation,
         )
         self.positions.append(OpenPosition(t, p.trailing_start, p.trailing_distance, p.valid_until,
                                            current_sl=p.stop_loss))
@@ -121,6 +121,10 @@ class PositionSimulator:
         t.exit_price = price
         t.exit_reason = reason
         t.stop_loss = pos.current_sl
+        # Kept for exit analysis: stop_loss above is the final (possibly trailed) stop.
+        t.context.setdefault("initial_stop_loss", t.stop_loss)
+        t.context.update(max_favorable_price=t.max_favorable, max_adverse_price=t.max_adverse,
+                         trailing_active=pos.trailing_active)
         t.gross_pnl = (price - t.entry_price) * direction * mpu
         t.commission = self.costs.commission(t.lots)
         t.swap = self.costs.swap(t.side, t.lots, t.entry_time, tick.time)

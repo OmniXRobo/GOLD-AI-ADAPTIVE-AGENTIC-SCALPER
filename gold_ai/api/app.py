@@ -29,6 +29,7 @@ from ..instruments import canonical, instrument_for
 from ..market.technical import summary as technical_summary
 from ..memory.store import MemoryStore
 from ..security.auth import AuthService, Permission, User
+from ..strategies import investigation
 
 log = logging.getLogger(__name__)
 
@@ -38,6 +39,11 @@ DOMAIN_LABELS = {
     MemoryDomain.VIRTUAL: "SIMULATED (live virtual, estimated fills)",
     MemoryDomain.REAL: "ACTUAL BROKER FILLS",
 }
+
+
+class CloseInvestigationBody(BaseModel):
+    target: str
+    reason: str
 
 
 class LoginBody(BaseModel):
@@ -250,6 +256,12 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
         if style:
             ts = [t for t in ts if t.context.get("style", "scalp") == style]
         m = json_safe(compute_metrics(ts))
+        # Exploration trades (taken to gather data, not because the model expected a profit) are reported
+        # apart, so their results are never read as the strategy's own performance.
+        expl_ids = {t.trade_id for t in ts if t.context.get("exploration") or "[EXPLORATION]" in t.explanation}
+        expl = [t for t in ts if t.trade_id in expl_ids]
+        model = [t for t in ts if t.trade_id not in expl_ids]
+        by_mode = {"exploration": json_safe(compute_metrics(expl)), "model_approved": json_safe(compute_metrics(model))}
         rows = []
         for t in ts[-limit:]:
             d = asdict(t)
@@ -261,9 +273,12 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             d["pip_size"] = inst.pip_size if inst else None
             d["context"] = {k: v for k, v in t.context.items() if k != "features"}
             d["style"] = t.context.get("style", "scalp")
+            d["exploration"] = t.trade_id in expl_ids
+            inv = investigation.blocking(s.store, t.strategy_version)
+            d["investigation"] = inv["target"] if inv else None
             rows.append(d)
         return {"domain": domain.value, "label": DOMAIN_LABELS[domain], "simulated": domain != MemoryDomain.REAL,
-                "symbol": symbol, "style": style, "trades": rows, "metrics": m}
+                "symbol": symbol, "style": style, "trades": rows, "metrics": m, "metrics_by_mode": by_mode}
 
     @app.get("/api/runs")
     def runs(domain: MemoryDomain | None = None, u: User = Depends(current_user)):
@@ -319,6 +334,19 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
     @app.get("/api/models")
     def models(u: User = Depends(current_user)):
         return s.store.list_models()
+
+    @app.get("/api/strategies/investigations")
+    def investigations(u: User = Depends(current_user)):
+        return investigation.listing(s.store)
+
+    @app.post("/api/strategies/investigations/close")
+    def close_investigation(body: CloseInvestigationBody, u: User = Depends(need(Permission.ADMIN))):
+        try:
+            return investigation.close_investigation(s.store, body.target, u, body.reason)
+        except PermissionError as e:
+            raise HTTPException(403, str(e))
+        except (KeyError, ValueError) as e:
+            raise HTTPException(400, str(e))
 
     @app.post("/api/models/{version}/promote")
     def promote(version: str, u: User = Depends(need(Permission.ADMIN))):

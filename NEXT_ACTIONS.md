@@ -1,5 +1,11 @@
 # Next actions
 
+R. (VPS thread, first) After the root-cause-audit PR is merged: `git pull`, restart GoldAI-Equiti, then run
+   `python -m gold_ai --config config.local.json audit-trades --domain virtual` and
+   `... audit-trades --domain virtual --symbol XAUUSD --style scalp`; share both reports from `data/audit/` as-is,
+   plus whether `news_calendar_files` is set in config.local.json and whether the Equiti account charges commission.
+   Note: demo execution and signals of the adaptive strategy are now refused while it is under investigation.
+
 0. (VPS thread) After the streaming-research PR is merged: `git pull`, check free disk (roughly 1 GB per 10 M ticks in
    SQLite), then `backfill-ticks --terminal-path "C:\Program Files\MT5_2" --symbol XAUUSD.sd --days 30` (it extends
    history backwards from the earliest stored tick) and re-run `research` with the round 2 grid in

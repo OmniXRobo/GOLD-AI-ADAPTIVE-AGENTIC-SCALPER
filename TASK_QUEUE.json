@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-25",
+  "updated": "2026-10-26",
   "real_money_execution": "DISABLED",
   "tasks": [
     {
@@ -462,6 +462,77 @@
       "status": "in_progress",
       "priority": 1,
       "notes": "Code done: RuleParams.min_atr_spread, trigger_tf=M5, research --variants. Run on the longer history after T-BACKFILL-WEEKS."
+    },
+    {
+      "id": "T-RCA-AUDIT",
+      "phase": 6,
+      "title": "Root-cause audit of losing live-virtual results: 24 items, confirmed defects vs hypotheses (docs/ROOT_CAUSE_AUDIT.md)",
+      "status": "in_progress",
+      "priority": 1,
+      "notes": "Code audit + fixes done; waiting on VPS `audit-trades` report to verify the screenshot figures and settle H1-H6"
+    },
+    {
+      "id": "T-RCA-INVESTIGATION-FLAG",
+      "phase": 6,
+      "title": "Adaptive strategy family under investigation: promotion, execution, signals blocked; model backup in registry",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-RCA-FIXES",
+      "phase": 6,
+      "title": "Fix confirmed defects: EV from realized payoff, initial stop + MFE/MAE stored, exploration reported apart",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-RCA-CALIBRATOR",
+      "phase": 6,
+      "title": "Per-direction reliability calibrator (shared BUY/SELL calibrator is a confirmed minor defect)",
+      "status": "todo",
+      "priority": 2
+    },
+    {
+      "id": "T-DASH-EXPLORATION-LABEL",
+      "phase": 6,
+      "title": "Dashboard: label exploration trades, show investigation banner and exploration vs model-approved metrics",
+      "status": "todo",
+      "priority": 2
+    },
+    {
+      "id": "T-REGIME-AGENT",
+      "phase": 6,
+      "title": "Regime agent with uncertainty (HMM / change-point benchmarked OOS), WAIT when uncertain",
+      "status": "todo",
+      "priority": 1
+    },
+    {
+      "id": "T-ENSEMBLE-META",
+      "phase": 6,
+      "title": "Specialist ensemble + meta-decision agent (WAIT on disagreement), no LLM in the decision path",
+      "status": "todo",
+      "priority": 1
+    },
+    {
+      "id": "T-DYNAMIC-EXITS",
+      "phase": 6,
+      "title": "Structure stops, model-invalidation exit, dynamic TP; never widen or remove stops",
+      "status": "todo",
+      "priority": 1
+    },
+    {
+      "id": "T-PURGED-WF",
+      "phase": 6,
+      "title": "Purged + embargoed walk-forward; configurable evaluation framework with CIs and slippage sensitivity",
+      "status": "todo",
+      "priority": 1
+    },
+    {
+      "id": "T-RL-RESEARCH",
+      "phase": 7,
+      "title": "RL research branch (simulation only, never trades), compared with baselines",
+      "status": "todo",
+      "priority": 3
     }
   ]
 }

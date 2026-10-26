@@ -29,6 +29,7 @@ from ..domain import SimTrade, SymbolSpec, Tick, utcnow
 from ..engines.backtest import run_backtest
 from ..engines.walkforward import WalkForwardConfig, run_walkforward
 from ..memory.store import MemoryStore
+from ..strategies import investigation
 from .decision import ModelState, StrategyParams
 from .maturity import calibration_error
 
@@ -405,6 +406,11 @@ class SelfHealingAgent:
         if getattr(user, "role", None) != "owner":
             raise PermissionError("only the owner can change the approved model")
 
+    def _check_investigation(self, m: dict) -> None:
+        for v in (m.get("strategy_version"), m.get("version")):
+            if (b := investigation.blocking(self.store, v)) is not None:
+                raise ValueError(f"strategy {v} is under investigation ({b['target']}) and cannot be promoted")
+
     def _approved(self, like: dict | None = None) -> list[str]:
         """Approved versions; with `like`, only those for the same symbol and trade style (one approved
         strategy per engine, so promoting a gold swing version does not retire the BTCUSD scalping one)."""
@@ -421,6 +427,7 @@ class SelfHealingAgent:
             raise KeyError(version)
         if m["stage"] != "validated":
             raise ValueError(f"only 'validated' models can be promoted (stage is {m['stage']!r})")
+        self._check_investigation(m)
         previous = self._approved(m)
         for v in previous:
             self.store.set_model_stage(v, "retired", owner_user.username, f"superseded by {version}")
@@ -438,6 +445,7 @@ class SelfHealingAgent:
             raise KeyError(to_version)
         if m["stage"] not in ("retired", "validated", "approved"):
             raise ValueError(f"cannot roll back to a model in stage {m['stage']!r}")
+        self._check_investigation(m)
         previous = [v for v in self._approved(m) if v != to_version]
         for v in previous:
             self.store.set_model_stage(v, "retired", owner_user.username, f"rollback to {to_version}")
