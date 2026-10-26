@@ -1,5 +1,10 @@
 # Next actions
 
+T. (VPS thread) After the research-lanes PR is merged: `git pull`, restart GoldAI-Equiti. Three research lanes start on
+   XAUUSD.sd (failed_breakout, trend_pullback, breakout at intraday scale; simulation only, `style=research`, no
+   signals). Check `/api/overview` → `research_lanes`. Weekly: `audit-trades --domain virtual --style research`.
+   Also: backfill further back (`backfill-ticks ... --days 120`, check disk first) and rerun the round 3 command.
+
 S. (VPS thread) After the round-3 PR is merged: `git pull`, restart GoldAI-Equiti (virtual engines stop taking
    momentum trades), then run the round 3 command in docs/research/README.md and share the report as-is.
    (the earlier audit and round 2 reports are committed in docs/audit and docs/research).

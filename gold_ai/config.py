@@ -90,6 +90,17 @@ class Settings(BaseModel):
     # "rejection" (support/resistance wick rejection). Momentum is off: the root-cause audit found it made
     # ~97% of the losing virtual trades (docs/ROOT_CAUSE_AUDIT.md). An empty list stops new virtual entries.
     virtual_entry_rules: list[str] = Field(default_factory=lambda: ["rejection"])
+    # Forward research lanes (gold_ai/engines/research_lanes.py): research setups traded virtually on live quotes,
+    # simulation only, labelled, no signals. Defaults: the intraday setups that were not negative on research
+    # round 3's test split, with the variant chosen on validation (docs/research/README.md).
+    research_lane_symbols: list[str] = Field(default_factory=lambda: ["XAUUSD"])
+    research_lanes: list[dict] = Field(default_factory=lambda: [
+        {"setup": "failed_breakout", "risk_reward": 1.5, "tf_scale": "intraday", "trigger_tf": "M5",
+         "max_hold_seconds": 8 * 3600},
+        {"setup": "trend_pullback", "risk_reward": 1.5, "tf_scale": "intraday", "trigger_tf": "M5",
+         "max_hold_seconds": 8 * 3600},
+        {"setup": "breakout", "risk_reward": 2.0, "tf_scale": "intraday", "max_hold_seconds": 4 * 3600},
+    ])
     # Per-symbol changes to gold_ai.instruments limits, e.g. {"BTCUSD": {"max_spread_pips": 40}}.
     instrument_overrides: dict[str, dict] = Field(default_factory=dict)
 

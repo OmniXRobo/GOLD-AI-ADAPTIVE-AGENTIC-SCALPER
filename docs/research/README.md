@@ -73,3 +73,7 @@ Every setup came back `insufficient_data`. Intraday-scale trades are rarer: one 
 
 Next: more history (backfill further back) so the intraday setups reach 30 test trades, and forward virtual
 evidence for the setups that survived (research lanes on live quotes, simulation only, labelled).
+
+Forward research lanes now run these three setups (failed_breakout, trend_pullback, breakout, intraday scale) on
+live Equiti quotes in simulation (`gold_ai/engines/research_lanes.py`, `style=research`). Their trades are
+evidence for or against the research result; they never signal and never count as the agent's performance.

@@ -100,6 +100,7 @@ class AppState:
         self.store = store or MemoryStore(settings.database_url)
         self.auth = AuthService(settings, self.store)
         self.virtual_engines: dict[str, Any] = {}     # key -> LiveVirtualEngine
+        self.research_lanes: dict[str, Any] = {}      # key -> ResearchLaneEngine (simulation only)
         self.specs: dict[tuple[str, str], SymbolSpec] = {}
         self.connectors: dict[str, Any] = {}          # broker -> MT5ReadOnlyConnector
         self.extras: dict[str, Callable[..., Any]] = {}  # optional providers: news, signals, maturity...
@@ -150,6 +151,7 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             "demo_execution_enabled": s.settings.demo_execution_enabled,
             "emergency_stop": bool(s.store.kv_get("emergency_stop", False)),
             "virtual_engines": [e.status() for e in s.virtual_engines.values()],
+            "research_lanes": [e.status() for e in s.research_lanes.values()],
             "latest_runs": [_run_summary(r) for r in s.store.list_runs()[:10]],
         }
 
@@ -244,7 +246,7 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
     # -- memory ----------------------------------------------------------------
     @app.get("/api/trades/{domain}")
     def trades(domain: MemoryDomain, limit: int = Query(200, le=5000), broker: str | None = None,
-               symbol: str | None = None, style: str | None = Query(None, pattern="^(scalp|swing)$"),
+               symbol: str | None = None, style: str | None = Query(None, pattern="^(scalp|swing|research)$"),
                u: User = Depends(current_user)):
         """`symbol` is a broker symbol or a canonical instrument (EURUSD matches EURUSD.sd and EURUSDm).
         `style` keeps only scalping or swing trades (trades recorded before styles existed are scalping)."""
