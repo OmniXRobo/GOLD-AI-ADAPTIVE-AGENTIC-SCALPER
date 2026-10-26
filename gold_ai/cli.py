@@ -20,7 +20,7 @@ from datetime import datetime, timedelta, timezone
 
 from .agents.decision import StrategyParams
 from .config import load_settings
-from .domain import SymbolSpec
+from .domain import MemoryDomain, SymbolSpec
 from .engines.backtest import run_backtest
 from .engines.metrics import json_safe
 from .engines.walkforward import WalkForwardConfig, run_walkforward
@@ -103,6 +103,40 @@ def _research(a, settings, store: MemoryStore) -> int:
     return 0
 
 
+def _audit_trades(a, settings, store: MemoryStore) -> int:
+    from pathlib import Path
+
+    from .instruments import canonical
+    from .research.trade_audit import audit_markdown, audit_trades, safe_name
+
+    domain = MemoryDomain(a.domain)
+    names = None
+    if a.symbol:
+        want = canonical(a.symbol)
+        names = [x for x in store.trade_symbols(domain) if x == a.symbol or (want and canonical(x) == want)]
+    ts = store.load_trades(domain, broker=a.broker, symbols=names)
+    if a.style:
+        ts = [t for t in ts if t.context.get("style", "scalp") == a.style]
+    if a.since:
+        since = _dt(a.since)
+        since = since if since.tzinfo else since.replace(tzinfo=timezone.utc)
+        ts = [t for t in ts if t.entry_time >= since]
+    filters = {k: v for k, v in (("broker", a.broker), ("symbol", a.symbol), ("style", a.style),
+                                 ("since", a.since)) if v}
+    rep = audit_trades(ts, domain=domain.value, filters=filters, local_timezone=settings.risk.local_timezone)
+    md = audit_markdown(rep)
+    dest = Path(a.out or Path(settings.data_dir) / "audit")
+    dest.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    base = safe_name(f"audit-{domain.value}-{a.symbol or 'all'}-{stamp}")
+    (dest / f"{base}.md").write_text(md, encoding="utf-8")
+    (dest / f"{base}.json").write_text(json.dumps(json_safe(rep), indent=2, default=str), encoding="utf-8")
+    store.audit("cli", "audit_trades", {"domain": domain.value, "filters": filters, "trades": rep["closed_trades"]})
+    print(md)
+    print(f"report written to {dest}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     ap = argparse.ArgumentParser(prog="gold_ai")
@@ -160,6 +194,15 @@ def main(argv: list[str] | None = None) -> int:
     rs.add_argument("--min-test-trades", type=int, default=30)
     rs.add_argument("--no-features", action="store_true", help="skip the indicator evaluation")
     rs.add_argument("--out", default=None, help="report directory (default <data_dir>/research)")
+
+    au = sub.add_parser("audit-trades", help="read-only audit of stored trades (reconciles dashboard figures, "
+                                             "breaks results down by rule, exit, regime, costs; checks integrity)")
+    au.add_argument("--domain", default="virtual", choices=[d.value for d in MemoryDomain])
+    au.add_argument("--broker", default=None)
+    au.add_argument("--symbol", default=None, help="broker symbol or instrument (XAUUSD matches XAUUSD.sd)")
+    au.add_argument("--style", default=None, choices=["scalp", "swing"])
+    au.add_argument("--since", default=None, help="ISO time; only trades entered at or after it")
+    au.add_argument("--out", default=None, help="report directory (default <data_dir>/audit)")
 
     bk = sub.add_parser("backup", help="owner-authenticated database backup with checksum manifest")
     bk.add_argument("--owner", default="owner")
@@ -259,6 +302,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.cmd == "research":
         return _research(a, settings, store)
+
+    if a.cmd == "audit-trades":
+        return _audit_trades(a, settings, store)
 
     if a.cmd == "backup":
         from .backup import BackupService

@@ -169,12 +169,17 @@ def test_promoted_strategy_reaches_its_live_engine_and_survives_restart(settings
     tok = c.post("/api/auth/login", json={"username": "owner", "password": "owner-pass-123"}).json()["token"]
     h = {"Authorization": f"Bearer {tok}"}
     model_before = eng.agent.model
+    # The adaptive family is under investigation (root-cause audit) until the owner closes it.
+    r = c.post("/api/models/heal-gold-scalp/promote", headers=h)
+    assert r.status_code == 400 and "under investigation" in r.json()["detail"]
+    assert c.post("/api/strategies/investigations/close", headers=h,
+                  json={"target": "family:adaptive-v1", "reason": "test"}).status_code == 200
     assert c.post("/api/models/heal-gold-scalp/promote", headers=h).status_code == 200
     r = c.post("/api/models/heal-btc-swing/promote", headers=h).json()
     assert r["live_engine"]["applied"] and r["live_engine"]["engine"] == "virtual:equiti:BTCUSD.sd:swing"
     assert eng.agent.params.risk_reward == 2.3 and eng.agent.params.exploration_rate == 0.2
     assert eng.agent.model is model_before                     # learning is kept
-    stages = {m["version"]: m["stage"] for m in store.list_models()}
+    stages = {m["version"]: m["stage"] for m in store.list_models() if m["version"].startswith("heal-")}
     assert stages == {"heal-btc-swing": "approved", "heal-gold-scalp": "approved"}   # scoped per engine
     assert st.virtual_engines["equiti:XAUUSD.sd"].agent.params.risk_reward == 1.4
     assert st.virtual_engines["equiti:BTCUSD.sd"].agent.params.risk_reward == 1.5     # BTC scalping untouched

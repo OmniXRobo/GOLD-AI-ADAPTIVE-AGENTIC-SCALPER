@@ -7,6 +7,7 @@ positions are persisted so the engine resumes after a restart.
 """
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import time
@@ -18,6 +19,7 @@ from ..agents.decision import ModelState, StrategyParams, TradingDecisionAgent
 from ..config import Settings
 from ..domain import Decision, ExitReason, MemoryDomain, Side, SimTrade, SymbolSpec, Tick
 from ..memory.store import MemoryStore
+from ..strategies import investigation
 from .loop import TradingLoop
 from .simulator import OpenPosition
 
@@ -42,6 +44,7 @@ class LiveVirtualEngine:
         params = self._restore_params(params)
         model = self._restore_model()
         self.agent = TradingDecisionAgent(params, model)
+        self._snapshot_model("restored at engine start")
         equity = store.kv_get(f"{self.key}:equity", starting_equity)
         self.loop = TradingLoop(settings, spec, self.agent, broker=spec.broker, account=account,
                                 starting_equity=equity, learn=True, simulation=True,
@@ -95,6 +98,20 @@ class LiveVirtualEngine:
                 log.warning("could not restore virtual model (%s); starting fresh", e)
         return ModelState()
 
+    def _snapshot_model(self, why: str) -> bool:
+        """Versioned backup of the current model in the (insert-only) registry, so learning that later
+        overwrites the running model never loses a version. A strategy under investigation is stored in
+        stage "under_investigation", which promotion and rollback refuse."""
+        p = self.agent.params
+        blocked = investigation.blocking(self.store, p.version())
+        d = asdict(p)
+        d["timeframes"] = list(p.timeframes)
+        return self.store.register_model(
+            self.agent.model.version(), p.version(), d, self.agent.model.to_dict(),
+            stage="under_investigation" if blocked else "snapshot",
+            notes=json.dumps({"broker": self.spec.broker, "symbol": self.spec.symbol, "style": self.style,
+                              "engine": self.key, "why": why, "investigation": blocked and blocked["target"]}))
+
     def _persist(self) -> None:
         self.store.kv_set(f"{self.key}:model", self.agent.model.to_dict())
         self.store.kv_set(f"{self.key}:equity", self.loop.equity)
@@ -123,7 +140,8 @@ class LiveVirtualEngine:
         if d.side != Side.WAIT:
             self.store.save_decision(MemoryDomain.VIRTUAL, self.spec.broker, d, verdict)
             if (self.signal_hook and verdict.get("approved") and d.proposal is not None
-                    and "[EXPLORATION]" not in d.proposal.explanation):
+                    and "[EXPLORATION]" not in d.proposal.explanation
+                    and investigation.blocking(self.store, d.proposal.strategy_version) is None):
                 try:
                     self.signal_hook(d.proposal, self.loop.last_tick)
                 except Exception:
@@ -242,4 +260,5 @@ class LiveVirtualEngine:
             "learning_started": self.store.kv_get(f"{self.key}:learning_started"),
             "last_tick": self._last_tick_time.isoformat() if self._last_tick_time else None,
             "fills": "estimated (virtual)",
+            "investigation": investigation.blocking(self.store, self.agent.params.version()),
         }

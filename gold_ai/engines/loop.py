@@ -134,7 +134,8 @@ class TradingLoop:
         self.risk.on_trade_closed(t.net_pnl, t.exit_time)
         self.risk.on_equity(self.equity, t.exit_time)
         if self.learn and "features" in t.context:
-            self.agent.learn(t.context["features"], t.side, t.net_pnl > 0)
+            self.agent.learn(t.context["features"], t.side, t.net_pnl > 0,
+                             r=t.r_multiple if t.initial_risk_money > 0 else None)
         if self.on_close:
             self.on_close(t)
 

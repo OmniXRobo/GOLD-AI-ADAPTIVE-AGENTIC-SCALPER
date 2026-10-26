@@ -1,7 +1,19 @@
-# Project status — 2026-10-25 (session 3, agentic redesign)
+# Project status — 2026-10-26 (session 4, root-cause audit)
 
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No strategy has shown an edge after costs (168 virtual trades, net -533.99 USD; all exploration trades).
+
+## Session 4 (root-cause audit of the losing virtual strategy, 2026-10-26)
+- Owner reported 34 virtual trades, 32.4% win rate, −991 pips, PF ~0.50 (not yet reproduced from the DB).
+  Code audit of 24 items in docs/ROOT_CAUSE_AUDIT.md. Main finding: every virtual trade so far was an
+  exploration trade of two hard-coded candidate rules (immature model, exploration 0.2), which had no
+  research evidence. The exit design gives ~50% wins of ~1R on a random walk, so a 32% win rate points to
+  entries worse than random, not costs (~0.05R) or exits.
+- The adaptive strategy family (`family:adaptive-v1`, all `strat-`/`heal-` versions) is under investigation:
+  promotion, rollback, MT5 execution (demo included) and signals are blocked; virtual trading continues;
+  only the owner can close it. Models are backed up in the registry at engine start.
+- Fixed: EV uses realized win/loss size per direction; trades store initial stop and MFE/MAE; `/api/trades`
+  reports exploration apart; new read-only `audit-trades` CLI. 253 tests pass.
 
 ## Session 3b (first real-data research, 2026-10-25)
 - Stage 1 deployed on the VPS (239 tests pass). `research` ran on 3,285,567 real Equiti XAUUSD.sd ticks

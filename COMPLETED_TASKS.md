@@ -1,5 +1,15 @@
 # Completed tasks
 
+## Session 4 — 2026-10-26 (root-cause audit)
+- docs/ROOT_CAUSE_AUDIT.md: 24-item audit, confirmed defects vs hypotheses H1–H6.
+- Strategy investigations (gold_ai/strategies/investigation.py): adaptive family blocked from promotion,
+  rollback, execution and signals; owner-only close, audited; registry snapshot of each engine's model.
+- Decision agent: expectancy from realized payoff per direction (`Payoff`), backward-compatible model schema.
+- Simulator: initial stop, MFE/MAE, trailing flag stored on each closed trade.
+- `/api/trades`: exploration vs model-approved metrics; per-trade exploration/investigation fields.
+- `audit-trades` CLI (gold_ai/research/trade_audit.py): dashboard-identical headline, breakdowns, R statistics,
+  exits, costs, spacing, integrity checks.
+
 ## Session 1 — 2026-10-22
 All items below have code + passing tests unless noted.
 - P1 Foundation: repo, config (real trading off by default), domain types, SQLAlchemy store (SQLite/PostgreSQL),

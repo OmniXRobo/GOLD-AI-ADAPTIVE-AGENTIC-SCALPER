@@ -1,5 +1,11 @@
 # Test results
 
+## 2026-10-26 — session 4 (cloud container)
+- `python -m pytest -q` → **253 passed, 1 skipped** (adds tests/test_investigation_audit.py: investigation
+  flags, promotion/rollback/execution/signal blocks, model snapshot, initial stop and MFE/MAE on trades,
+  realized-payoff EV, audit headline vs dashboard arithmetic, integrity checks, binomial test, CLI, and the
+  random-walk exit profile of the incumbent exits: ~50% wins of ~1R).
+
 ## 2026-10-25 — session 3b
 - First real-data research (VPS, Equiti XAUUSD.sd, 3,285,567 ticks, 2026-10-18 → 2026-10-23): every setup
   insufficient_data (0–11 test trades of 30 required). Report and interpretation: docs/research/.

@@ -26,6 +26,7 @@ from .agents.self_healing import SelfHealingAgent, model_scope
 from .api.app import AppState, create_app, json_safe_any
 from .backup import BackupService
 from .brokers.mock_feed import synthetic_spec
+from .strategies import investigation
 from .config import Settings
 from .domain import SymbolSpec
 from .memory.store import MemoryStore
@@ -281,6 +282,7 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
     """Returns (app, supervisor). Call `supervisor.start()` to run the background workers; a crashed
     worker is restarted with exponential backoff and recorded as an incident."""
     state = AppState(settings, store)
+    investigation.seed(store)   # before any engine registers a model snapshot
     heartbeats = HeartbeatRegistry()
     supervisor = Supervisor(store, heartbeats=heartbeats)
     engines: list = []
