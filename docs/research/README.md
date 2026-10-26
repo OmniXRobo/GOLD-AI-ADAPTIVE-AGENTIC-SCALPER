@@ -58,3 +58,18 @@ python -m gold_ai --config config.local.json research --broker equiti --symbol X
 The random baseline for each setup uses the same scale (M5 decisions, M15-ATR stop), so the comparison stays fair.
 A setup becomes a candidate only with ≥30 test trades, a positive test expectancy whose interval is above zero,
 and a result better than its baseline; then it goes to walk-forward before it may trade in the virtual engine.
+
+## Round 3 result (2026-10-26, `research-XAUUSD.sd-20261026T161050Z.md`, 13.2 M ticks, 25 Sep → 26 Oct)
+Every setup came back `insufficient_data`. Intraday-scale trades are rarer: one month gives 12–23 test trades, and
+30 are required. Cost rejections are gone, so the wider stops did their job; what is missing now is sample size.
+- `failed_breakout` is the only setup positive on both validation (+0.01R) and test (+0.04R, 22 trades), and it
+  beat its random baseline (−0.33R). The edge is small and the interval is wide (−0.35..+0.47R).
+- `trend_pullback` had +0.20R on test (PF 1.47) but −0.26R on validation, so its sign is unstable. `breakout` was
+  −1.02R on validation. Both are noise at this size.
+- `range_reversion` and `liquidity_sweep` were negative on test; `liquidity_sweep`'s interval is entirely below zero.
+- Band-width percentile (`bb_bw_pctile_m5`) is again the strongest stable feature (ρ ≈ +0.26..+0.31 on train and
+  validation, both directions): brackets do better when volatility is expanded. Part of this is mechanical, since
+  costs are a smaller share of a wider ATR stop.
+
+Next: more history (backfill further back) so the intraday setups reach 30 test trades, and forward virtual
+evidence for the setups that survived (research lanes on live quotes, simulation only, labelled).
