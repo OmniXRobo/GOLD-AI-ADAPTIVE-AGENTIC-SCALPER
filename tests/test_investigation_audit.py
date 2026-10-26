@@ -209,3 +209,17 @@ def test_exit_design_gives_coin_flip_wins_of_about_one_r_on_a_random_walk():
     assert 0.46 < len(wins) / len(rs) < 0.54
     assert 0.9 < sum(wins) / len(wins) < 1.1
     assert abs(sum(rs) / len(rs)) < 0.08
+
+
+def test_virtual_engines_take_no_momentum_trades_by_default(settings, spec, store):
+    class Src:
+        def latest_tick(self, symbol):
+            return None
+
+    eng = LiveVirtualEngine(settings, spec, Src(), store)
+    assert not eng.agent.params.use_momentum and eng.agent.params.use_mean_reversion
+    assert eng.status()["entry_rules"] == ["rejection"]
+    eng.apply_params(StrategyParams(risk_reward=2.0))                  # a promoted strategy cannot re-enable it
+    assert not eng.agent.params.use_momentum
+    settings.virtual_entry_rules = ["momentum", "rejection"]
+    assert LiveVirtualEngine(settings, spec, Src(), store).agent.params.use_momentum

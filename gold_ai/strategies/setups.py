@@ -26,30 +26,42 @@ class SetupContext:
     regime: str
     _cache: dict = field(default_factory=dict)
     trigger_tf: str = "M1"               # bars the setup's trigger and structure are read from (M1 or M5)
+    # Timeframe scale. Setups are written in scalping timeframes (M1 trigger, M5 ATR/location, M15 trend);
+    # "intraday" reads every one of them a step slower (M5, M15, H1), so stops are wider and costs a smaller
+    # share of the risk, with the same setup logic.
+    scale: str = "scalp"
 
     def trigger(self) -> list[Candle]:
         return self.tf(self.trigger_tf)
 
     def tf(self, name: str) -> list[Candle]:
-        return self.bars.get(name, [])
+        return self.bars.get(scaled_tf(name, self.scale), [])
 
     def closes(self, name: str) -> list[float]:
-        key = ("closes", name)
+        key = ("closes", scaled_tf(name, self.scale))
         if key not in self._cache:
             self._cache[key] = [b.close for b in self.tf(name)]
         return self._cache[key]
 
     def atr(self, name: str) -> float:
-        key = ("atr", name)
+        key = ("atr", scaled_tf(name, self.scale))
         if key not in self._cache:
             self._cache[key] = atr(self.tf(name))
         return self._cache[key]
 
     def adx(self, name: str) -> dict | None:
-        key = ("adx", name)
+        key = ("adx", scaled_tf(name, self.scale))
         if key not in self._cache:
             self._cache[key] = adx(self.tf(name)[-80:])
         return self._cache[key]
+
+
+SCALES = {"scalp": {}, "intraday": {"M1": "M5", "M5": "M15", "M15": "H1", "H1": "H4"}}
+
+
+def scaled_tf(name: str, scale: str) -> str:
+    """The timeframe actually read for a setup's scalping-timeframe name under `scale`."""
+    return SCALES[scale].get(name, name)
 
 
 @dataclass(frozen=True)

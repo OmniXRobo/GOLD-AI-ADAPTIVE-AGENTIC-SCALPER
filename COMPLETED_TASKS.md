@@ -1,5 +1,11 @@
 # Completed tasks
 
+## Session 4b — 2026-10-26 (towards a new strategy)
+- Live-virtual engines: momentum continuation off by default (`virtual_entry_rules`); promoted strategies cannot
+  re-enable it; engine status lists its entry rules.
+- Research: `tf_scale: intraday` runs every setup a timeframe slower; `intraday-round3` variant preset; matched
+  baselines follow the scale.
+
 ## Session 4 — 2026-10-26 (root-cause audit)
 - docs/ROOT_CAUSE_AUDIT.md: 24-item audit, confirmed defects vs hypotheses H1–H6.
 - Strategy investigations (gold_ai/strategies/investigation.py): adaptive family blocked from promotion,

@@ -14,7 +14,7 @@ from datetime import timedelta
 
 from ..domain import Decision, Side, TradeProposal
 from ..market.features import MarketState, atr
-from .setups import Setup, SetupContext, make_setup
+from .setups import SCALES, Setup, SetupContext, make_setup, scaled_tf
 
 NO_TRADE = "NO TRADE"
 
@@ -35,15 +35,23 @@ class RuleParams:
     trigger_tf: str = "M1"
     # Trade only when M5 ATR is at least this many spreads (0 = off): costs are small relative to the move.
     min_atr_spread: float = 0.0
+    # "scalp" or "intraday" (every timeframe a step slower: trigger M5/M15, ATR M15, trend H1); see setups.SCALES.
+    # Trigger timeframes, stop/ATR limits and min_atr_spread are named in scalping timeframes and scaled with it.
+    tf_scale: str = "scalp"
 
     def __post_init__(self) -> None:
         self.timeframes = tuple(self.timeframes)
         if self.trigger_tf not in ("M1", "M5"):
             raise ValueError(f"trigger_tf must be M1 or M5, got {self.trigger_tf!r}")
+        if self.tf_scale not in SCALES:
+            raise ValueError(f"tf_scale must be one of {', '.join(SCALES)}, got {self.tf_scale!r}")
+
+    def tf(self, name: str) -> str:
+        return scaled_tf(name, self.tf_scale)
 
     def version(self) -> str:
         d = asdict(self)
-        for k, default in (("trigger_tf", "M1"), ("min_atr_spread", 0.0)):   # keep earlier version ids
+        for k, default in (("trigger_tf", "M1"), ("min_atr_spread", 0.0), ("tf_scale", "scalp")):   # keep earlier ids
             if d[k] == default:
                 d.pop(k)
         blob = json.dumps(d, sort_keys=True, default=str).encode()
@@ -63,7 +71,7 @@ class RuleAgent:
 
     @property
     def decide_on_bar_close(self) -> str:
-        return self.params.trigger_tf
+        return self.params.tf(self.params.trigger_tf)
 
     def _reject(self, why: str, f: dict) -> Decision:
         self.rejected[why.split(" (")[0]] = self.rejected.get(why.split(" (")[0], 0) + 1
@@ -79,22 +87,22 @@ class RuleAgent:
         if not state.ready or state.last_tick is None or not state.bars:
             return Decision(Side.WAIT, 0.0, f"{NO_TRADE}: insufficient market history", features=f)
         tick = state.last_tick
-        m1 = state.bars.get("M1")
+        m1 = state.bars.get("M1")   # every higher bar closes with an M1 bar, so this keys all timeframes
         bar_key = (m1[-1].time, len(m1)) if m1 else None
         if self.cache.get("_bar") != bar_key:
             self.cache.clear()
             self.cache["_bar"] = bar_key
         p = self.params
         if p.min_atr_spread > 0 and tick.spread > 0:
-            ratio = atr(state.bars.get("M5", [])) / tick.spread
+            ratio = atr(state.bars.get(p.tf("M5"), [])) / tick.spread
             if ratio < p.min_atr_spread:
                 return self._reject(f"volatility too low for the spread ({ratio:.1f} < {p.min_atr_spread:g} spreads)", f)
-        ctx = SetupContext(tick, state.bars, f, state.regime, self.cache, p.trigger_tf)
+        ctx = SetupContext(tick, state.bars, f, state.regime, self.cache, p.trigger_tf, p.tf_scale)
         sig = self.setup.evaluate(ctx)
         if sig is None:
             return Decision(Side.WAIT, 0.0, f"{NO_TRADE}: no {self.setup.name} setup", features=f)
         self.signals += 1
-        a5 = atr(state.bars.get("M5", []))
+        a5 = atr(state.bars.get(p.tf("M5"), []))
         entry = tick.ask if sig.side == Side.BUY else tick.bid
         sl_d = entry - sig.stop if sig.side == Side.BUY else sig.stop - entry
         if a5 <= 0 or sl_d <= 0:

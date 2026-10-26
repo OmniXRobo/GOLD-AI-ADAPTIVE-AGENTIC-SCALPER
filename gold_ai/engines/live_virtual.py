@@ -41,7 +41,7 @@ class LiveVirtualEngine:
         self.style = params.style
         # Scalping keeps the original key, so its learning from before trade styles existed carries on.
         self.key = f"virtual:{spec.broker}:{spec.symbol}" + ("" if self.style == "scalp" else f":{self.style}")
-        params = self._restore_params(params)
+        params = self._rule_switches(self._restore_params(params))
         model = self._restore_model()
         self.agent = TradingDecisionAgent(params, model)
         self._snapshot_model("restored at engine start")
@@ -60,6 +60,12 @@ class LiveVirtualEngine:
         self._seed_before: datetime | None = None
         # Called with (proposal, tick) for risk-approved, non-exploratory proposals (signal-only mode).
         self.signal_hook = None
+
+    def _rule_switches(self, p: StrategyParams) -> StrategyParams:
+        """Settings decide which candidate rules may trade, whatever a promoted strategy says."""
+        rules = set(self.settings.virtual_entry_rules)
+        return replace(p, use_momentum=p.use_momentum and "momentum" in rules,
+                       use_mean_reversion=p.use_mean_reversion and "rejection" in rules)
 
     # -- persistence -------------------------------------------------------------
     def _restore_params(self, default: StrategyParams) -> StrategyParams:
@@ -81,13 +87,13 @@ class LiveVirtualEngine:
         if params.style != self.style:
             raise ValueError(f"strategy is for {params.style} trades, this engine trades {self.style}")
         params = replace(params, exploration_rate=self.agent.params.exploration_rate)
-        self.agent.params = params
+        self.agent.params = self._rule_switches(params)
         self.loop.sim.max_hold_seconds = params.max_hold_seconds
-        d = asdict(params)
+        d = asdict(params)   # stored as promoted; the rule switches are applied again on every start
         d["timeframes"] = list(params.timeframes)
         self.store.kv_set(f"{self.key}:params", d)
         self.store.kv_set(f"{self.key}:params_version", version)
-        log.info("%s: now trading strategy %s (%s)", self.key, params.version(), version or "unnamed")
+        log.info("%s: now trading strategy %s (%s)", self.key, self.agent.params.version(), version or "unnamed")
 
     def _restore_model(self) -> ModelState:
         d = self.store.kv_get(f"{self.key}:model")
@@ -254,6 +260,8 @@ class LiveVirtualEngine:
         return {
             "broker": self.spec.broker, "symbol": self.spec.symbol, "style": self.style,
             "timeframes": list(self.agent.params.timeframes), "strategy_version": self.agent.params.version(),
+            "entry_rules": [r for r, on in (("momentum", self.agent.params.use_momentum),
+                                            ("rejection", self.agent.params.use_mean_reversion)) if on],
             "ready": self.loop.market.ready, "equity": self.loop.equity,
             "open_positions": len(self.loop.sim.positions), "ticks_processed": self.loop.stats.ticks,
             "decisions": self.loop.stats.decisions, "model_version": self.agent.model.version(),
