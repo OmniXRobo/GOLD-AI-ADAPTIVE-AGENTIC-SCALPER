@@ -42,6 +42,10 @@ SPLITS = ("train", "validation", "test")
 VARIANT_PRESETS: dict[str, tuple[dict, ...]] = {
     "plain": ({},),
     "cost-round2": ({}, {"min_atr_spread": 10}, {"trigger_tf": "M5"}, {"trigger_tf": "M5", "min_atr_spread": 10}),
+    # Round 3: the same setups a step slower (trigger M5 or M15, ATR M15, trend H1), so stops are several times
+    # the spread and costs stop dominating; held up to 4 h / 8 h.
+    "intraday-round3": ({"tf_scale": "intraday", "max_hold_seconds": 4 * 3600},
+                        {"tf_scale": "intraday", "trigger_tf": "M5", "max_hold_seconds": 8 * 3600}),
 }
 
 
@@ -196,8 +200,8 @@ def evaluate_setups(settings: Settings, spec: SymbolSpec, ticks: "list[Tick] | T
     for name in cfg.setups:
         if name not in SETUPS:
             raise ValueError(f"unknown setup {name}")
-    grid = [(name, variant_key(rr, ov), RuleParams(setup=name, max_hold_seconds=cfg.max_hold_seconds,
-                                                   **{**ov, "risk_reward": rr}))
+    grid = [(name, variant_key(rr, ov), RuleParams(setup=name, **{"max_hold_seconds": cfg.max_hold_seconds,
+                                                                       **ov, "risk_reward": rr}))
             for name in cfg.setups for ov in cfg.variants for rr in cfg.risk_rewards]
     if progress:
         progress(f"pass 1: {len(grid)} setup variants, {stream.start} -> {stream.end}")
@@ -233,9 +237,12 @@ def evaluate_setups(settings: Settings, spec: SymbolSpec, ticks: "list[Tick] | T
         best_params, parts, _ = by_setup[name][best]
         all_trades = [t for s in SPLITS for t in parts[s]]
         sl_atrs = [t.context.get("sl_atr") for t in all_trades if t.context.get("sl_atr")]
-        prob = len(all_trades) / max(1, m1_bars)
+        # The baseline decides on the closes of the scale's fastest bar (M1, or M5 for intraday) and takes its
+        # ATR stop on the same timeframe the setup's stop was measured against.
+        decisions = m1_bars / (5 if best_params.tf_scale == "intraday" else 1)
+        prob = len(all_trades) / max(1.0, decisions)
         baselines.append((RuleParams(setup="random_baseline", risk_reward=best_params.risk_reward, min_stop_atr=0.0,
-                                     max_hold_seconds=cfg.max_hold_seconds),
+                                     max_hold_seconds=best_params.max_hold_seconds, tf_scale=best_params.tf_scale),
                           RandomBaseline(probability=min(1.0, max(prob, 1e-4)),
                                          sl_atr=statistics.median(sl_atrs) if sl_atrs else 1.0, seed=cfg.seed)))
     if progress:

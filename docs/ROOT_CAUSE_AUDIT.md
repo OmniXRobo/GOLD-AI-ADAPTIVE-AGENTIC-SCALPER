@@ -130,6 +130,13 @@ Legend: **Defect** = confirmed in code · **OK** = checked, no defect found · *
   `exploration` / `investigation` fields.
 - **`audit-trades` CLI** (read-only), described in section 1.
 
+## 5b. Findings reported from the VPS (2026-10-26, relayed; reports to be committed verbatim)
+- `audit-trades` on 226 virtual trades: about 97% came from momentum continuation, which lost about $816; buy
+  trades were the worst. This supports H1 (momentum entries chase the move).
+- Research round 2 on 12.6 M ticks: no setup profitable after costs; S/R rejection about 0R.
+- Action: momentum continuation is switched off in the live-virtual engines (`virtual_entry_rules`, default
+  `["rejection"]`); research round 3 tests the setups a timeframe slower (docs/research/README.md).
+
 ## 6. What happens next (no live trading in any step)
 
 1. Run `audit-trades` on the VPS and commit its report verbatim under `docs/audit/`, then settle H1–H6.

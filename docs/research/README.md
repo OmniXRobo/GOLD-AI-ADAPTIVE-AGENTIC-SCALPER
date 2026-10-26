@@ -43,3 +43,18 @@ python -m gold_ai --config config.local.json research --broker equiti --symbol X
   share of the risk). Bar counts in setup parameters are then M5 bars.
 - 7 setups × 2 R:R × 4 variants = 56 lanes plus 7 baselines. Choosing among more variants raises the chance that the
   best one looks good by luck, which is why the test split and the random baseline still decide the verdict.
+
+## Round 3 grid (prepared 2026-10-26, not yet run on real data)
+Round 2 (12.6 M ticks, reported by the VPS thread; the report itself is still to be committed here) found no
+setup profitable after costs; S/R rejection came out at about 0R. Round 3 keeps the setup logic and moves every
+timeframe one step slower (`tf_scale: intraday`): triggers on M5 (or M15) closes, ATR and location on M15, trend
+on H1, held up to 4 h (8 h). Stops become several times the ~0.27 spread, so costs are a small share of the risk.
+The legacy setups read the scalping features, so they are left out:
+
+```
+python -m gold_ai --config config.local.json research --broker equiti --symbol XAUUSD.sd --rr 1.5,2.0 --variants intraday-round3 --setups trend_pullback,breakout,failed_breakout,range_reversion,liquidity_sweep
+```
+
+The random baseline for each setup uses the same scale (M5 decisions, M15-ATR stop), so the comparison stays fair.
+A setup becomes a candidate only with ≥30 test trades, a positive test expectancy whose interval is above zero,
+and a result better than its baseline; then it goes to walk-forward before it may trade in the virtual engine.

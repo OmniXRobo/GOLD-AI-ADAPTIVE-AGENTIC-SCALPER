@@ -533,6 +533,21 @@
       "title": "RL research branch (simulation only, never trades), compared with baselines",
       "status": "todo",
       "priority": 3
+    },
+    {
+      "id": "T-MOMENTUM-OFF",
+      "phase": 6,
+      "title": "Momentum continuation off in live-virtual engines (virtual_entry_rules)",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-RESEARCH-ROUND3",
+      "phase": 6,
+      "title": "Research round 3: setups at intraday scale (M5/M15 triggers, M15 ATR, H1 trend) on the VPS",
+      "status": "todo",
+      "priority": 1,
+      "notes": "command in docs/research/README.md"
     }
   ]
 }

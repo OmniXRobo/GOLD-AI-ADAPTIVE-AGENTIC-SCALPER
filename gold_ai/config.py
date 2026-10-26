@@ -86,6 +86,10 @@ class Settings(BaseModel):
     # Signal styles run for every instrument, each as its own virtual engine with separate memory:
     # "scalp" (M1/M5/M15 bars, held up to 1 h) and "swing" (M15/H1/H4 bars, held up to 3 days).
     trade_styles: list[str] = Field(default_factory=lambda: ["scalp", "swing"])
+    # Candidate rules the live-virtual engines may take trades from: "momentum" (momentum continuation) and
+    # "rejection" (support/resistance wick rejection). Momentum is off: the root-cause audit found it made
+    # ~97% of the losing virtual trades (docs/ROOT_CAUSE_AUDIT.md). An empty list stops new virtual entries.
+    virtual_entry_rules: list[str] = Field(default_factory=lambda: ["rejection"])
     # Per-symbol changes to gold_ai.instruments limits, e.g. {"BTCUSD": {"max_spread_pips": 40}}.
     instrument_overrides: dict[str, dict] = Field(default_factory=dict)
 

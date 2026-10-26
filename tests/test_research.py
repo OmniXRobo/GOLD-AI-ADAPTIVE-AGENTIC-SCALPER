@@ -296,3 +296,28 @@ def test_variant_grid_cost_gate_and_m5_trigger(settings, spec):
     m5, _ = run_rules(settings, spec, tk, RuleParams(setup="legacy_momentum", trigger_tf="M5"))
     assert m5 and all(t.entry_time.minute % 5 == 0 for t in m5)        # decided only on M5 closes
     assert RuleParams(setup="breakout").version() == RuleParams(setup="breakout", trigger_tf="M1").version()
+
+
+def test_intraday_scale_reads_every_timeframe_a_step_slower(settings, spec):
+    from gold_ai.research.setup_eval import VARIANT_PRESETS
+    from gold_ai.strategies.setups import scaled_tf
+
+    assert [scaled_tf(t, "intraday") for t in ("M1", "M5", "M15")] == ["M5", "M15", "H1"]
+    tk = ticks(200_000, seed=5)
+    p = RuleParams(setup="random_baseline", setup_params={"probability": 0.3}, tf_scale="intraday",
+                   max_hold_seconds=4 * 3600)
+    assert RuleAgent(p).decide_on_bar_close == "M5"
+    trades, _ = run_rules(settings, spec, tk, p)
+    assert trades and all(t.entry_time.minute % 5 == 0 for t in trades)    # decided only on M5 closes
+    scalp, _ = run_rules(settings, spec, tk, RuleParams(setup="random_baseline", setup_params={"probability": 0.3}))
+    med = lambda ts: sorted(t.initial_risk_money / t.lots for t in ts)[len(ts) // 2]  # noqa: E731
+    assert med(trades) > 1.5 * med(scalp)                    # stops on M15 ATR are wider than on M5 ATR
+    assert RuleParams(setup="breakout").version() == RuleParams(setup="breakout", tf_scale="scalp").version()
+    assert RuleParams(setup="breakout").version() != RuleParams(setup="breakout", tf_scale="intraday").version()
+    with pytest.raises(ValueError):
+        RuleParams(setup="breakout", tf_scale="weekly")
+    cfg = ResearchConfig(setups=("range_reversion",), risk_rewards=(1.5,), min_test_trades=5,
+                         variants=VARIANT_PRESETS["intraday-round3"])
+    rep = evaluate_setups(settings, spec, tk, cfg)
+    assert {k.split(",", 1)[1] for k in rep.setups[0].variants} == {
+        "max_hold_seconds=14400,tf_scale=intraday", "max_hold_seconds=28800,tf_scale=intraday,trigger_tf=M5"}

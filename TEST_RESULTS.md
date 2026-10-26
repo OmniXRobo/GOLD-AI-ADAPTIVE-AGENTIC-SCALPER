@@ -1,5 +1,9 @@
 # Test results
 
+## 2026-10-26 — session 4b (cloud container)
+- `python -m pytest -q` → **255 passed, 1 skipped** (adds intraday-scale research test and the momentum-off
+  virtual engine test).
+
 ## 2026-10-26 — session 4 (cloud container)
 - `python -m pytest -q` → **253 passed, 1 skipped** (adds tests/test_investigation_audit.py: investigation
   flags, promotion/rollback/execution/signal blocks, model snapshot, initial stop and MFE/MAE on trades,
