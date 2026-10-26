@@ -107,8 +107,8 @@ bool ExportCalendar()
 
 int OnInit()
   {
-   EventSetTimer(MathMax(1, InpEveryMinutes) * 60);
-   ExportCalendar();
+   EventSetTimer(60);                    // checks every minute; exports when InpEveryMinutes are due
+   ExportIfDue();
    return INIT_SUCCEEDED;
   }
 
@@ -117,12 +117,25 @@ void OnDeinit(const int reason)
    EventKillTimer();
   }
 
+datetime g_last_export = 0;
+
+void ExportIfDue()
+  {
+   if(TimeLocal() - g_last_export < MathMax(1, InpEveryMinutes) * 60)
+      return;
+   if(ExportCalendar())
+      g_last_export = TimeLocal();
+  }
+
+// The timer alone proved unreliable on the VPS (one export, then none), so ticks also trigger
+// the refresh; either path exports at most once per InpEveryMinutes.
 void OnTimer()
   {
-   ExportCalendar();
+   ExportIfDue();
   }
 
 void OnTick()
   {
+   ExportIfDue();
   }
 //+------------------------------------------------------------------+
