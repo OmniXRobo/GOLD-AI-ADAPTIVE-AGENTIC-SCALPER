@@ -45,7 +45,7 @@ python -m gold_ai --config config.local.json research --broker equiti --symbol X
   best one looks good by luck, which is why the test split and the random baseline still decide the verdict.
 
 ## Round 3 grid (prepared 2026-10-26, not yet run on real data)
-Round 2 (12.6 M ticks, reported by the VPS thread; the report itself is still to be committed here) found no
+Round 2 (12.6 M ticks, `research-XAUUSD.sd-20261025T175132Z.md`) found no
 setup profitable after costs; S/R rejection came out at about 0R. Round 3 keeps the setup logic and moves every
 timeframe one step slower (`tf_scale: intraday`): triggers on M5 (or M15) closes, ATR and location on M15, trend
 on H1, held up to 4 h (8 h). Stops become several times the ~0.27 spread, so costs are a small share of the risk.
