@@ -38,7 +38,9 @@ internet. Recommended: **Tailscale** (free for personal use; private, encrypted,
 ## Installing the APK
 1. Copy `gold-ai-<version>.apk` (latest: 1.5.0 once built on the VPS, which adds profit alerts; 1.4.0 before that) to the phone (or download it from the project files).
 2. Open it and allow "Install unknown apps" for the app you opened it with when Android asks.
-3. Open **Gold AI**, enter the server address, sign in with your dashboard account.
+3. Open **Gold AI**, enter the server address, sign in with your dashboard account. The app stays signed in,
+   also after it is closed, until you tap **Sign out** (the session lasts 30 days and renews each time the app
+   opens). In a browser this is the "Keep me signed in on this device" box.
 4. Allow notifications when asked. For reliable alerts, set the app's battery usage to *Unrestricted*
    (Settings → Apps → Gold AI → Battery).
 

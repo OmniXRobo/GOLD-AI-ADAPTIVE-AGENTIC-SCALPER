@@ -121,3 +121,4 @@ All items below have code + passing tests unless noted.
 - 2026-10-25: first real-data research run committed (docs/research/); research streams ticks from the DB.
 - 2026-10-27: fixed app pages hanging (websocket DB read off the event loop, no-cache index.html, non-overlapping
   polling with 30 s GET timeout, page Retry). APK 1.5.0 built and signed with the existing key.
+- 2026-10-27: stay signed in (30-day remembered session renewed on start; always on in the Android app).

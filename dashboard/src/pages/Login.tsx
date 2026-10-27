@@ -9,12 +9,15 @@ export default function LoginPage() {
   const [p, setP] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The phone app always stays signed in until Sign out; in a browser it is the user's choice.
+  const inApp = nativeApp.available();
+  const [remember, setRemember] = useState(inApp);
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setErr(null);
     try {
-      await login(u, p);
+      await login(u, p, inApp || remember);
     } catch (ex) {
       setErr((ex as Error).message);
     } finally {
@@ -40,6 +43,12 @@ export default function LoginPage() {
           <span>Password</span>
           <input type="password" value={p} onChange={(e) => setP(e.target.value)} autoComplete="current-password" required />
         </label>
+        {!inApp && (
+          <label className="check">
+            <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
+            <span>Keep me signed in on this device</span>
+          </label>
+        )}
         {err && <p className="state state-error">{err}</p>}
         <button className="btn btn-primary" disabled={busy}>
           {busy ? "Signing in..." : "Sign in"}

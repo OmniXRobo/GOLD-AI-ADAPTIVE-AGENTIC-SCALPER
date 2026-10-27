@@ -51,6 +51,7 @@ class CloseInvestigationBody(BaseModel):
 class LoginBody(BaseModel):
     username: str
     password: str
+    remember: bool = False
 
 
 class BacktestBody(BaseModel):
@@ -143,7 +144,15 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
         u = s.auth.authenticate(body.username, body.password)
         if u is None:
             raise HTTPException(401, "invalid credentials")
-        return {"token": s.auth.issue_token(u), "role": u.role}
+        return {"token": s.auth.issue_token(u, remember=body.remember), "role": u.role, "remember": body.remember}
+
+    @app.post("/api/auth/refresh")
+    def refresh(authorization: str = Header(default="")):
+        r = s.auth.refresh_token(authorization.removeprefix("Bearer ").strip())
+        if r is None:
+            raise HTTPException(401, "not authenticated")
+        token, u = r
+        return {"token": token, "role": u.role}
 
     # -- overview -------------------------------------------------------------
     def overview_data() -> dict:

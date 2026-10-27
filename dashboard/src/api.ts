@@ -500,28 +500,41 @@ export type Settings = Record<string, unknown>;
 const TOKEN_KEY = "gold_ai_token";
 const ROLE_KEY = "gold_ai_role";
 
-function safeStorage(): Storage | null {
+function store(kind: "localStorage" | "sessionStorage"): Storage | null {
   try {
-    return window.sessionStorage;
+    return window[kind];
   } catch {
     return null;
   }
 }
 
+// "Keep me signed in" keeps the token in localStorage, which survives closing the app or browser;
+// otherwise it lives in sessionStorage and ends with the tab.
+function readKey(key: string): string | null {
+  return store("localStorage")?.getItem(key) ?? store("sessionStorage")?.getItem(key) ?? null;
+}
+
 export function getToken(): string | null {
-  return safeStorage()?.getItem(TOKEN_KEY) ?? null;
+  return readKey(TOKEN_KEY);
 }
 export function getRole(): string | null {
-  return safeStorage()?.getItem(ROLE_KEY) ?? null;
+  return readKey(ROLE_KEY);
 }
-export function setSession(token: string, role: string): void {
-  safeStorage()?.setItem(TOKEN_KEY, token);
-  safeStorage()?.setItem(ROLE_KEY, role);
-  nativeApp.onSession(token);
+export function isRemembered(): boolean {
+  return !!store("localStorage")?.getItem(TOKEN_KEY);
+}
+export function setSession(token: string, role: string, remember = false, notifyApp = true): void {
+  clearSession();
+  const s = store(remember ? "localStorage" : "sessionStorage");
+  s?.setItem(TOKEN_KEY, token);
+  s?.setItem(ROLE_KEY, role);
+  if (notifyApp) nativeApp.onSession(token);
 }
 export function clearSession(): void {
-  safeStorage()?.removeItem(TOKEN_KEY);
-  safeStorage()?.removeItem(ROLE_KEY);
+  for (const kind of ["localStorage", "sessionStorage"] as const) {
+    store(kind)?.removeItem(TOKEN_KEY);
+    store(kind)?.removeItem(ROLE_KEY);
+  }
 }
 
 export const AUTH_EXPIRED_EVENT = "gold-ai:auth-expired";
@@ -583,7 +596,8 @@ const enc = encodeURIComponent;
 // ---------------------------------------------------------------- endpoints
 
 export const api = {
-  login: (username: string, password: string) => post<LoginResponse>("/api/auth/login", { username, password }),
+  login: (username: string, password: string, remember = false) => post<LoginResponse>("/api/auth/login", { username, password, remember }),
+  refreshSession: () => post<LoginResponse>("/api/auth/refresh"),
   health: () => get<Health>("/api/health"),
   overview: () => get<Overview>("/api/overview"),
   brokers: () => get<BrokerStatus[]>("/api/brokers"),

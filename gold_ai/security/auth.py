@@ -129,8 +129,22 @@ class AuthService:
         self.store.audit(username, "login_success" if ok else "login_failed", {})
         return User(username, u["role"]) if ok else None
 
-    def issue_token(self, user: User, ttl_seconds: int = 8 * 3600) -> str:
-        return self.signer.sign({"sub": user.username, "role": user.role, "typ": "session"}, ttl_seconds)
+    SESSION_TTL = 8 * 3600
+    # "Keep me signed in" (always on in the Android app): the token lasts 30 days and the dashboard renews it
+    # on every start, so a user who opens the app at least once a month stays signed in until they sign out.
+    REMEMBER_TTL = 30 * 24 * 3600
+
+    def issue_token(self, user: User, ttl_seconds: int | None = None, remember: bool = False) -> str:
+        ttl = ttl_seconds or (self.REMEMBER_TTL if remember else self.SESSION_TTL)
+        return self.signer.sign({"sub": user.username, "role": user.role, "typ": "session", "rem": remember}, ttl)
+
+    def refresh_token(self, token: str) -> tuple[str, User] | None:
+        """A fresh session token with the same lifetime for a valid one; the user's current role is used."""
+        body = self.signer.verify(token)
+        u = self.user_from_token(token)
+        if not body or u is None:
+            return None
+        return self.issue_token(u, remember=bool(body.get("rem"))), u
 
     # -- read-only device tokens (Android app signal alerts) ------------------------
     # A device token only lets a phone read the signal list in the background; it is

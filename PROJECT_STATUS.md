@@ -3,6 +3,11 @@
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No strategy has shown an edge after costs (168 virtual trades, net -533.99 USD; all exploration trades).
 
+## Session 5c (stay signed in, 2026-10-27)
+- The Android app stays signed in after it is closed until Sign out: 30-day session token kept in the WebView's
+  localStorage, renewed on every start (`POST /api/auth/refresh`). Browsers get a "Keep me signed in" box.
+  Dashboard rebuild on the VPS is enough; no new APK.
+
 ## Session 5b (app pages stuck loading, 2026-10-27)
 - Cause: the live-status websocket read the database on the server's event loop every 2 s per open screen; with
   the large, busy VPS database each read stalled every page, script and API call. Fixed by reading in a worker
