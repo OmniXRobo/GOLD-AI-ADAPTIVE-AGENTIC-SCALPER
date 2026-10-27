@@ -168,3 +168,17 @@ def test_dashboard_static_files_stay_inside_build_folder(settings, store, tmp_pa
     assert c.get("/signals").headers["cache-control"] == "no-cache"
     assert c.get("/index.html").headers["cache-control"] == "no-cache"
     assert "do not serve" not in c.get("/..%2Fsecret.txt").text
+
+
+def test_stale_page_chunk_triggers_reload_instead_of_404(settings, store, tmp_path):
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text("<script type=module src=/assets/index-new.js></script>")
+    (dist / "assets" / "index-new.js").write_text("console.log('new build')")
+    c = TestClient(create_app(AppState(settings, store), str(dist)))
+    assert c.get("/assets/index-new.js").text == "console.log('new build')"
+    old = c.get("/assets/Analysis-OLDHASH.js")           # asked for by a page cached before a redeploy
+    assert old.status_code == 200 and "location.reload()" in old.text
+    assert old.headers["content-type"].startswith("text/javascript") and old.headers["cache-control"] == "no-store"
+    assert c.get("/assets/missing.css").status_code == 404
+    assert c.get("/analysis").headers["cache-control"] == "no-cache"

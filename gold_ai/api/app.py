@@ -14,8 +14,9 @@ from pathlib import Path
 from typing import Any, Callable
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from pydantic import BaseModel
 
 from ..agents.decision import StrategyParams
@@ -504,7 +505,7 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
     # -- static dashboard ----------------------------------------------------------------
     if dashboard_dir and Path(dashboard_dir).exists():
         root = Path(dashboard_dir).resolve()
-        app.mount("/assets", StaticFiles(directory=root / "assets"), name="assets")
+        app.mount("/assets", _BuildAssets(directory=root / "assets"), name="assets")
 
         @app.get("/{path:path}")
         def spa(path: str):
@@ -517,6 +518,24 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             return FileResponse(root / "index.html", headers={"Cache-Control": "no-cache"})
 
     return app
+
+
+# A page script from an earlier build: answering with this instead of a 404 makes a stale page (an app or
+# browser that kept an old cached index.html/index.js across a redeploy) reload and pick up the current build.
+_STALE_CHUNK_JS = ("try{var k='goldai:stale-reload',t=+sessionStorage.getItem(k)||0;"
+                   "if(Date.now()-t>60000){sessionStorage.setItem(k,String(Date.now()));location.reload();}}"
+                   "catch(e){location.reload();}\nexport default null;\n")
+
+
+class _BuildAssets(StaticFiles):
+    async def get_response(self, path, scope):
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as e:
+            if e.status_code == 404 and path.endswith(".js"):
+                return Response(_STALE_CHUNK_JS, media_type="text/javascript",
+                                headers={"Cache-Control": "no-store"})
+            raise
 
 
 def _run_summary(r: dict) -> dict:
