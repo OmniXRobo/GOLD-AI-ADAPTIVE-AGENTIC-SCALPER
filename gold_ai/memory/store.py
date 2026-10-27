@@ -12,8 +12,8 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterable, Iterator
 
-from sqlalchemy import (JSON, Boolean, DateTime, Float, Integer, String, Text, create_engine, event, func,
-                        select)
+from sqlalchemy import (JSON, Boolean, DateTime, Float, Index, Integer, String, Text, create_engine, event,
+                        func, select)
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from ..domain import ExitReason, MemoryDomain, Side, SimTrade, Tick
@@ -87,6 +87,9 @@ class TickRow(Base):
     ask: Mapped[float] = mapped_column(Float)
     volume: Mapped[float] = mapped_column(Float, default=0.0)
     source: Mapped[str] = mapped_column(String(32), default="mt5")  # mt5 | csv | synthetic
+    # Every tick read is "this broker + symbol in a time range, in time order". With tens of millions of rows
+    # the single-column indexes made each such read scan the symbol's whole history and sort it.
+    __table_args__ = (Index("ix_ticks_broker_symbol_time", "broker", "symbol", "time"),)
 
 
 class DecisionRow(Base):
@@ -176,7 +179,11 @@ class MemoryStore:
         # SQLite allows one writer at a time; with one collector + engine per instrument the startup
         # backfills overlap, so writers wait up to 30 s for the lock instead of the default 5 s.
         connect_args = {"timeout": 30} if url.startswith("sqlite") else {}
-        self.engine = create_engine(url, future=True, connect_args=connect_args)
+        # One collector and one or two engines per instrument plus research lanes all read at start-up;
+        # SQLite connections are cheap, so the pool must not be the bottleneck (default 5 + 10 overflow).
+        pool_args = ({"pool_size": 40, "max_overflow": 20}
+                     if url.startswith("sqlite") and ":memory:" not in url else {})
+        self.engine = create_engine(url, future=True, connect_args=connect_args, **pool_args)
         if url.startswith("sqlite"):
             @event.listens_for(self.engine, "connect")
             def _pragmas(conn, _):  # pragma: no cover - trivial
@@ -184,6 +191,10 @@ class MemoryStore:
                 conn.execute("PRAGMA busy_timeout=30000")
                 conn.execute("PRAGMA foreign_keys=ON")
         Base.metadata.create_all(self.engine)
+        # create_all adds indexes only with new tables; add ones introduced later to existing databases
+        # (one-off: building it on tens of millions of ticks takes several minutes).
+        for ix in TickRow.__table__.indexes:
+            ix.create(self.engine, checkfirst=True)
         self.Session = sessionmaker(self.engine, expire_on_commit=False)
 
     # -- trades ------------------------------------------------------------------
