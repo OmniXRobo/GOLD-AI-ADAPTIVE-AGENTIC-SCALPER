@@ -349,7 +349,7 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
         signals: SignalService = svc["signals"]
         healers = {e.key: (svc["healer"] if i == 0 else SelfHealingAgent(settings, e.spec, store))
                    for i, e in enumerate(engines)}
-        for engine in engines:
+        for engine in [*engines, *lanes]:   # lanes signal only while promoted to champion
             engine.signal_hook = (lambda p, tick, e=engine:
                                   signals.create(p, tick, e.spec.broker, e.spec.symbol,
                                                  max_hold_seconds=e.agent.params.max_hold_seconds))

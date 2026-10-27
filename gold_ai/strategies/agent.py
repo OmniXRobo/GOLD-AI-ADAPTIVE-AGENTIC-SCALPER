@@ -68,6 +68,9 @@ class RuleAgent:
         self.cache = cache if cache is not None else {}
         self.signals = 0
         self.rejected: dict[str, int] = {}
+        # True only while the owner has promoted this setup to champion (agents/strategy_selector.py): its proposals
+        # are then the agent's strategy rather than research exploration.
+        self.champion = False
 
     @property
     def decide_on_bar_close(self) -> str:
@@ -122,7 +125,8 @@ class RuleAgent:
             return self._reject(f"costs too large for the stop ({cost_r:.2f}R > {p.max_cost_r}R)", f)
         tp = entry + sl_d * p.risk_reward if sig.side == Side.BUY else entry - sl_d * p.risk_reward
         expl = (f"{sig.side.value}: {sig.reason} [{self.setup.name}]; regime={state.regime}; "
-                f"stop {sl_atr:.2f} ATR; R:R {p.risk_reward:.2f}; [EXPLORATION] research trade")
+                f"stop {sl_atr:.2f} ATR; R:R {p.risk_reward:.2f}; "
+                f"{'[CHAMPION] owner-promoted strategy' if self.champion else '[EXPLORATION] research trade'}")
         prop = TradeProposal(
             side=sig.side, entry=entry, stop_loss=sig.stop, take_profit=tp, lots=lots, confidence=0.0,
             valid_until=tick.time + timedelta(seconds=p.signal_validity_seconds), expected_cost=cost,

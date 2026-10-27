@@ -93,6 +93,9 @@ class Settings(BaseModel):
     # Forward research lanes (gold_ai/engines/research_lanes.py): research setups traded virtually on live quotes,
     # simulation only, labelled, no signals. Defaults: the intraday setups that were not negative on research
     # round 3's test split, with the variant chosen on validation (docs/research/README.md).
+    # Evidence a research lane needs before the owner may promote it to champion (agents/strategy_selector.py
+    # PromotionCriteria field names; empty = the strict defaults).
+    promotion_criteria: dict = Field(default_factory=dict)
     research_lane_symbols: list[str] = Field(default_factory=lambda: ["XAUUSD"])
     research_lanes: list[dict] = Field(default_factory=lambda: [
         {"setup": "failed_breakout", "risk_reward": 1.5, "tf_scale": "intraday", "trigger_tf": "M5",

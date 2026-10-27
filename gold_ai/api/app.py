@@ -31,6 +31,7 @@ from ..market.technical import summary as technical_summary
 from ..memory.store import MemoryStore
 from ..notifications.trade_alerts import profit_alerts
 from ..security.auth import AuthService, Permission, User
+from ..agents import strategy_selector as selector
 from ..strategies import investigation
 
 log = logging.getLogger(__name__)
@@ -41,6 +42,11 @@ DOMAIN_LABELS = {
     MemoryDomain.VIRTUAL: "SIMULATED (live virtual, estimated fills)",
     MemoryDomain.REAL: "ACTUAL BROKER FILLS",
 }
+
+
+class LaneBody(BaseModel):
+    lane: str
+    reason: str = ""
 
 
 class CloseInvestigationBody(BaseModel):
@@ -347,6 +353,43 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
     @app.get("/api/models")
     def models(u: User = Depends(current_user)):
         return s.store.list_models()
+
+    # -- strategy selection (agents/strategy_selector.py) -----------------------------
+    def criteria():
+        return selector.PromotionCriteria(**s.settings.promotion_criteria)
+
+    def lane_or_404(key: str):
+        lane = s.research_lanes.get(key)
+        if lane is None:
+            raise HTTPException(404, f"no research lane {key}")
+        return lane
+
+    @app.get("/api/strategies/scoreboard")
+    def strategy_scoreboard(u: User = Depends(current_user)):
+        """Every research lane's historical and forward evidence, whether it is eligible, and why not."""
+        return json_safe_any({"criteria": asdict(criteria()),
+                              "lanes": selector.scoreboard(s.store, s.research_lanes.values(), criteria())})
+
+    @app.post("/api/strategies/promote")
+    def strategy_promote(body: LaneBody, u: User = Depends(need(Permission.ADMIN))):
+        lane = lane_or_404(body.lane)
+        try:
+            out = selector.promote(s.store, lane, criteria(), u)
+        except PermissionError as e:
+            raise HTTPException(403, str(e))
+        except ValueError as e:
+            raise HTTPException(400, str(e))
+        lane.refresh_champion()
+        return json_safe_any(out)
+
+    @app.post("/api/strategies/demote")
+    def strategy_demote(body: LaneBody, u: User = Depends(need(Permission.ADMIN))):
+        if u.role != "owner":
+            raise HTTPException(403, "owner only")
+        lane = lane_or_404(body.lane)
+        out = selector.demote(s.store, lane, u.username, body.reason or "owner demotion")
+        lane.refresh_champion()
+        return {"demoted": out is not None}
 
     @app.get("/api/strategies/investigations")
     def investigations(u: User = Depends(current_user)):
