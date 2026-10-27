@@ -16,9 +16,11 @@ export function useApi<T>(fn: () => Promise<T>, deps: unknown[] = [], refreshMs?
   const fnRef = useRef(fn);
   fnRef.current = fn;
   const seq = useRef(0);
+  const inFlight = useRef(false);
 
   const load = useCallback(() => {
     const id = ++seq.current;
+    inFlight.current = true;
     setLoading(true);
     fnRef
       .current()
@@ -33,7 +35,9 @@ export function useApi<T>(fn: () => Promise<T>, deps: unknown[] = [], refreshMs?
         setError(e.message || "Request failed");
       })
       .finally(() => {
-        if (id === seq.current) setLoading(false);
+        if (id !== seq.current) return;
+        inFlight.current = false;
+        setLoading(false);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
@@ -41,7 +45,11 @@ export function useApi<T>(fn: () => Promise<T>, deps: unknown[] = [], refreshMs?
   useEffect(() => {
     load();
     if (!refreshMs) return;
-    const t = window.setInterval(load, refreshMs);
+    // Skip a poll while the previous one is still running or the screen is hidden, so a slow server does not
+    // get a growing pile of the same request (each one also blocks a browser connection).
+    const t = window.setInterval(() => {
+      if (!inFlight.current && !document.hidden) load();
+    }, refreshMs);
     return () => window.clearInterval(t);
   }, [load, refreshMs]);
 

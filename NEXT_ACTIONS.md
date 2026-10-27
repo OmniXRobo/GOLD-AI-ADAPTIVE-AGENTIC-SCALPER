@@ -1,8 +1,12 @@
 # Next actions
 
+V. (VPS thread) After the "app pages stuck loading" PR is merged: `git pull`, rebuild the dashboard
+   (`cd dashboard && npm ci && npm run build`), restart GoldAI-Equiti. No new APK needed: the app loads the
+   dashboard from the server. Then open the app and switch between pages to confirm they load.
+
 U. (VPS thread) After the profit-alerts PR is merged: `git pull`, rebuild the dashboard (`cd dashboard && npm ci &&
-   npm run build`), restart GoldAI-Equiti, then build Android 1.5.0 with the existing signing key
-   (docs/ANDROID_APP.md) and put `gold-ai-1.5.0.apk` in the project files. The bell appears in the dashboard
+   npm run build`), restart GoldAI-Equiti, Android 1.5.0 is built (project files,
+   `gold-ai-scalper/android/gold-ai-1.5.0.apk`). The bell appears in the dashboard
    header at once; the phone needs 1.5.0 for background profit notifications.
 
 T. (VPS thread) After the research-lanes PR is merged: `git pull`, restart GoldAI-Equiti. Three research lanes start on

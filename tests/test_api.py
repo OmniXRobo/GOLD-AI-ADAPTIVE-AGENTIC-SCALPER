@@ -97,6 +97,28 @@ def test_websocket_requires_token(client):
         assert msg["type"] == "status" and msg["real_trading_enabled"] is False
 
 
+def test_websocket_reads_database_off_the_event_loop(client):
+    # A slow database read on the event loop froze every page and script the server sends (app stuck loading).
+    import asyncio
+    c, st = client
+    on_loop = []
+    orig = st.store.count_trades
+
+    def count(*a, **k):
+        try:
+            asyncio.get_running_loop()
+            on_loop.append(True)
+        except RuntimeError:
+            on_loop.append(False)
+        return orig(*a, **k)
+
+    st.store.count_trades = count
+    tok = login(c, "owner", "owner-pass-123")["Authorization"].split()[1]
+    with c.websocket_connect(f"/ws/live?token={tok}") as ws:
+        ws.receive_json()
+    assert on_loop and not any(on_loop)
+
+
 def test_device_token_is_read_only_and_revocable(client):
     c, st = client
     st.extras["signals"] = lambda: [{"id": "s1", "status": "pending", "action_token": "secret-action"}]
@@ -142,4 +164,7 @@ def test_dashboard_static_files_stay_inside_build_folder(settings, store, tmp_pa
     c = TestClient(create_app(AppState(settings, store), dashboard_dir=dist))
     assert c.get("/favicon.svg").text == "<svg/>"
     assert c.get("/signals").text == "<html>app</html>"
+    # index.html names the current build's scripts, so it must never be served from a stale cache
+    assert c.get("/signals").headers["cache-control"] == "no-cache"
+    assert c.get("/index.html").headers["cache-control"] == "no-cache"
     assert "do not serve" not in c.get("/..%2Fsecret.txt").text

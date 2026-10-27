@@ -533,16 +533,23 @@ export class ApiError extends Error {
   }
 }
 
+const GET_TIMEOUT_MS = 30000;
+
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = { Accept: "application/json" };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers["Content-Type"] = "application/json";
+  // A GET that hangs holds one of the few connections the browser keeps per server, and page scripts queue
+  // behind it. Give up after 30 s so a slow server cannot freeze navigation; POSTs (backtests) may run longer.
+  const signal = method === "GET" && typeof AbortSignal.timeout === "function" ? AbortSignal.timeout(GET_TIMEOUT_MS) : undefined;
   let res: Response;
   try {
-    res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
+    res = await fetch(path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal });
   } catch (e) {
-    throw new ApiError(0, `Network error: ${(e as Error).message}`, path);
+    const err = e as Error;
+    if (err.name === "TimeoutError") throw new ApiError(0, `Server did not answer within ${GET_TIMEOUT_MS / 1000} s`, path);
+    throw new ApiError(0, `Network error: ${err.message}`, path);
   }
   const text = await res.text();
   let data: unknown = null;
