@@ -7,9 +7,26 @@ import LoginPage from "./pages/Login";
 import { nativeApp } from "./native";
 import { LiveProvider, useAuth } from "./state";
 
+const RELOAD_KEY = "goldai:chunk-reload";
+
+/** After a redeploy the page scripts get new file names, so an app that stayed open asks for files that no
+ *  longer exist (404). Reload once to pick up the new build; the flag stops a reload loop if it still fails. */
+function reloadForNewBuild<M>(err: unknown): Promise<M> {
+  let last = 0;
+  try { last = Number(sessionStorage.getItem(RELOAD_KEY) || 0); } catch { /* storage blocked */ }
+  if (Date.now() - last > 60_000) {
+    try { sessionStorage.setItem(RELOAD_KEY, String(Date.now())); } catch { /* storage blocked */ }
+    window.location.reload();
+    return new Promise<M>(() => {});   // the page is going away
+  }
+  return Promise.reject(err);
+}
+
 /** Try a page script again once after a short wait: a busy server or a dropped mobile connection often recovers. */
 function retryOnce<M>(load: () => Promise<M>): Promise<M> {
-  return load().catch(() => new Promise<M>((ok, fail) => window.setTimeout(() => load().then(ok, fail), 1500)));
+  return load()
+    .catch(() => new Promise<M>((ok, fail) => window.setTimeout(() => load().then(ok, fail), 1500)))
+    .catch((err) => reloadForNewBuild<M>(err));
 }
 
 // Each page group loads on first visit so the first screen paints quickly on phones.
