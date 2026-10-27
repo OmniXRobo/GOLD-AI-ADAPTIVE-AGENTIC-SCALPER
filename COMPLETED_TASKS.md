@@ -122,3 +122,4 @@ All items below have code + passing tests unless noted.
 - 2026-10-27: fixed app pages hanging (websocket DB read off the event loop, no-cache index.html, non-overlapping
   polling with 30 s GET timeout, page Retry). APK 1.5.0 built and signed with the existing key.
 - 2026-10-27: stay signed in (30-day remembered session renewed on start; always on in the Android app).
+- 2026-10-27: Android 1.5.1 (no WebView state restore, cache cleared after an app update).

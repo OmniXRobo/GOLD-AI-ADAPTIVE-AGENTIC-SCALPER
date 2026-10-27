@@ -1,7 +1,8 @@
 # Next actions
 
 W. (VPS thread) After the "stay signed in" PR is merged: `git pull`, `cd dashboard && npm ci && npm run build`,
-   restart GoldAI-Equiti. Users sign in once more; after that the app keeps them signed in until Sign out.
+   restart GoldAI-Equiti. Users install Android 1.5.1 (project files) and sign in once more; after that the app
+   keeps them signed in until Sign out.
 
 V. (VPS thread) After the "app pages stuck loading" PR is merged: `git pull`, rebuild the dashboard
    (`cd dashboard && npm ci && npm run build`), restart GoldAI-Equiti. No new APK needed: the app loads the

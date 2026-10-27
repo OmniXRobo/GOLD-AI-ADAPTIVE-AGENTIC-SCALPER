@@ -67,8 +67,15 @@ public class MainActivity extends Activity {
         web.setWebChromeClient(new WebChromeClient());
         web.setWebViewClient(new Client());
 
-        if (state != null) web.restoreState(state);
-        else web.loadUrl(base + pathFrom(getIntent()));
+        // Always load the dashboard fresh from the server. Restoring saved WebView state replayed pages from an
+        // older build whose scripts no longer exist, so those pages never opened. After an app update the HTTP
+        // cache is cleared once for the same reason (the sign-in kept in localStorage is not touched).
+        String v = version();
+        if (!v.equals(Prefs.cacheVersion(this))) {
+            web.clearCache(true);
+            Prefs.setCacheVersion(this, v);
+        }
+        web.loadUrl(base + pathFrom(getIntent()));
 
         if (Prefs.alerts(this)) {
             askNotificationPermission();
@@ -89,15 +96,10 @@ public class MainActivity extends Activity {
         String now = Prefs.server(this);
         if (web != null && now != null && !now.equals(base)) {
             base = now;
+            web.clearCache(true);
             web.clearHistory();
             web.loadUrl(base + "/");
         }
-    }
-
-    @Override
-    protected void onSaveInstanceState(Bundle out) {
-        super.onSaveInstanceState(out);
-        if (web != null) web.saveState(out);
     }
 
     @Override
