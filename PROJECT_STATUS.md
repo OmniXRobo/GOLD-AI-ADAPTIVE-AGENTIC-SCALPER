@@ -3,6 +3,11 @@
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No strategy has shown an edge after costs (168 virtual trades, net -533.99 USD; all exploration trades).
 
+## Session 5d (AI agents leaderboard, 2026-10-27)
+- New "AI Agents" page: one row per AI agent and strategy version (adaptive scalp/swing agents, research lanes),
+  with its total trades, won/lost, win rate, net P/L, profit factor, drawdown and average R from recorded closed
+  trades only. Needs a dashboard rebuild and restart on the VPS.
+
 ## Session 5c (stay signed in, 2026-10-27)
 - The Android app stays signed in after it is closed until Sign out: 30-day session token kept in the WebView's
   localStorage, renewed on every start (`POST /api/auth/refresh`). Browsers get a "Keep me signed in" box.

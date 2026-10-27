@@ -10,6 +10,7 @@ export const MAIN_NAV: NavItem[] = [
   { path: "/autopilot", label: "Autopilot", icon: "agent" },
   { path: "/analysis", label: "Analysis", icon: "performance" },
   { path: "/results", label: "Results", icon: "backtesting" },
+  { path: "/agents", label: "AI Agents", icon: "agent" },
   { path: "/practice", label: "Practice", icon: "practice" },
   { path: "/signals", label: "Signals", icon: "signals" },
   { path: "/learn", label: "Learn", icon: "news" },
