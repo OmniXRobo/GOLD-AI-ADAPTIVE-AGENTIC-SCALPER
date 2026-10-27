@@ -3,6 +3,12 @@
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No strategy has shown an edge after costs (168 virtual trades, net -533.99 USD; all exploration trades).
 
+## Session 5 (profit alerts, 2026-10-27)
+- Owner asked for an in-app notification when a trade closes in profit. Dashboard: a bell in the header with an
+  unread count, the last profitable closes, and a pop-up for each new one. Android 1.5.0 source: a separate
+  "Trades closed in profit" notification. Each alert says VIRTUAL (estimated fills) or REAL (broker fill) and
+  marks exploration trades. Read-only; nothing is executed. 261 tests pass. APK still to be built with the key.
+
 ## Session 4 (root-cause audit of the losing virtual strategy, 2026-10-26)
 - Owner reported 34 virtual trades, 32.4% win rate, −991 pips, PF ~0.50 (not yet reproduced from the DB).
   Code audit of 24 items in docs/ROOT_CAUSE_AUDIT.md. Main finding: every virtual trade so far was an

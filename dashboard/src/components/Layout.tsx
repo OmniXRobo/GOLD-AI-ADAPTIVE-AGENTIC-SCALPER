@@ -6,6 +6,7 @@ import { useAuth, useLive } from "../state";
 import { MAIN_NAV, NAV_GROUPS, MOBILE_TABS, navLabel } from "../nav";
 import { useTheme } from "../theme";
 import { Icon } from "./icons";
+import ProfitAlerts from "./ProfitAlerts";
 import { ConfirmDialog } from "./ui";
 
 function RealTradingBanner() {
@@ -175,6 +176,7 @@ export default function Layout() {
             </div>
             <div className="topbar-right">
               <PriceTicker />
+              <ProfitAlerts />
               <span className={`conn ${wsConnected ? "conn-on" : "conn-off"}`} title={wsConnected ? "Live status stream connected" : "Live stream down, polling every 10 s"}>
                 <i />
                 <span className="conn-label">{wsConnected ? "Live" : "Polling"}</span>

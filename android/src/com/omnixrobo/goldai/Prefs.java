@@ -18,7 +18,8 @@ final class Prefs {
     }
 
     static void setServer(Context c, String url) {
-        p(c).edit().putString("server", url).remove("device_token").remove("seen").remove("primed").apply();
+        p(c).edit().putString("server", url).remove("device_token").remove("seen").remove("primed")
+                .remove("seen_profit").remove("primed_profit").apply();
     }
 
     static boolean alerts(Context c) {
@@ -50,6 +51,19 @@ final class Prefs {
 
     static void setSeen(Context c, String seen) {
         p(c).edit().putString("seen", seen).putBoolean("primed", true).apply();
+    }
+
+    /** Trades already alerted as closed in profit (kept apart from signals so neither list pushes the other out). */
+    static String seenProfit(Context c) {
+        return p(c).getString("seen_profit", "");
+    }
+
+    static boolean primedProfit(Context c) {
+        return p(c).getBoolean("primed_profit", false);
+    }
+
+    static void setSeenProfit(Context c, String seen) {
+        p(c).edit().putString("seen_profit", seen).putBoolean("primed_profit", true).apply();
     }
 
     /** Accepts "host:port" or a full URL; defaults to https and drops a trailing slash. */

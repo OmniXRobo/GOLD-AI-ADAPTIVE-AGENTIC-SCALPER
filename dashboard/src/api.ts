@@ -337,6 +337,33 @@ export interface SystemHealth {
   checks: HealthCheck[];
 }
 
+/** A virtual (Memory C) or real (Memory D) trade that closed with a positive net result. */
+export interface ProfitAlert {
+  id: string;
+  trade_id: string;
+  account: "virtual" | "real";
+  account_label: string;
+  /** true for virtual trades (estimated fills); false only for actual broker fills */
+  simulated: boolean;
+  broker: string;
+  symbol: string;
+  instrument: string;
+  digits: number;
+  side: "BUY" | "SELL";
+  style: string;
+  style_label: string;
+  lots: number;
+  entry_price: number;
+  exit_price: number;
+  entry_time: string;
+  exit_time: string;
+  exit_reason: string | null;
+  net_pnl: number;
+  pips: number | null;
+  r_multiple: number;
+  exploration: boolean;
+}
+
 export interface Signal {
   id: string | number;
   time?: string;
@@ -567,6 +594,7 @@ export const api = {
   selfHealing: () => get<SelfHealing>("/api/self-healing"),
   systemHealth: () => get<SystemHealth>("/api/system/health"),
   signals: () => get<Signal[]>("/api/signals"),
+  profitCloses: (limit = 30) => get<ProfitAlert[]>(`/api/alerts/profit-closes?limit=${limit}`),
   revokeDeviceTokens: () => post<{ ok: boolean }>("/api/auth/device-token/revoke-all", {}),
   signalAction: (id: string | number, action: SignalAction, token: string) =>
     post<unknown>(`/api/signals/${enc(String(id))}/action`, { action, token }),

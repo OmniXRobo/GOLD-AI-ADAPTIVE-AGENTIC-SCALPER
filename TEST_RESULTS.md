@@ -1,5 +1,13 @@
 # Test results
 
+## 2026-10-27 — session 5 (cloud container, profit alerts)
+- `python -m pytest -q` → **261 passed, 1 skipped** (adds tests/test_profit_alerts.py: only profitable closes from
+  Memories C and D, newest first, real vs virtual labels, `since` filter, session and device-token endpoints).
+- Dashboard `npx tsc --noEmit` and `npm run build` pass; bell, panel and pop-up checked in a headless browser at
+  desktop and phone width against a seeded local database (test trades only).
+- Android sources compile with javac against android-all 13 (stub R class). APK 1.5.0 not built here: the
+  signing key is not in the container.
+
 ## 2026-10-26 — session 4c (cloud container)
 - `python -m pytest -q` → **258 passed, 1 skipped** (adds tests/test_research_lanes.py: labelled simulated lane trades,
   restart, read-only source, runtime starts 3 gold lanes).

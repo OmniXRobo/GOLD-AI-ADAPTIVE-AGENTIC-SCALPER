@@ -1,5 +1,10 @@
 # Next actions
 
+U. (VPS thread) After the profit-alerts PR is merged: `git pull`, rebuild the dashboard (`cd dashboard && npm ci &&
+   npm run build`), restart GoldAI-Equiti, then build Android 1.5.0 with the existing signing key
+   (docs/ANDROID_APP.md) and put `gold-ai-1.5.0.apk` in the project files. The bell appears in the dashboard
+   header at once; the phone needs 1.5.0 for background profit notifications.
+
 T. (VPS thread) After the research-lanes PR is merged: `git pull`, restart GoldAI-Equiti. Three research lanes start on
    XAUUSD.sd (failed_breakout, trend_pullback, breakout at intraday scale; simulation only, `style=research`, no
    signals). Check `/api/overview` → `research_lanes`. Weekly: `audit-trades --domain virtual --style research`.

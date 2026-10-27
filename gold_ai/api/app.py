@@ -28,6 +28,7 @@ from ..engines.walkforward import WalkForwardConfig, run_walkforward
 from ..instruments import canonical, instrument_for
 from ..market.technical import summary as technical_summary
 from ..memory.store import MemoryStore
+from ..notifications.trade_alerts import profit_alerts
 from ..security.auth import AuthService, Permission, User
 from ..strategies import investigation
 
@@ -454,6 +455,28 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             raise HTTPException(401, "invalid or revoked device token")
         # Read-only view: action tokens stay in the dashboard session.
         return [{k: v for k, v in d.items() if k != "action_token"} for d in extra("signals")]
+
+    def _since(since: str | None) -> datetime | None:
+        if not since:
+            return None
+        try:
+            t = datetime.fromisoformat(since.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(422, "since must be an ISO 8601 time")
+        return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+    # -- profit alerts: virtual and real trades that closed with a positive net result --------
+    @app.get("/api/alerts/profit-closes")
+    def profit_closes(limit: int = Query(30, ge=1, le=200), since: str | None = None,
+                      u: User = Depends(current_user)):
+        return profit_alerts(s.store, limit=limit, since=_since(since))
+
+    @app.get("/api/device/profit-closes")
+    def device_profit_closes(limit: int = Query(30, ge=1, le=200), authorization: str = Header(default="")):
+        token = authorization.removeprefix("Bearer ").strip()
+        if not token or s.auth.user_from_device_token(token) is None:
+            raise HTTPException(401, "invalid or revoked device token")
+        return profit_alerts(s.store, limit=limit)
 
     @app.post("/api/backups")
     def make_backup(u: User = Depends(need(Permission.ADMIN))):

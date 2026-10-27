@@ -230,6 +230,18 @@ class MemoryStore:
         with self.Session() as s:
             return [self._to_trade(r) for r in s.scalars(q)]
 
+    def recent_closed_trades(self, domain: MemoryDomain, limit: int = 50, min_net_pnl: float | None = None,
+                             since: datetime | None = None) -> list[SimTrade]:
+        """Closed trades, newest exit first; `min_net_pnl` keeps only trades that made more than it."""
+        table = TRADE_TABLES[domain]
+        q = select(table).where(table.exit_time.is_not(None)).order_by(table.exit_time.desc()).limit(limit)
+        if min_net_pnl is not None:
+            q = q.where(table.net_pnl > min_net_pnl)
+        if since is not None:
+            q = q.where(table.exit_time > since)
+        with self.Session() as s:
+            return [self._to_trade(r) for r in s.scalars(q)]
+
     def count_trades(self, domain: MemoryDomain) -> int:
         table = TRADE_TABLES[domain]
         with self.Session() as s:
