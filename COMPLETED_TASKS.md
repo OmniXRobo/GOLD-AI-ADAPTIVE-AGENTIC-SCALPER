@@ -1,5 +1,11 @@
 # Completed tasks
 
+## Session 5d — 2026-10-27 (AI agents leaderboard)
+- `gold_ai/agents/leaderboard.py`: totals per AI agent (adaptive scalp/swing agents and research lanes) and per
+  strategy version, computed only from recorded closed trades: trades, won/lost, win rate, net P/L, profit factor,
+  max drawdown, average R, last trade. Running agents with no trades are listed with zeros.
+- API: `GET /api/agents/leaderboard?domain=virtual|real`. Dashboard: new "AI Agents" page (nav + Home link).
+
 ## Session 5 — 2026-10-27 (profit alerts)
 - `gold_ai/notifications/trade_alerts.py`: alerts for trades that closed with a positive net result, read from
   Memory C (virtual) and Memory D (real); each says virtual or real and whether it was an exploration trade.

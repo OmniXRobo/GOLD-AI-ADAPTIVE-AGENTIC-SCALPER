@@ -32,6 +32,7 @@ from ..memory.store import MemoryStore
 from ..notifications.trade_alerts import profit_alerts
 from ..security.auth import AuthService, Permission, User
 from ..agents import strategy_selector as selector
+from ..agents.leaderboard import leaderboard
 from ..strategies import investigation
 
 log = logging.getLogger(__name__)
@@ -363,6 +364,15 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
         if lane is None:
             raise HTTPException(404, f"no research lane {key}")
         return lane
+
+    @app.get("/api/agents/leaderboard")
+    def agents_leaderboard(domain: str = Query("virtual", pattern="^(virtual|real)$"), u: User = Depends(current_user)):
+        """Each AI agent and research lane by name and version, with its total recorded results."""
+        d = MemoryDomain(domain)
+        live = d == MemoryDomain.VIRTUAL      # running engines and lanes trade virtually; list them only there
+        return json_safe_any({"domain": domain, "simulated": d != MemoryDomain.REAL, "agents": leaderboard(
+            s.store.load_trades(d), [e.status() for e in s.virtual_engines.values()] if live else [],
+            [l.status() for l in s.research_lanes.values()] if live else [])})
 
     @app.get("/api/strategies/scoreboard")
     def strategy_scoreboard(u: User = Depends(current_user)):

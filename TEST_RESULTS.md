@@ -1,5 +1,9 @@
 # Test results
 
+## 2026-10-27 — session 5d (cloud container, AI agents leaderboard)
+- `python -m pytest -q` → **271 passed, 1 skipped** (adds tests/test_leaderboard.py). Dashboard `tsc --noEmit` and
+  build pass.
+
 ## 2026-10-27 — session 4d (cloud container)
 - `python -m pytest -q` → **267 passed, 1 skipped** (adds tests/test_strategy_selector.py).
 

@@ -169,6 +169,7 @@ export default function HomePage() {
         <QuickLink to="/analysis" icon="performance" label="Analysis" hint="technical, news, calendar" />
         <QuickLink to="/practice" icon="practice" label="Practice" hint="paper trade the live price" />
         <QuickLink to="/results" icon="backtesting" label="Results" hint="win rate and pips by period" />
+        <QuickLink to="/agents" icon="agent" label="AI Agents" hint="each agent and its totals" />
         <QuickLink to="/learn" icon="news" label="Learn" hint="guide, calculator, FAQ" />
         <QuickLink to="/risk" icon="risk" label="Risk" hint={overview?.emergency_stop ? "emergency stop ACTIVE" : "limits and stop"} />
       </div>

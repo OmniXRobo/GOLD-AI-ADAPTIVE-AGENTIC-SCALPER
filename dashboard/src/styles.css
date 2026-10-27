@@ -1690,6 +1690,29 @@ details summary {
   color: var(--text);
   font-variant-numeric: tabular-nums;
 }
+.agents-table td {
+  vertical-align: middle;
+}
+.sticky-col {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+  min-width: 190px;
+  box-shadow: 1px 0 0 var(--grid);
+}
+.agent-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.agent-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
 .event-card {
   display: block;
   padding: 14px 16px;

@@ -399,6 +399,35 @@ export interface Signal {
   [k: string]: unknown;
 }
 
+export interface AgentRow {
+  agent: string;
+  kind: string;
+  style: string;
+  version: string;
+  model_version: string | null;
+  brokers: string[];
+  symbols: string[];
+  running: boolean;
+  champion: boolean;
+  trades: number;
+  wins: number;
+  losses: number;
+  win_rate: number | null;
+  net_profit: number;
+  profit_factor: number | null;
+  no_losses?: boolean;
+  max_drawdown: number;
+  avg_r: number | null;
+  first_trade: string | null;
+  last_trade: string | null;
+}
+
+export interface AgentsBoard {
+  domain: "virtual" | "real";
+  simulated: boolean;
+  agents: AgentRow[];
+}
+
 export interface Technical {
   broker: string;
   symbol: string;
@@ -603,6 +632,7 @@ export const api = {
   brokers: () => get<BrokerStatus[]>("/api/brokers"),
   market: (symbol?: string | null) => get<MarketState>(`/api/market/state${symbol ? `?symbol=${enc(symbol)}` : ""}`),
   instruments: () => get<Instrument[]>("/api/instruments"),
+  agentsBoard: (domain: "virtual" | "real") => get<AgentsBoard>(`/api/agents/leaderboard?domain=${domain}`),
   trades: (domain: Domain, limit = 200, symbol?: string | null) =>
     get<TradesResponse>(`/api/trades/${domain}?limit=${limit}${symbol ? `&symbol=${enc(symbol)}` : ""}`),
   runs: (domain: "historical" | "forward") => get<Run[]>(`/api/runs?domain=${domain}`),

@@ -1,5 +1,8 @@
 # Next actions
 
+X. (VPS thread) After the AI-agents-leaderboard PR is merged: `git pull`, `cd dashboard && npm ci && npm run build`,
+   restart GoldAI-Equiti. No new APK needed. Open "AI Agents" and check the totals match Results.
+
 U. (Owner) Check `/api/strategies/scoreboard` as forward trades accumulate. A lane can be promoted only when it shows
    `eligible: true`; until then the agent has no proven strategy and keeps trading virtually for evidence only.
 

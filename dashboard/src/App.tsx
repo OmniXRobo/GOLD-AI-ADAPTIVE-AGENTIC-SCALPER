@@ -46,6 +46,7 @@ const AnalysisPage = page(() => import("./pages/Analysis"), "default");
 const PracticePage = page(() => import("./pages/Practice"), "default");
 const ResultsPage = page(() => import("./pages/Results"), "default");
 const LearnPage = page(() => import("./pages/Learn"), "default");
+const AgentsPage = page(() => import("./pages/Agents"), "default");
 const BrokersPage = page(monitor, "BrokersPage");
 const MarketPage = page(monitor, "MarketPage");
 const AgentPage = page(monitor, "AgentPage");
@@ -94,6 +95,7 @@ export default function App() {
           <Route path="practice" element={<PracticePage />} />
           <Route path="results" element={<ResultsPage />} />
           <Route path="learn" element={<LearnPage />} />
+          <Route path="agents" element={<AgentsPage />} />
           <Route path="overview" element={<OverviewPage />} />
           <Route path="brokers" element={<BrokersPage />} />
           <Route path="market" element={<MarketPage />} />
