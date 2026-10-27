@@ -1,5 +1,12 @@
 # Completed tasks
 
+## Session 5 — 2026-10-27 (profit alerts)
+- `gold_ai/notifications/trade_alerts.py`: alerts for trades that closed with a positive net result, read from
+  Memory C (virtual) and Memory D (real); each says virtual or real and whether it was an exploration trade.
+- API: `GET /api/alerts/profit-closes` (session) and `GET /api/device/profit-closes` (phone device token).
+- Dashboard: header bell with unread count, list of recent profitable closes, pop-up for each new one, optional
+  browser notifications. Android 1.5.0 source: "Trades closed in profit" notification channel.
+
 ## Session 4c — 2026-10-26 (forward research lanes)
 - Round 3 report committed (all insufficient_data; failed_breakout positive on validation and test, beat baseline).
 - `ResearchLaneEngine` (gold_ai/engines/research_lanes.py): research setups traded virtually on live quotes,

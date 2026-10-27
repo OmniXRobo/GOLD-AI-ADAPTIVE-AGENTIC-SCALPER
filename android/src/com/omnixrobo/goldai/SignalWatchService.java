@@ -21,12 +21,14 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Polls the server's read-only signal list and posts a notification for each new pending signal.
- * It never approves, rejects or executes anything.
+ * Polls the server's read-only signal list and posts a notification for each new pending signal, and
+ * the list of trades that closed in profit (virtual or real, always labelled). It never approves,
+ * rejects or executes anything.
  */
 public class SignalWatchService extends Service {
     private static final String CH_STATUS = "watch";
     private static final String CH_SIGNALS = "signals";
+    private static final String CH_PROFIT = "profit";
     private static final int ONGOING_ID = 1;
     private static final long INTERVAL_MS = 20000;
     private static final long MAX_BACKOFF_MS = 120000;
@@ -99,6 +101,7 @@ public class SignalWatchService extends Service {
                 }
                 if (r.code != 200) throw new Exception("HTTP " + r.code);
                 handle(new JSONArray(r.body));
+                pollProfit(server, token);
                 updateOngoing("Watching for new signals");
                 delay = INTERVAL_MS;
             } catch (Exception e) {
@@ -120,6 +123,56 @@ public class SignalWatchService extends Service {
             // On the first poll only remember what already exists, so old signals don't all ring at once.
             if (primed && "pending".equals(s.optString("status"))) notifySignal(s);
         }
+        Prefs.setSeen(this, join(seen));
+    }
+
+    /** Trades that closed in profit. A server without this endpoint (older version) is skipped quietly. */
+    private void pollProfit(String server, String token) {
+        try {
+            Http.Response r = Http.request("GET", server + "/api/device/profit-closes", token, null);
+            if (r.code != 200) return;
+            JSONArray list = new JSONArray(r.body);
+            List<String> seen = new ArrayList<String>(Arrays.asList(Prefs.seenProfit(this).split(",")));
+            boolean primed = Prefs.primedProfit(this);
+            // The server lists newest first; walk oldest first so notifications arrive in order.
+            for (int i = list.length() - 1; i >= 0; i--) {
+                JSONObject a = list.getJSONObject(i);
+                String id = a.optString("id");
+                if (id.isEmpty() || seen.contains(id)) continue;
+                seen.add(id);
+                // On the first poll only remember what already exists, so old closes don't all ring at once.
+                if (primed) notifyProfit(a);
+            }
+            Prefs.setSeenProfit(this, join(seen));
+        } catch (Exception ignored) {
+            // Signal alerts keep working even if this list can't be read.
+        }
+    }
+
+    private void notifyProfit(JSONObject a) {
+        int d = a.optInt("digits", 2);
+        String tag = a.optBoolean("simulated", true) ? "VIRTUAL" : "REAL";
+        String title = tag + " " + a.optString("style_label", "") + " " + a.optString("side", "") + " "
+                + a.optString("symbol", "") + " closed in profit";
+        double pnl = a.optDouble("net_pnl", 0);
+        String pips = a.isNull("pips") ? "" : String.format(Locale.US, " · %+.1f pips", a.optDouble("pips", 0));
+        String text = String.format(Locale.US, "%+.2f", pnl) + pips + " · " + num(a, "entry_price", d) + " → "
+                + num(a, "exit_price", d);
+        String more = text + "\n" + a.optString("account_label", "")
+                + (a.optBoolean("exploration", false) ? " · exploration trade" : "")
+                + (a.optBoolean("simulated", true) ? "\nVirtual trade: no real money was involved." : "");
+        Notification.Builder b = builder(CH_PROFIT)
+                .setSmallIcon(R.drawable.ic_stat_signal)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(more))
+                .setAutoCancel(true)
+                .setCategory(Notification.CATEGORY_STATUS)
+                .setContentIntent(open("/results"));
+        nm().notify(nextId++, b.build());
+    }
+
+    private static String join(List<String> seen) {
         while (seen.size() > SEEN_LIMIT) seen.remove(0);
         StringBuilder sb = new StringBuilder();
         for (String id : seen) {
@@ -127,7 +180,7 @@ public class SignalWatchService extends Service {
             if (sb.length() > 0) sb.append(',');
             sb.append(id);
         }
-        Prefs.setSeen(this, sb.toString());
+        return sb.toString();
     }
 
     private void notifySignal(JSONObject s) {
@@ -182,7 +235,7 @@ public class SignalWatchService extends Service {
     private Notification.Builder builder(String channel) {
         Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, channel) : new Notification.Builder(this);
         b.setColor(getColor(R.color.gold));
-        if (Build.VERSION.SDK_INT < 26 && CH_SIGNALS.equals(channel)) b.setPriority(Notification.PRIORITY_HIGH).setDefaults(Notification.DEFAULT_ALL);
+        if (Build.VERSION.SDK_INT < 26 && !CH_STATUS.equals(channel)) b.setPriority(Notification.PRIORITY_HIGH).setDefaults(Notification.DEFAULT_ALL);
         return b;
     }
 
@@ -196,7 +249,10 @@ public class SignalWatchService extends Service {
         watch.setShowBadge(false);
         NotificationChannel sig = new NotificationChannel(CH_SIGNALS, "Trade signals", NotificationManager.IMPORTANCE_HIGH);
         sig.setDescription("New gold, Bitcoin and forex signals from your Gold AI server");
+        NotificationChannel profit = new NotificationChannel(CH_PROFIT, "Trades closed in profit", NotificationManager.IMPORTANCE_HIGH);
+        profit.setDescription("A virtual or real trade closed with a profit (each alert says which)");
         nm().createNotificationChannel(watch);
         nm().createNotificationChannel(sig);
+        nm().createNotificationChannel(profit);
     }
 }

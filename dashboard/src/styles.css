@@ -2007,3 +2007,127 @@ details summary {
 .style-swing {
   color: #5b8def;
 }
+
+/* Profit alerts: header bell, dropdown and toasts for trades that closed in profit */
+.palert {
+  position: relative;
+}
+.palert-btn {
+  position: relative;
+}
+.palert-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--pos);
+  color: var(--bg);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
+.palert-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: min(360px, calc(100vw - 32px));
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  z-index: 80;
+  padding: 8px;
+}
+.palert-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 8px 10px;
+}
+.palert-empty {
+  padding: 8px;
+}
+.palert-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.palert-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.palert-item:hover {
+  background: var(--hover);
+}
+.palert-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.palert-head .pos {
+  margin-left: auto;
+  font-weight: 700;
+}
+.palert-ask {
+  width: 100%;
+  margin-top: 6px;
+}
+.palert-toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  z-index: 90;
+  pointer-events: none;
+}
+.palert-toast {
+  display: flex;
+  align-items: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--pos);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+.palert-x {
+  background: none;
+  border: 0;
+  font-size: 1.2rem;
+  line-height: 1;
+  min-width: 32px;
+}
+@media (max-width: 600px) {
+  /* Anchor the panel to the full-width header instead of the bell, so it never runs off screen. */
+  .palert {
+    position: static;
+  }
+  .palert-panel {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    top: calc(100% + 4px);
+  }
+  .palert-toasts {
+    bottom: 76px;
+  }
+}

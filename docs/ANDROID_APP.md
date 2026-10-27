@@ -13,6 +13,11 @@ grants it on the server; the app cannot grant it.
   `GET /api/device/signals` every 20 seconds (backing off to 2 minutes when the server is unreachable) and posts a
   notification for each new pending signal. Alerts are read-only: approving or rejecting a signal still happens in
   the dashboard, which needs your normal session. The device token is never accepted by any other endpoint.
+- **Profit alerts** (1.5.0): the same service reads `GET /api/device/profit-closes` and posts a notification on
+  the *Trades closed in profit* channel when a virtual or real trade closes with a positive net result. Each one
+  starts with VIRTUAL or REAL and says if it was an exploration trade; tapping it opens Results. Mute it in
+  Android's notification settings for the app without turning signal alerts off. An older server without this
+  endpoint is skipped quietly.
 - **Revoking**: Settings → *Revoke all phone alert tokens* (owner/admin) invalidates every phone's token at once.
   Turning alerts off on the phone stops polling.
 
@@ -31,7 +36,7 @@ internet. Recommended: **Tailscale** (free for personal use; private, encrypted,
 `http://` addresses are accepted only for private networks; the app warns when a public address is used without HTTPS.
 
 ## Installing the APK
-1. Copy `gold-ai-<version>.apk` (latest: 1.4.0 once built on the VPS, which labels alerts Scalp or Swing; 1.3.0 before that) to the phone (or download it from the project files).
+1. Copy `gold-ai-<version>.apk` (latest: 1.5.0 once built on the VPS, which adds profit alerts; 1.4.0 before that) to the phone (or download it from the project files).
 2. Open it and allow "Install unknown apps" for the app you opened it with when Android asks.
 3. Open **Gold AI**, enter the server address, sign in with your dashboard account.
 4. Allow notifications when asked. For reliable alerts, set the app's battery usage to *Unrestricted*
