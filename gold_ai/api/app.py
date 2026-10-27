@@ -491,7 +491,10 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
         await ws.accept()
         try:
             while True:
-                await ws.send_json(json_safe_any({"type": "status", **overview_data()}))
+                # overview_data reads the database; run it in a worker thread so a slow or locked database never
+                # blocks the event loop (which also serves every page, script and API call).
+                data = await asyncio.to_thread(overview_data)
+                await ws.send_json(json_safe_any({"type": "status", **data}))
                 await asyncio.sleep(2)
         except (WebSocketDisconnect, RuntimeError):
             # RuntimeError: the phone or browser dropped the connection (app closed, network switch) and the
@@ -507,7 +510,11 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
         def spa(path: str):
             f = (root / path).resolve()
             inside = f == root or root in f.parents  # never serve files outside the build folder
-            return FileResponse(f if path and inside and f.is_file() else root / "index.html")
+            if path and inside and f.is_file() and f.name != "index.html":
+                return FileResponse(f)
+            # index.html names the current build's scripts: never let a browser or the app keep an old copy,
+            # or after an update it asks for scripts that no longer exist and pages fail to open.
+            return FileResponse(root / "index.html", headers={"Cache-Control": "no-cache"})
 
     return app
 

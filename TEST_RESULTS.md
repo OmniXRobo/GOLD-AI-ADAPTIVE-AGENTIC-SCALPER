@@ -1,5 +1,12 @@
 # Test results
 
+## 2026-10-27 — session 5b (cloud container, app pages stuck loading)
+- Reproduced: with trade counts slowed to 0.75 s each (stand-in for the busy 10 GB VPS database) and two live
+  websocket clients open, a dashboard script took **56 s** to download. After moving the websocket's database
+  read to a worker thread: **0.01 s**.
+- `python -m pytest -q` → **262 passed, 1 skipped** (+ websocket reads off the event loop, index.html no-cache;
+  both fail on the old code). Dashboard `tsc --noEmit` and build pass. Android 1.5.0 built and signed (same key).
+
 ## 2026-10-27 — session 5 (cloud container, profit alerts)
 - `python -m pytest -q` → **261 passed, 1 skipped** (adds tests/test_profit_alerts.py: only profitable closes from
   Memories C and D, newest first, real vs virtual labels, `since` filter, session and device-token endpoints).

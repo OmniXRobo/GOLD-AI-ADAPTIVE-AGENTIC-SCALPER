@@ -119,3 +119,5 @@ All items below have code + passing tests unless noted.
   `research`, feature evaluation, EV after costs in the decision agent, risk engine v2, Dubai-time sessions,
   day-rollover fix. Tested on synthetic data only.
 - 2026-10-25: first real-data research run committed (docs/research/); research streams ticks from the DB.
+- 2026-10-27: fixed app pages hanging (websocket DB read off the event loop, no-cache index.html, non-overlapping
+  polling with 30 s GET timeout, page Retry). APK 1.5.0 built and signed with the existing key.

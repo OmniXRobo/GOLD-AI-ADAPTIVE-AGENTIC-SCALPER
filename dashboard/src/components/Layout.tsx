@@ -6,6 +6,7 @@ import { useAuth, useLive } from "../state";
 import { MAIN_NAV, NAV_GROUPS, MOBILE_TABS, navLabel } from "../nav";
 import { useTheme } from "../theme";
 import { Icon } from "./icons";
+import { PageBoundary } from "./PageBoundary";
 import ProfitAlerts from "./ProfitAlerts";
 import { ConfirmDialog } from "./ui";
 
@@ -187,9 +188,11 @@ export default function Layout() {
             </div>
           </header>
           <main className="main">
-            <Suspense fallback={<div className="state state-loading">Loading...</div>}>
-              <Outlet />
-            </Suspense>
+            <PageBoundary key={loc.pathname}>
+              <Suspense fallback={<div className="state state-loading">Loading...</div>}>
+                <Outlet />
+              </Suspense>
+            </PageBoundary>
           </main>
         </div>
       </div>

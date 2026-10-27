@@ -7,9 +7,14 @@ import LoginPage from "./pages/Login";
 import { nativeApp } from "./native";
 import { LiveProvider, useAuth } from "./state";
 
+/** Try a page script again once after a short wait: a busy server or a dropped mobile connection often recovers. */
+function retryOnce<M>(load: () => Promise<M>): Promise<M> {
+  return load().catch(() => new Promise<M>((ok, fail) => window.setTimeout(() => load().then(ok, fail), 1500)));
+}
+
 // Each page group loads on first visit so the first screen paints quickly on phones.
 function page<M extends Record<string, unknown>>(load: () => Promise<M>, name: keyof M) {
-  return lazy(() => load().then((m) => ({ default: m[name] as ComponentType })));
+  return lazy(() => retryOnce(load).then((m) => ({ default: m[name] as ComponentType })));
 }
 const monitor = () => import("./pages/Monitor");
 const control = () => import("./pages/Control");

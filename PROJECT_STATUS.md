@@ -3,6 +3,12 @@
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No strategy has shown an edge after costs (168 virtual trades, net -533.99 USD; all exploration trades).
 
+## Session 5b (app pages stuck loading, 2026-10-27)
+- Cause: the live-status websocket read the database on the server's event loop every 2 s per open screen; with
+  the large, busy VPS database each read stalled every page, script and API call. Fixed by reading in a worker
+  thread. Also: index.html is never cached, polling no longer piles up, GETs time out after 30 s, and a page that
+  fails to load shows Retry. Needs `git pull`, `npm run build` and a service restart on the VPS.
+
 ## Session 5 (profit alerts, 2026-10-27)
 - Owner asked for an in-app notification when a trade closes in profit. Dashboard: a bell in the header with an
   unread count, the last profitable closes, and a pop-up for each new one. Android 1.5.0 source: a separate
