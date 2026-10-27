@@ -22,6 +22,15 @@ final class Prefs {
                 .remove("seen_profit").remove("primed_profit").apply();
     }
 
+    /** App version whose WebView cache is current; a different version clears the cache once. */
+    static String cacheVersion(Context c) {
+        return p(c).getString("cache_version", "");
+    }
+
+    static void setCacheVersion(Context c, String v) {
+        p(c).edit().putString("cache_version", v).apply();
+    }
+
     static boolean alerts(Context c) {
         return p(c).getBoolean("alerts", true);
     }

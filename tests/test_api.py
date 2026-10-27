@@ -1,3 +1,4 @@
+import time
 import pytest
 from fastapi.testclient import TestClient
 
@@ -182,3 +183,21 @@ def test_stale_page_chunk_triggers_reload_instead_of_404(settings, store, tmp_pa
     assert old.headers["content-type"].startswith("text/javascript") and old.headers["cache-control"] == "no-store"
     assert c.get("/assets/missing.css").status_code == 404
     assert c.get("/analysis").headers["cache-control"] == "no-cache"
+
+
+def test_keep_me_signed_in_lasts_30_days_and_renews(client):
+    # The phone app stays signed in until the user signs out: a remembered token lasts 30 days and is renewed.
+    c, st = client
+    exp = lambda tok: st.auth.signer.verify(tok)["exp"] - time.time()
+    short = c.post("/api/auth/login", json={"username": "owner", "password": "owner-pass-123"}).json()
+    assert exp(short["token"]) <= 8 * 3600
+    r = c.post("/api/auth/login", json={"username": "owner", "password": "owner-pass-123", "remember": True}).json()
+    assert r["remember"] is True and exp(r["token"]) > 29 * 24 * 3600
+    new = c.post("/api/auth/refresh", headers={"Authorization": f"Bearer {r['token']}"}).json()
+    assert new["role"] == "owner" and exp(new["token"]) > 29 * 24 * 3600 and new["token"] != r["token"]
+    # a short session renews as a short session; a bad or device token cannot renew
+    again = c.post("/api/auth/refresh", headers={"Authorization": f"Bearer {short['token']}"}).json()
+    assert exp(again["token"]) <= 8 * 3600
+    assert c.post("/api/auth/refresh", headers={"Authorization": "Bearer nope"}).status_code == 401
+    dev = c.post("/api/auth/device-token", json={"device": "phone"}, headers={"Authorization": f"Bearer {r['token']}"}).json()
+    assert c.post("/api/auth/refresh", headers={"Authorization": f"Bearer {dev['token']}"}).status_code == 401

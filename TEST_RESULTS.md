@@ -1,5 +1,13 @@
 # Test results
 
+## 2026-10-27 — session 5c (cloud container, stay signed in)
+- `python -m pytest -q` → **263 passed, 1 skipped** (+ remembered 30-day token, refresh keeps the lifetime,
+  bad and device tokens cannot refresh). Dashboard `tsc --noEmit` and build pass.
+- Headless browser: signed in without "keep me signed in", closed the page, reopened → sign-in screen; with it
+  checked → still signed in.
+- After rebasing on main: **264 passed, 1 skipped**. Android 1.5.1 (versionCode 8) built and signed with the same key
+  (no longer restores saved WebView pages; clears the HTTP cache once after an app update). Not run on a phone.
+
 ## 2026-10-27 — session 5b (cloud container, app pages stuck loading)
 - Reproduced: with trade counts slowed to 0.75 s each (stand-in for the busy 10 GB VPS database) and two live
   websocket clients open, a dashboard script took **56 s** to download. After moving the websocket's database

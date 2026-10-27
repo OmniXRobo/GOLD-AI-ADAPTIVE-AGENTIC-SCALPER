@@ -1,12 +1,12 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { api, AUTH_EXPIRED_EVENT, clearSession, connectLive, getRole, getToken, setSession, type Authorization, type Overview } from "./api";
+import { api, AUTH_EXPIRED_EVENT, clearSession, connectLive, getRole, getToken, isRemembered, setSession, type Authorization, type Overview } from "./api";
 
 // ---------------------------------------------------------------- auth
 
 interface AuthCtx {
   token: string | null;
   role: string | null;
-  login: (u: string, p: string) => Promise<void>;
+  login: (u: string, p: string, remember?: boolean) => Promise<void>;
   logout: () => void;
 }
 const AuthContext = createContext<AuthCtx | null>(null);
@@ -22,10 +22,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.addEventListener(AUTH_EXPIRED_EVENT, onExpired);
     return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired);
   }, []);
-  const login = useCallback(async (u: string, p: string) => {
-    const r = await api.login(u, p);
+  // A remembered session is renewed on every start and twice a day, so it only ends when the user signs out
+  // (or does not open the app for 30 days). Network errors keep the current token; a 401 signs out as usual.
+  useEffect(() => {
+    if (!token || !isRemembered()) return;
+    const renew = () =>
+      api
+        .refreshSession()
+        .then((r) => {
+          if (r?.token && isRemembered()) setSession(r.token, r.role ?? "", true, false);
+        })
+        .catch(() => undefined);
+    renew();
+    const t = window.setInterval(renew, 12 * 3600 * 1000);
+    return () => window.clearInterval(t);
+  }, [token]);
+  const login = useCallback(async (u: string, p: string, remember = false) => {
+    const r = await api.login(u, p, remember);
     if (!r || typeof r.token !== "string") throw new Error("Login response missing token");
-    setSession(r.token, r.role ?? "");
+    setSession(r.token, r.role ?? "", remember);
     setToken(r.token);
     setRole(r.role ?? "");
   }, []);
