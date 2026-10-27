@@ -1,5 +1,11 @@
 # Completed tasks
 
+## Session 4c — 2026-10-26 (forward research lanes)
+- Round 3 report committed (all insufficient_data; failed_breakout positive on validation and test, beat baseline).
+- `ResearchLaneEngine` (gold_ai/engines/research_lanes.py): research setups traded virtually on live quotes,
+  simulation only, no learning, no signals, `style=research`, own account, positions survive restarts.
+  Configured by `research_lanes` / `research_lane_symbols` (default: 3 intraday setups on XAUUSD).
+
 ## Session 4b — 2026-10-26 (towards a new strategy)
 - Live-virtual engines: momentum continuation off by default (`virtual_entry_rules`); promoted strategies cannot
   re-enable it; engine status lists its entry rules.

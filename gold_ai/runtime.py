@@ -286,11 +286,14 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
     heartbeats = HeartbeatRegistry()
     supervisor = Supervisor(store, heartbeats=heartbeats)
     engines: list = []
+    lanes: list = []
     collectors: dict[str, object] = {}
     if use_mt5:
         from .brokers.mt5_connector import MT5ReadOnlyConnector
         from .collector import TickCollector
         from .engines.live_virtual import LiveVirtualEngine
+        from .engines.research_lanes import ResearchLaneEngine, lane_params
+        from .instruments import canonical
         conn = connector_factory() if connector_factory else MT5ReadOnlyConnector(terminal_path=terminal_path)
         if not conn.connect():
             raise RuntimeError("could not connect to the MT5 terminal")
@@ -326,6 +329,19 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                 engines.append(engine)
                 name = f"live_virtual{sfx}{tag}"
                 supervisor.register(name, _engine_worker(engine, heartbeats, name))
+            # Forward research lanes (simulation only, no signals, no self-healing): see engines/research_lanes.py.
+            if canonical(spec.symbol) in {canonical(x) or x for x in settings.research_lane_symbols}:
+                for cfg in settings.research_lanes:
+                    try:
+                        lane = ResearchLaneEngine(settings, spec, conn, store, lane_params(cfg),
+                                                  account=f"research-{acct.login}")
+                    except (TypeError, ValueError) as e:
+                        log.warning("research lane %s not started: %s", cfg, e)
+                        continue
+                    state.research_lanes[lane.key] = lane
+                    lanes.append(lane)
+                    name = f"research_lane:{lane.agent.params.setup}{tag}"
+                    supervisor.register(name, _engine_worker(lane, heartbeats, name))
 
     svc = register_services(state, heartbeats=heartbeats, supervisor=supervisor)
     if engines:
@@ -343,7 +359,7 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                 now = datetime.now(timezone.utc)
                 try:
                     n = news.refresh(now - timedelta(days=1), now + timedelta(days=7))
-                    for e in engines:
+                    for e in [*engines, *lanes]:
                         news.sync_risk_engine(e.loop.risk)
                     log.info("news refresh: %d events loaded, %d upcoming high-impact in 24 h", n,
                              sum(e.impact == "high" for e in news.upcoming(now)))

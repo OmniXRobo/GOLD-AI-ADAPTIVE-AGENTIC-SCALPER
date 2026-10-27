@@ -545,9 +545,23 @@
       "id": "T-RESEARCH-ROUND3",
       "phase": 6,
       "title": "Research round 3: setups at intraday scale (M5/M15 triggers, M15 ATR, H1 trend) on the VPS",
-      "status": "todo",
+      "status": "done",
       "priority": 1,
-      "notes": "command in docs/research/README.md"
+      "notes": "insufficient_data: 12-23 test trades of 30; report docs/research/research-XAUUSD.sd-20261026T161050Z.md"
+    },
+    {
+      "id": "T-RESEARCH-LANES",
+      "phase": 6,
+      "title": "Forward research lanes: failed_breakout, trend_pullback, breakout (intraday) traded virtually on live quotes, simulation only",
+      "status": "done",
+      "priority": 1
+    },
+    {
+      "id": "T-BACKFILL-MONTHS",
+      "phase": 6,
+      "title": "VPS: backfill more months of XAUUSD.sd ticks and rerun round 3 so intraday setups reach 30 test trades",
+      "status": "todo",
+      "priority": 1
     }
   ]
 }

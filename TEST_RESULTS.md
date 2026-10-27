@@ -1,5 +1,9 @@
 # Test results
 
+## 2026-10-26 — session 4c (cloud container)
+- `python -m pytest -q` → **258 passed, 1 skipped** (adds tests/test_research_lanes.py: labelled simulated lane trades,
+  restart, read-only source, runtime starts 3 gold lanes).
+
 ## 2026-10-26 — session 4b (cloud container)
 - `python -m pytest -q` → **255 passed, 1 skipped** (adds intraday-scale research test and the momentum-off
   virtual engine test).

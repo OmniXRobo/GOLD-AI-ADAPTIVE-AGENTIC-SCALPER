@@ -200,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
     au.add_argument("--domain", default="virtual", choices=[d.value for d in MemoryDomain])
     au.add_argument("--broker", default=None)
     au.add_argument("--symbol", default=None, help="broker symbol or instrument (XAUUSD matches XAUUSD.sd)")
-    au.add_argument("--style", default=None, choices=["scalp", "swing"])
+    au.add_argument("--style", default=None, choices=["scalp", "swing", "research"])
     au.add_argument("--since", default=None, help="ISO time; only trades entered at or after it")
     au.add_argument("--out", default=None, help="report directory (default <data_dir>/audit)")
 

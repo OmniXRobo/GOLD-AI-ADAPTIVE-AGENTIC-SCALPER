@@ -1,6 +1,6 @@
 # Root-cause audit: losing live-virtual results
 
-Status: **open**. Started 2026-10-26 after the owner reported the live-virtual results below.
+Status: **open** (code audit done; VPS data verified 2026-10-26, see 5b). Started 2026-10-26 after the owner reported the live-virtual results below.
 The strategy involved is under investigation and blocked from promotion, execution and signals
 (see "Actions taken"). No trade, model or history has been changed or deleted.
 
@@ -55,10 +55,10 @@ code proves from what still needs the data.
    34 has p ≈ 0.04. The losses therefore come mainly from **entries that did worse than random**, not from
    costs or exits. The likeliest mechanism is that momentum entries chase a move that has already happened
    (hypothesis H1 below).
-4. **Costs are not the cause for this engine.** It uses a 1.5 × ATR(M5) stop, about 87 pips. The spread
-   (~2.7 pips on Equiti XAUUSD.sd) plus modelled slippage (0.5 pip per side, plus 1 pip on stops) is about
-   5 pips, or about 0.05R. Costs were the dominant problem for the tight structural stops of the research
-   setups, not here.
+4. **Costs are not the main cause, but they are larger than first estimated.** The estimate from code was
+   about 0.05R. The VPS audit (section 5b) measured 0.09R per trade on gold scalps (median stop about
+   53 pips) and 0.24R across all symbols, where BTC and forex stops pay more slippage. Stop-loss exits lost
+   1.08x (gold) to 1.19x (all symbols) of the planned risk.
 5. **Confirmed defects found and fixed in this change** (section 3): the expected-value formula assumed every
    win pays the full 1.5R target; trade records lost the initial stop and MFE/MAE, so exits could not be
    analysed; exploration trades were reported as if they were strategy performance; and the model was
@@ -130,12 +130,34 @@ Legend: **Defect** = confirmed in code · **OK** = checked, no defect found · *
   `exploration` / `investigation` fields.
 - **`audit-trades` CLI** (read-only), described in section 1.
 
-## 5b. Findings reported from the VPS (2026-10-26, relayed; reports to be committed verbatim)
-- `audit-trades` on 226 virtual trades: about 97% came from momentum continuation, which lost about $816; buy
-  trades were the worst. This supports H1 (momentum entries chase the move).
-- Research round 2 on 12.6 M ticks: no setup profitable after costs; S/R rejection about 0R.
-- Action: momentum continuation is switched off in the live-virtual engines (`virtual_entry_rules`, default
-  `["rejection"]`); research round 3 tests the setups a timeframe slower (docs/research/README.md).
+## 5b. Verified on the VPS data (2026-10-26)
+Reports, committed as produced: `docs/audit/audit-virtual-all-20261026T041228Z.md` (all symbols) and
+`docs/audit/audit-virtual-XAUUSD-20261026T041229Z.md` (gold scalping). Round 2 research:
+`docs/research/research-XAUUSD.sd-20261025T175132Z.md`.
+
+- **Scope.** 226 closed virtual trades from 22 Oct 14:40 to 26 Oct 03:46 UTC across 9 symbols, all of them
+  exploration. 129 were BTCUSD (−$536) and 58 were gold scalps; 12 were swing trades. The owner's 34-trade
+  screenshot is a filtered view of these rows; its exact filter was not reproduced. The integrity checks are
+  clean: no duplicates or overlaps, and the money-per-price arithmetic is consistent for every symbol.
+- **All symbols.** Win rate 39.4% against a 54.3% break-even at the realized payoff (p < 0.001). Expectancy
+  −0.29R (90% CI −0.40..−0.17), net −$761.63, PF 0.71.
+- **H1 supported.** Momentum continuation made 219 of 226 trades (97%) and lost $816. Buys did much worse
+  than sells (−0.49R vs −0.14R).
+- **Gold scalping alone is about break-even, not clearly losing.** 58 trades, win rate 51.7%, −0.03R
+  (90% CI −0.23..+0.19), PF 0.94. Sells were +0.13R; buys lost. Most of the loss came from BTC, forex and
+  swing trades.
+- **H4 (expiry) is not the problem:** 40 expiries averaged −0.13R. Losses come from full stops: 111 stop
+  exits averaged −1.19R.
+- **H6 supported** (these trades predate risk engine v2): 85 re-entries within 60 s of an exit, and 66 within
+  5 min of a loss. Risk engine v2 now blocks both.
+- **H5 confirmed:** the dashboard's all-markets view mixes symbols and styles.
+- **H2 and H3 are still open**, because MFE/MAE was not stored for these trades; it is recorded from now on.
+- **By hour:** Dubai 18:00 was the best hour (22 trades, +0.33R). That is too few trades to act on; it is
+  noted for the owner's session preference only.
+- **Research round 2** (12.6 M ticks, 25 Sep to 23 Oct): no candidate. trend_pullback, failed_breakout and
+  liquidity_sweep were rejected; legacy_rejection was inconclusive at +0.00R.
+- **Action.** Momentum continuation is switched off in the live-virtual engines (`virtual_entry_rules`,
+  default `["rejection"]`). Research round 3 tests the setups one timeframe slower (docs/research/README.md).
 
 ## 6. What happens next (no live trading in any step)
 
