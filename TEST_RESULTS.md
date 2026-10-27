@@ -1,5 +1,8 @@
 # Test results
 
+## 2026-10-27 — session 4d (cloud container)
+- `python -m pytest -q` → **267 passed, 1 skipped** (adds tests/test_strategy_selector.py).
+
 ## 2026-10-27 — session 5c (cloud container, stay signed in)
 - `python -m pytest -q` → **263 passed, 1 skipped** (+ remembered 30-day token, refresh keeps the lifetime,
   bad and device tokens cannot refresh). Dashboard `tsc --noEmit` and build pass.

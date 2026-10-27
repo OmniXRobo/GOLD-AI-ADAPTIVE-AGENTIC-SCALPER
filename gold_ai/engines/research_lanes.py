@@ -4,9 +4,11 @@ Historical research decides which setups are worth watching. A lane runs one of 
 source as the live virtual engines, so it builds forward evidence on prices it was never tuned on. Lanes:
 - trade only in simulation (the rule agent refuses to propose outside it), with estimated fills, and every trade
   is labelled `[EXPLORATION] research trade` and `style="research"`, so it never counts as a strategy's results,
-  never produces a signal and is kept apart from the scalping and swing engines' accounts;
+  never produces a signal (see the champion exception below) and is kept apart from the scalping and swing engines' accounts;
 - do not learn online (rules are measured, not fitted), and have no model;
 - keep open positions across restarts like the live virtual engines.
+Exception: a lane the owner has promoted to champion (agents/strategy_selector.py, only when every evidence
+criterion holds) labels its proposals as the champion strategy instead, and they may become signals.
 A lane's results are read with `audit-trades --style research` or `/api/trades/virtual`; promoting a setup to the
 agent's strategy is a separate, owner-approved step after research, walk-forward and this forward evidence agree.
 Which lanes run, and on which instruments, is set by `Settings.research_lanes` / `research_lane_symbols`.
@@ -16,6 +18,7 @@ from __future__ import annotations
 import threading
 from datetime import datetime, timedelta
 
+from ..agents import strategy_selector as selector
 from ..config import Settings
 from ..domain import SymbolSpec
 from ..memory.store import MemoryStore
@@ -50,7 +53,20 @@ class ResearchLaneEngine(LiveVirtualEngine):
         self.stale_polls = 0
         self._seed_pending = False
         self._seed_before: datetime | None = None
-        self.signal_hook = None          # never set: research lanes do not signal
+        # Signals are sent only while the owner has promoted this lane to champion (agents/strategy_selector.py);
+        # until then every proposal is labelled exploration and the inherited _on_decision never calls the hook.
+        self.signal_hook = None
+        self.criteria = selector.PromotionCriteria(**settings.promotion_criteria)
+        self.refresh_champion()
+
+    def refresh_champion(self) -> bool:
+        self.agent.champion = selector.is_champion(self.store, self)
+        return self.agent.champion
+
+    def _on_close(self, t) -> None:
+        super()._on_close(t)
+        if self.agent.champion and selector.check_demotion(self.store, self, self.criteria) is not None:
+            self.refresh_champion()
 
     def _persist(self) -> None:
         self.store.kv_set(f"{self.key}:equity", self.loop.equity)
@@ -75,5 +91,5 @@ class ResearchLaneEngine(LiveVirtualEngine):
             "open_positions": len(self.loop.sim.positions), "ticks_processed": self.loop.stats.ticks,
             "signals": self.agent.signals, "rejected": dict(self.agent.rejected),
             "last_tick": self._last_tick_time.isoformat() if self._last_tick_time else None,
-            "fills": "estimated (virtual research lane)",
+            "fills": "estimated (virtual research lane)", "champion": self.agent.champion,
         }

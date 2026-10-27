@@ -570,6 +570,14 @@
       "status": "done",
       "priority": 2,
       "notes": "APK 1.5.0 must be built and signed on the VPS"
+    },
+    {
+      "id": "T-STRATEGY-SELECTOR",
+      "phase": 6,
+      "title": "Strategy Selector Agent: evidence scoreboard per research lane, owner promotion only when eligible, automatic demotion on bad forward results",
+      "status": "done",
+      "priority": 1,
+      "notes": "No lane is eligible yet (round 3 insufficient_data; forward lanes just started). Waiting on 4-month research rerun and ~30 forward trades per lane."
     }
   ]
 }

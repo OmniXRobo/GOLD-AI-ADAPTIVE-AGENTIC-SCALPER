@@ -1,5 +1,8 @@
 # Next actions
 
+U. (Owner) Check `/api/strategies/scoreboard` as forward trades accumulate. A lane can be promoted only when it shows
+   `eligible: true`; until then the agent has no proven strategy and keeps trading virtually for evidence only.
+
 W. (VPS thread) After the "stay signed in" PR is merged: `git pull`, `cd dashboard && npm ci && npm run build`,
    restart GoldAI-Equiti. Users install Android 1.5.1 (project files) and sign in once more; after that the app
    keeps them signed in until Sign out.

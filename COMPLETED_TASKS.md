@@ -7,6 +7,14 @@
 - Dashboard: header bell with unread count, list of recent profitable closes, pop-up for each new one, optional
   browser notifications. Android 1.5.0 source: "Trades closed in profit" notification channel.
 
+## Session 4d — 2026-10-27 (strategy selector)
+- gold_ai/agents/strategy_selector.py: joins each research lane's latest research verdict (Memory A) with its
+  forward virtual trades (Memory C); owner-configurable `promotion_criteria` (default: research `candidate`,
+  ≥30 forward trades, forward expectancy ≥ +0.05R with 90% interval above zero, drawdown ≤ 10R).
+  Owner-only promotion of an eligible lane to champion (its proposals stop being exploration and may become
+  signals, virtual fills only); automatic demotion after 20 trades below −0.15R; all audited.
+- API: GET /api/strategies/scoreboard, POST /api/strategies/promote, POST /api/strategies/demote.
+
 ## Session 4c — 2026-10-26 (forward research lanes)
 - Round 3 report committed (all insufficient_data; failed_breakout positive on validation and test, beat baseline).
 - `ResearchLaneEngine` (gold_ai/engines/research_lanes.py): research setups traded virtually on live quotes,
