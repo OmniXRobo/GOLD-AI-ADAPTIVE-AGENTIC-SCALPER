@@ -29,7 +29,7 @@ from ..engines.metrics import json_safe
 from ..instruments import settings_for
 from ..market.features import MarketIntelligenceAgent
 from ..memory.store import MemoryStore
-from ..risk.engine import NewsEvent, RiskEngine
+from ..risk.engine import NewsEvent, RiskEngine, measurement_risk
 from ..strategies.agent import RuleAgent, RuleParams
 from ..strategies.setups import RESEARCH_SETUPS, SETUPS, RandomBaseline
 from .stats import r_summary
@@ -94,7 +94,8 @@ class ResearchReport:
     setups: list[SetupReport]
     data_hash: str
     label: str = ("historical research on recorded ticks with modelled costs — NOT live or forward results; "
-                  "a 'candidate' still needs walk-forward and forward virtual evidence")
+                  "a 'candidate' still needs walk-forward and forward virtual evidence; account loss stops "
+                  "(drawdown, daily/weekly loss, loss cooldowns) are off while measuring, per-trade rules apply")
 
     def to_dict(self) -> dict:
         return json_safe(asdict(self))
@@ -137,7 +138,7 @@ def run_lanes(settings: Settings, spec: SymbolSpec, ticks: Iterable[Tick],
     loops: list[TradingLoop] = []
     for params, setup in lanes:
         agent = RuleAgent(params, setup, cache)
-        risk = RiskEngine.create(settings_for(settings, spec).risk, spec, starting_equity)
+        risk = RiskEngine.create(measurement_risk(settings_for(settings, spec).risk), spec, starting_equity)
         risk.news = list(news or [])
         loops.append(TradingLoop(settings, spec, agent, broker=spec.broker, account="research",
                                  starting_equity=starting_equity, learn=False, simulation=True, risk=risk,

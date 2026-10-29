@@ -77,3 +77,25 @@ evidence for the setups that survived (research lanes on live quotes, simulation
 Forward research lanes now run these three setups (failed_breakout, trend_pullback, breakout, intraday scale) on
 live Equiti quotes in simulation (`gold_ai/engines/research_lanes.py`, `style=research`). Their trades are
 evidence for or against the research result; they never signal and never count as the agent's performance.
+
+## Round 4: 4 months (2026-10-29, `research-XAUUSD.sd-20261029T152424Z.md`, 62.2 M ticks, 28 Jun → 29 Oct)
+**This run is flawed and must be repeated.** 13 of the 20 setup variants traded in the train split and then
+never again: 0 validation and 0 test trades. Those variants lost about 20R or more in train, which with 0.5% risk
+per trade hit the risk engine's 10% maximum-drawdown stop. That stop then blocked the lane for the rest of the
+run. So "insufficient_data" for trend_pullback and failed_breakout really means "lost in train, then stopped
+measuring", not "too few signals". Trades in the "structural stop too wide" counts are signals rejected before
+any trade; they are a separate issue.
+
+What the run does show, from the variants that were measured on all three splits:
+- **breakout** (rr 2, 4 h): +0.13R train, −0.17R validation, +0.01R test (39 trades). That is noise around zero.
+- **range_reversion** (M5 trigger, 8 h): roughly 0R in train, −0.08 to −0.11R on test. Rejected.
+- **liquidity_sweep** (M5 trigger, 8 h): +0.11 to +0.18R train, −0.08 to −0.17R validation, +0.01 to +0.10R
+  test. It is no better than random entry. Rejected.
+- **failed_breakout** and **trend_pullback**: −0.14 to −0.32R in train on every variant (100+ trades each). Even
+  before the truncation, they did not hold up over four months. Round 3's +0.20R and +0.04R did not survive.
+- Features: `spread_atr` (more spread relative to volatility → worse outcomes) and `bb_bw_pctile_m5` (expanded
+  volatility → better outcomes) remain the most stable. `adx_m15`, `macd_hist_m5`, `efficiency_m5` and
+  `tick_rate_z` were also kept this time.
+
+Fix: research lanes now measure with account-level loss stops switched off (`risk.engine.measurement_risk`).
+Per-trade rules still apply. Rerun the same command to get valid validation and test splits for every variant.

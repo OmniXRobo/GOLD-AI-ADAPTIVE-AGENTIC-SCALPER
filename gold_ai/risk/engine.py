@@ -19,6 +19,20 @@ from ..domain import Side, SymbolSpec, Tick, TradeProposal
 from ..timeutil import in_local_window
 
 
+def measurement_risk(cfg: RiskConfig) -> RiskConfig:
+    """Risk rules for *measuring* a setup (research harness, forward research lanes), not for trading an account.
+
+    Account-level loss limits (drawdown, daily and weekly loss, loss-streak cooldowns, re-entry after a loss) make a
+    measurement path-dependent: a setup that loses 10% early is blocked for the rest of the run, so its later
+    validation and test splits show 0 trades and the verdict says "insufficient data" instead of "rejected". They
+    are switched off here. Every per-trade rule (spread, abnormal volatility, news, sessions, R:R, stop side,
+    trade spacing and daily trade count, one position at a time) still applies. Accounts that trade, virtual or
+    otherwise, keep the full rules.
+    """
+    return cfg.model_copy(update={"max_drawdown_pct": 1e9, "max_daily_loss_pct": 1e9, "max_weekly_loss_pct": 1e9,
+                                  "max_consecutive_losses": 10**9, "reentry_after_loss_minutes": 0.0})
+
+
 @dataclass(frozen=True)
 class NewsEvent:
     time: datetime
