@@ -283,6 +283,7 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
         model = [t for t in ts if t.trade_id not in expl_ids]
         by_mode = {"exploration": json_safe(compute_metrics(expl)), "model_approved": json_safe(compute_metrics(model))}
         rows = []
+        blocking: dict[str | None, dict | None] = {}   # one store lookup per strategy version, not per row
         for t in ts[-limit:]:
             d = asdict(t)
             d["side"] = t.side.value
@@ -294,7 +295,9 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             d["context"] = {k: v for k, v in t.context.items() if k != "features"}
             d["style"] = t.context.get("style", "scalp")
             d["exploration"] = t.trade_id in expl_ids
-            inv = investigation.blocking(s.store, t.strategy_version)
+            if t.strategy_version not in blocking:
+                blocking[t.strategy_version] = investigation.blocking(s.store, t.strategy_version)
+            inv = blocking[t.strategy_version]
             d["investigation"] = inv["target"] if inv else None
             rows.append(d)
         return {"domain": domain.value, "label": DOMAIN_LABELS[domain], "simulated": domain != MemoryDomain.REAL,
