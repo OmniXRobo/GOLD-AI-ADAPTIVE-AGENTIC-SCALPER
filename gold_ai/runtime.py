@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import os
 import threading
+import time
 from dataclasses import asdict
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -58,12 +59,22 @@ def register_services(state: AppState, *, news: NewsAgent | None = None,
         connector=next(iter(s.connectors.values()), None), store=s.store, heartbeats=heartbeats,
         supervisor=supervisor, disk_path=s.settings.data_dir if Path(s.settings.data_dir).exists() else ".")
 
+    maturity_cache: dict[str | None, tuple[float, dict]] = {}
+
     def maturity(broker: str | None = None):
+        # Grading every broker's evidence takes ~9 s on the VPS (thousands of trades, bootstrap intervals);
+        # the inputs change slowly, so a 60 s cache keeps the AI Maturity page responsive.
+        hit = maturity_cache.get(broker)
+        if hit and time.monotonic() - hit[0] < 60:
+            return hit[1]
         ops = health.run().as_operational_checks()
         if broker:
-            return assess(s.store, broker, operational_checks=ops).to_dict()
-        reports = assess_all_brokers(s.store, operational_checks=ops)
-        return {"brokers": {b: r.to_dict() for b, r in reports.items()}}
+            out = assess(s.store, broker, operational_checks=ops).to_dict()
+        else:
+            reports = assess_all_brokers(s.store, operational_checks=ops)
+            out = {"brokers": {b: r.to_dict() for b, r in reports.items()}}
+        maturity_cache[broker] = (time.monotonic(), out)
+        return out
 
     def signal_list():
         signals.expire_stale()
