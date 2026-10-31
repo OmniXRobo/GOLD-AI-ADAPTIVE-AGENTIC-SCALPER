@@ -98,8 +98,10 @@ class Settings(BaseModel):
     promotion_criteria: dict = Field(default_factory=dict)
     research_lane_symbols: list[str] = Field(default_factory=lambda: ["XAUUSD"])
     research_lanes: list[dict] = Field(default_factory=lambda: [
+        # Round 5's one variant that was not negative on any split (train -0.00R, validation +0.15R, test +0.12R,
+        # 63 test trades). It was not the variant chosen on validation, so this is a hypothesis for forward testing.
         {"setup": "failed_breakout", "risk_reward": 1.5, "tf_scale": "intraday", "trigger_tf": "M5",
-         "max_hold_seconds": 8 * 3600},
+         "max_hold_seconds": 8 * 3600, "min_bb_bw_pctile": 0.6},
         {"setup": "trend_pullback", "risk_reward": 1.5, "tf_scale": "intraday", "trigger_tf": "M5",
          "max_hold_seconds": 8 * 3600},
         {"setup": "breakout", "risk_reward": 2.0, "tf_scale": "intraday", "max_hold_seconds": 4 * 3600},
