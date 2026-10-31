@@ -321,3 +321,20 @@ def test_intraday_scale_reads_every_timeframe_a_step_slower(settings, spec):
     rep = evaluate_setups(settings, spec, tk, cfg)
     assert {k.split(",", 1)[1] for k in rep.setups[0].variants} == {
         "max_hold_seconds=14400,tf_scale=intraday", "max_hold_seconds=28800,tf_scale=intraday,trigger_tf=M5"}
+
+
+def test_account_loss_stops_do_not_truncate_a_measurement(settings, spec):
+    """A setup that loses early must still be measured on validation and test (root cause of round 4's 0-trade
+    splits): the research harness switches off account-level loss stops, the trading engines keep them."""
+    from gold_ai.risk.engine import RiskEngine, measurement_risk
+
+    settings.risk.max_drawdown_pct = 0.5            # would block after one loss at 0.5% risk per trade
+    settings.risk.max_daily_loss_pct = 0.5
+    tk = ticks(120_000, seed=9)
+    p = RuleParams(setup="random_baseline", setup_params={"probability": 0.2})
+    trades, _ = run_rules(settings, spec, tk, p)
+    losses = [t for t in trades if t.net_pnl < 0]
+    assert losses and any(t.entry_time > losses[0].exit_time + timedelta(days=1) for t in trades)
+    m = measurement_risk(settings.risk)
+    assert m.max_drawdown_pct > 100 and m.max_spread_points == settings.risk.max_spread_points
+    assert RiskEngine.create(settings.risk, spec, 1e4).cfg.max_drawdown_pct == 0.5      # trading rules unchanged

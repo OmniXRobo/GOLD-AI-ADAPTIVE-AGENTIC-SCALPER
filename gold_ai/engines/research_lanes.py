@@ -21,7 +21,9 @@ from datetime import datetime, timedelta
 from ..agents import strategy_selector as selector
 from ..config import Settings
 from ..domain import SymbolSpec
+from ..instruments import settings_for
 from ..memory.store import MemoryStore
+from ..risk.engine import RiskEngine, measurement_risk
 from ..strategies.agent import RuleAgent, RuleParams
 from .live_virtual import LiveVirtualEngine, QuoteSource
 from .loop import TradingLoop
@@ -43,8 +45,11 @@ class ResearchLaneEngine(LiveVirtualEngine):
         self.key = f"research:{spec.broker}:{spec.symbol}:{params.version()}"
         self.agent = RuleAgent(params)
         equity = store.kv_get(f"{self.key}:equity", starting_equity)
+        # Measured like the research harness (no account-level loss stops), until promoted to champion.
+        self._trading_risk = settings_for(settings, spec).risk
+        risk = RiskEngine.create(measurement_risk(self._trading_risk), spec, equity)
         self.loop = TradingLoop(settings, spec, self.agent, broker=spec.broker, account=account,
-                                starting_equity=equity, learn=False, simulation=True,
+                                starting_equity=equity, learn=False, simulation=True, risk=risk,
                                 on_decision=self._on_decision, on_close=self._on_close)
         self._restore_positions()
         self.poll_interval = poll_interval
@@ -60,7 +65,9 @@ class ResearchLaneEngine(LiveVirtualEngine):
         self.refresh_champion()
 
     def refresh_champion(self) -> bool:
+        """A champion trades under the full account risk rules; a lane under observation is measured."""
         self.agent.champion = selector.is_champion(self.store, self)
+        self.loop.risk.cfg = self._trading_risk if self.agent.champion else measurement_risk(self._trading_risk)
         return self.agent.champion
 
     def _on_close(self, t) -> None:
