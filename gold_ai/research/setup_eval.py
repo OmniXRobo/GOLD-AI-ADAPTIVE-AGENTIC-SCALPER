@@ -53,6 +53,13 @@ VARIANT_PRESETS: dict[str, tuple[dict, ...]] = {
                                for base in ({"tf_scale": "intraday", "max_hold_seconds": 4 * 3600},
                                             {"tf_scale": "intraday", "trigger_tf": "M5", "max_hold_seconds": 8 * 3600})
                                for flt in ({}, {"min_atr_spread": 15}, {"min_bb_bw_pctile": 0.6})),
+    # Round 6: the same intraday variants traded only in the busiest UTC hours, when gold moves most for its spread:
+    # London + New York (07-17) or their overlap (12-16), each with and without the round 5 band-width filter.
+    "session-round6": tuple({**base, **hours, **flt}
+                            for base in ({"tf_scale": "intraday", "max_hold_seconds": 4 * 3600},
+                                         {"tf_scale": "intraday", "trigger_tf": "M5", "max_hold_seconds": 8 * 3600})
+                            for hours in ({"hours_utc": (7, 17)}, {"hours_utc": (12, 16)})
+                            for flt in ({}, {"min_bb_bw_pctile": 0.6})),
 }
 
 

@@ -23,7 +23,8 @@ from ..strategies.agent import RuleParams
 
 CHAMPION_KEY = "strategy_champion"
 _MATCH_FIELDS = ("setup", "setup_params", "risk_reward", "tf_scale", "trigger_tf", "max_hold_seconds",
-                 "min_atr_spread", "min_stop_atr", "max_stop_atr", "max_cost_r", "min_bb_bw_pctile")
+                 "min_atr_spread", "min_stop_atr", "max_stop_atr", "max_cost_r", "min_bb_bw_pctile",
+                 "hours_utc")
 
 
 @dataclass

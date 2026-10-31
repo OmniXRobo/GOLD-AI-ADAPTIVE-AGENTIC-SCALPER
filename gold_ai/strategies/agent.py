@@ -39,12 +39,18 @@ class RuleParams:
     # Trade only when the M5 Bollinger bandwidth is at least this percentile of its last 100 bars (0 = off):
     # research round 5 found wider bands the strongest positive feature and spread/ATR the strongest negative one.
     min_bb_bw_pctile: float = 0.0
+    # Trade only when the UTC hour is in [start, end) (None = any hour), e.g. (12, 16) for the London/New York overlap.
+    hours_utc: tuple[int, int] | None = None
     # "scalp" or "intraday" (every timeframe a step slower: trigger M5/M15, ATR M15, trend H1); see setups.SCALES.
     # Trigger timeframes, stop/ATR limits and min_atr_spread are named in scalping timeframes and scaled with it.
     tf_scale: str = "scalp"
 
     def __post_init__(self) -> None:
         self.timeframes = tuple(self.timeframes)
+        if self.hours_utc is not None:
+            self.hours_utc = tuple(self.hours_utc)
+            if len(self.hours_utc) != 2 or not 0 <= self.hours_utc[0] < self.hours_utc[1] <= 24:
+                raise ValueError(f"hours_utc must be (start, end) with 0 <= start < end <= 24, got {self.hours_utc!r}")
         if self.trigger_tf not in ("M1", "M5"):
             raise ValueError(f"trigger_tf must be M1 or M5, got {self.trigger_tf!r}")
         if self.tf_scale not in SCALES:
@@ -56,7 +62,7 @@ class RuleParams:
     def version(self) -> str:
         d = asdict(self)
         for k, default in (("trigger_tf", "M1"), ("min_atr_spread", 0.0), ("tf_scale", "scalp"),
-                           ("min_bb_bw_pctile", 0.0)):   # keep earlier ids
+                           ("min_bb_bw_pctile", 0.0), ("hours_utc", None)):   # keep earlier ids
             if d[k] == default:
                 d.pop(k)
         blob = json.dumps(d, sort_keys=True, default=str).encode()
@@ -101,6 +107,8 @@ class RuleAgent:
             self.cache.clear()
             self.cache["_bar"] = bar_key
         p = self.params
+        if p.hours_utc is not None and not p.hours_utc[0] <= tick.time.hour < p.hours_utc[1]:
+            return self._reject(f"outside trading hours ({tick.time.hour:02d} UTC)", f)
         if p.min_atr_spread > 0 and tick.spread > 0:
             ratio = atr(state.bars.get(p.tf("M5"), [])) / tick.spread
             if ratio < p.min_atr_spread:
