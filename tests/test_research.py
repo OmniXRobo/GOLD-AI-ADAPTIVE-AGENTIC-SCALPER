@@ -298,6 +298,22 @@ def test_variant_grid_cost_gate_and_m5_trigger(settings, spec):
     assert RuleParams(setup="breakout").version() == RuleParams(setup="breakout", trigger_tf="M1").version()
 
 
+def test_band_width_filter_and_round5_preset(settings, spec):
+    from gold_ai.research.setup_eval import VARIANT_PRESETS
+
+    tk = ticks(60_000)
+    gated, agent = run_rules(settings, spec, tk, RuleParams(setup="legacy_momentum", min_bb_bw_pctile=1.01))
+    assert gated == [] and any("bands too narrow" in k for k in agent.rejected)
+    plain, _ = run_rules(settings, spec, tk, RuleParams(setup="legacy_momentum"))
+    some, _ = run_rules(settings, spec, tk, RuleParams(setup="legacy_momentum", min_bb_bw_pctile=0.5))
+    assert len(some) <= len(plain)
+    # Off by default, and the default keeps earlier strategy ids.
+    assert RuleParams(setup="breakout").version() == RuleParams(setup="breakout", min_bb_bw_pctile=0.0).version()
+    r5 = VARIANT_PRESETS["volatility-round5"]
+    assert len(r5) == 6 and all(v["tf_scale"] == "intraday" for v in r5)
+    assert {v.get("min_atr_spread", 0) for v in r5} == {0, 15} and {v.get("min_bb_bw_pctile", 0) for v in r5} == {0, 0.6}
+
+
 def test_intraday_scale_reads_every_timeframe_a_step_slower(settings, spec):
     from gold_ai.research.setup_eval import VARIANT_PRESETS
     from gold_ai.strategies.setups import scaled_tf
