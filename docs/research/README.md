@@ -103,8 +103,12 @@ Per-trade rules still apply. Rerun the same command to get valid validation and 
 ## Round 4b: 4 months with the measurement fix (2026-10-31, `research-XAUUSD.sd-20261031T042938Z.md`)
 Same ticks (62.2 M, hash `1b4cdc9e…`) and splits as round 4, with account-level loss stops off while measuring.
 Two differences from round 4: the run used the default **scalp** variants (R:R grid only, M1 trigger, 1 h hold),
-not the `intraday-round3` preset. The calendar also had 43 high-impact events instead of 124. So it answers
-"do the setups work at scalping timeframes over four months?". It does not answer the round 4 intraday question.
+not the `intraday-round3` preset. So it answers "do the setups work at scalping timeframes over four months?".
+It does not answer the round 4 intraday question.
+News coverage: the calendar export (mql5/GoldAICalendar.mq5) writes only events from 1 day back to 14 days ahead.
+Round 4's 124 events and this run's 43 were both only from about 28 to 30 October. So neither run applied the news
+blackout to the rest of the four months. Results include trades around high-impact releases that live trading
+would skip. A historical calendar export is needed before any setup is promoted on these numbers.
 
 - Every setup now has a full sample (187 to 482 test trades). Six are **rejected** and **legacy_rejection** is
   **inconclusive** (+0.016R test, 90% CI −0.086..+0.129, −0.151R validation). Nothing passes.
