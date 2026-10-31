@@ -14,6 +14,7 @@ from datetime import timedelta
 
 from ..domain import Decision, Side, TradeProposal
 from ..market.features import MarketState, atr
+from ..market.indicators import bollinger_stats
 from .setups import SCALES, Setup, SetupContext, make_setup, scaled_tf
 
 NO_TRADE = "NO TRADE"
@@ -35,6 +36,9 @@ class RuleParams:
     trigger_tf: str = "M1"
     # Trade only when M5 ATR is at least this many spreads (0 = off): costs are small relative to the move.
     min_atr_spread: float = 0.0
+    # Trade only when the M5 Bollinger bandwidth is at least this percentile of its last 100 bars (0 = off):
+    # research round 5 found wider bands the strongest positive feature and spread/ATR the strongest negative one.
+    min_bb_bw_pctile: float = 0.0
     # "scalp" or "intraday" (every timeframe a step slower: trigger M5/M15, ATR M15, trend H1); see setups.SCALES.
     # Trigger timeframes, stop/ATR limits and min_atr_spread are named in scalping timeframes and scaled with it.
     tf_scale: str = "scalp"
@@ -51,7 +55,8 @@ class RuleParams:
 
     def version(self) -> str:
         d = asdict(self)
-        for k, default in (("trigger_tf", "M1"), ("min_atr_spread", 0.0), ("tf_scale", "scalp")):   # keep earlier ids
+        for k, default in (("trigger_tf", "M1"), ("min_atr_spread", 0.0), ("tf_scale", "scalp"),
+                           ("min_bb_bw_pctile", 0.0)):   # keep earlier ids
             if d[k] == default:
                 d.pop(k)
         blob = json.dumps(d, sort_keys=True, default=str).encode()
@@ -100,6 +105,12 @@ class RuleAgent:
             ratio = atr(state.bars.get(p.tf("M5"), [])) / tick.spread
             if ratio < p.min_atr_spread:
                 return self._reject(f"volatility too low for the spread ({ratio:.1f} < {p.min_atr_spread:g} spreads)", f)
+        if p.min_bb_bw_pctile > 0:
+            bb = bollinger_stats([b.close for b in state.bars.get(p.tf("M5"), [])[-200:]])
+            pctile = bb["bandwidth_pctile"] if bb else None
+            if pctile is None or pctile < p.min_bb_bw_pctile:
+                return self._reject(f"bands too narrow ({pctile if pctile is not None else 0:.2f} < "
+                                    f"{p.min_bb_bw_pctile:g} percentile)", f)
         ctx = SetupContext(tick, state.bars, f, state.regime, self.cache, p.trigger_tf, p.tf_scale)
         sig = self.setup.evaluate(ctx)
         if sig is None:

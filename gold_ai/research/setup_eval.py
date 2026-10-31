@@ -46,6 +46,13 @@ VARIANT_PRESETS: dict[str, tuple[dict, ...]] = {
     # the spread and costs stop dominating; held up to 4 h / 8 h.
     "intraday-round3": ({"tf_scale": "intraday", "max_hold_seconds": 4 * 3600},
                         {"tf_scale": "intraday", "trigger_tf": "M5", "max_hold_seconds": 8 * 3600}),
+    # Round 5: the round 3 intraday variants, each also tried only when volatility is high for the spread (M15 ATR
+    # at least 15 spreads) or the M15 Bollinger bands are wide (60th percentile or more). The 4-month rerun's feature
+    # evaluation found spread/ATR the strongest negative feature and band width the strongest positive one.
+    "volatility-round5": tuple({**base, **flt}
+                               for base in ({"tf_scale": "intraday", "max_hold_seconds": 4 * 3600},
+                                            {"tf_scale": "intraday", "trigger_tf": "M5", "max_hold_seconds": 8 * 3600})
+                               for flt in ({}, {"min_atr_spread": 15}, {"min_bb_bw_pctile": 0.6})),
 }
 
 

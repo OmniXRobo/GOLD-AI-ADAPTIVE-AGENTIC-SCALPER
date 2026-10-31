@@ -1,0 +1,1755 @@
+{
+  "report": {
+    "symbol": "XAUUSD.sd",
+    "broker": "equiti",
+    "data_source": "mt5,mt5_history",
+    "period": [
+      "2026-06-28T22:00:20.025000+00:00",
+      "2026-10-29T11:17:11.951000+00:00"
+    ],
+    "splits": {
+      "train": [
+        "2026-06-28T22:00:20.025000+00:00",
+        "2026-08-29T04:38:45.988000+00:00"
+      ],
+      "validation": [
+        "2026-08-29T04:38:45.988000+00:00",
+        "2026-09-28T19:57:58.969500+00:00"
+      ],
+      "test": [
+        "2026-09-28T19:57:58.969500+00:00",
+        "2026-10-29T11:17:11.951000+00:00"
+      ]
+    },
+    "ticks": 62184629,
+    "m1_bars": 120570,
+    "setups": [
+      {
+        "setup": "trend_pullback",
+        "family": "trend continuation",
+        "regime": "trending",
+        "selected": {
+          "setup": "trend_pullback",
+          "setup_params": {},
+          "risk_reward": 1.5,
+          "min_stop_atr": 0.3,
+          "max_stop_atr": 3.0,
+          "max_cost_r": 0.25,
+          "max_hold_seconds": 3600,
+          "signal_validity_seconds": 60,
+          "style": "scalp",
+          "timeframes": [
+            "M1",
+            "M5",
+            "M15"
+          ],
+          "trigger_tf": "M1",
+          "min_atr_spread": 0.0,
+          "tf_scale": "scalp"
+        },
+        "variants": {
+          "rr=1": {
+            "train": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "validation": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "test": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            }
+          },
+          "rr=1.5": {
+            "train": {
+              "trades": 789,
+              "expectancy_r": -0.1120371055648954,
+              "ci90": [
+                -0.18158974269318853,
+                -0.04711052380368789
+              ],
+              "profit_factor": 0.8190165206778757,
+              "win_rate": 0.39036755386565275,
+              "max_drawdown_r": 97.0711985271036,
+              "worst_r": -1.7689852617312722,
+              "tail5_r": -1.1799995610624074,
+              "total_r": -88.39727629070248
+            },
+            "validation": {
+              "trades": 326,
+              "expectancy_r": -0.14322268295445412,
+              "ci90": [
+                -0.25361904031541394,
+                -0.04062156586342301
+              ],
+              "profit_factor": 0.7752687692760089,
+              "win_rate": 0.36503067484662577,
+              "max_drawdown_r": 54.6651742009012,
+              "worst_r": -1.2291838417143761,
+              "tail5_r": -1.1342298643952482,
+              "total_r": -46.690594643152046
+            },
+            "test": {
+              "trades": 364,
+              "expectancy_r": -0.09698743524796395,
+              "ci90": [
+                -0.19545404418574777,
+                0.00111322496001708
+              ],
+              "profit_factor": 0.8416923224375789,
+              "win_rate": 0.40384615384615385,
+              "max_drawdown_r": 35.51947465747078,
+              "worst_r": -1.5306249223505906,
+              "tail5_r": -1.171541588987115,
+              "total_r": -35.30342643025888
+            }
+          },
+          "rr=2": {
+            "train": {
+              "trades": 764,
+              "expectancy_r": -0.1065767350792084,
+              "ci90": [
+                -0.18780067215636378,
+                -0.03302939211231745
+              ],
+              "profit_factor": 0.8383799121881572,
+              "win_rate": 0.3507853403141361,
+              "max_drawdown_r": 94.08787110489286,
+              "worst_r": -2.057157206105948,
+              "tail5_r": -1.1943154545248706,
+              "total_r": -81.42462560051521
+            },
+            "validation": {
+              "trades": 315,
+              "expectancy_r": -0.16792196908147355,
+              "ci90": [
+                -0.28237095091187997,
+                -0.04827785060544098
+              ],
+              "profit_factor": 0.7550884246540769,
+              "win_rate": 0.3142857142857143,
+              "max_drawdown_r": 74.60628102752347,
+              "worst_r": -1.3695758507437787,
+              "tail5_r": -1.151251216587218,
+              "total_r": -52.89542026066417
+            },
+            "test": {
+              "trades": 349,
+              "expectancy_r": -0.08975796904245505,
+              "ci90": [
+                -0.20630372435761332,
+                0.03276221394787161
+              ],
+              "profit_factor": 0.862506844630463,
+              "win_rate": 0.36103151862464183,
+              "max_drawdown_r": 33.34324770706822,
+              "worst_r": -1.5306249223505906,
+              "tail5_r": -1.1773419611695681,
+              "total_r": -31.32553119581681
+            }
+          }
+        },
+        "test": {
+          "trades": 364,
+          "expectancy_r": -0.09698743524796395,
+          "ci90": [
+            -0.19545404418574777,
+            0.00111322496001708
+          ],
+          "profit_factor": 0.8416923224375789,
+          "win_rate": 0.40384615384615385,
+          "max_drawdown_r": 35.51947465747078,
+          "worst_r": -1.5306249223505906,
+          "tail5_r": -1.171541588987115,
+          "total_r": -35.30342643025888
+        },
+        "baseline_test": {
+          "trades": 305,
+          "expectancy_r": -0.14846977909202747,
+          "ci90": [
+            -0.2593951809405316,
+            -0.030073310294338382
+          ],
+          "profit_factor": 0.774495966436033,
+          "win_rate": 0.3770491803278688,
+          "max_drawdown_r": 49.77081206958795,
+          "worst_r": -2.021515301480255,
+          "tail5_r": -1.2877779476428353,
+          "total_r": -45.283282623068374
+        },
+        "by_regime_test": {
+          "ranging": {
+            "trades": 336,
+            "total_r": -31.52833942892313
+          },
+          "quiet": {
+            "trades": 4,
+            "total_r": 3.1204291939309026
+          },
+          "trending_down": {
+            "trades": 15,
+            "total_r": -6.80199178984506
+          },
+          "trending_up": {
+            "trades": 9,
+            "total_r": -0.09352440542160156
+          }
+        },
+        "rejections": {
+          "structural stop too tight": 92,
+          "costs too large for the stop": 144,
+          "structural stop too wide": 63,
+          "stop on the wrong side of entry": 4
+        },
+        "verdict": "rejected",
+        "notes": [
+          "test expectancy -0.097R after costs is not positive"
+        ],
+        "run_id": "research-6f00284ecc95",
+        "selected_key": "rr=1.5"
+      },
+      {
+        "setup": "breakout",
+        "family": "breakout",
+        "regime": "breakout",
+        "selected": {
+          "setup": "breakout",
+          "setup_params": {},
+          "risk_reward": 1.5,
+          "min_stop_atr": 0.3,
+          "max_stop_atr": 3.0,
+          "max_cost_r": 0.25,
+          "max_hold_seconds": 3600,
+          "signal_validity_seconds": 60,
+          "style": "scalp",
+          "timeframes": [
+            "M1",
+            "M5",
+            "M15"
+          ],
+          "trigger_tf": "M1",
+          "min_atr_spread": 0.0,
+          "tf_scale": "scalp"
+        },
+        "variants": {
+          "rr=1": {
+            "train": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "validation": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "test": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            }
+          },
+          "rr=1.5": {
+            "train": {
+              "trades": 375,
+              "expectancy_r": -0.09285632232369063,
+              "ci90": [
+                -0.1896715803882429,
+                0.01000065050404441
+              ],
+              "profit_factor": 0.8353488794535577,
+              "win_rate": 0.4106666666666667,
+              "max_drawdown_r": 44.20204315156774,
+              "worst_r": -6.624698642533286,
+              "tail5_r": -1.5039009495732694,
+              "total_r": -34.82112087138399
+            },
+            "validation": {
+              "trades": 177,
+              "expectancy_r": 0.0345584065483059,
+              "ci90": [
+                -0.1225365832989783,
+                0.18567170838040872
+              ],
+              "profit_factor": 1.064370963310202,
+              "win_rate": 0.4632768361581921,
+              "max_drawdown_r": 13.648288005909654,
+              "worst_r": -6.7674832162374186,
+              "tail5_r": -1.8814494035924725,
+              "total_r": 6.1168379590501445
+            },
+            "test": {
+              "trades": 187,
+              "expectancy_r": -0.038262526551945376,
+              "ci90": [
+                -0.16917902517551944,
+                0.09537402934127318
+              ],
+              "profit_factor": 0.9266358684106714,
+              "win_rate": 0.44385026737967914,
+              "max_drawdown_r": 19.68085284258562,
+              "worst_r": -1.133580562659926,
+              "tail5_r": -1.0989075898925205,
+              "total_r": -7.1550924652137855
+            }
+          },
+          "rr=2": {
+            "train": {
+              "trades": 366,
+              "expectancy_r": -0.0427490585772923,
+              "ci90": [
+                -0.15286703881341174,
+                0.06591614447668578
+              ],
+              "profit_factor": 0.9264945322835846,
+              "win_rate": 0.39617486338797814,
+              "max_drawdown_r": 41.36170657636031,
+              "worst_r": -6.624698642533286,
+              "tail5_r": -1.5063644086127606,
+              "total_r": -15.64615543928898
+            },
+            "validation": {
+              "trades": 172,
+              "expectancy_r": -0.0029120863787695465,
+              "ci90": [
+                -0.171465901752549,
+                0.16161869463318573
+              ],
+              "profit_factor": 0.9949499002795731,
+              "win_rate": 0.4186046511627907,
+              "max_drawdown_r": 17.721353576473497,
+              "worst_r": -6.767483216237419,
+              "tail5_r": -1.8614066089339631,
+              "total_r": -0.500878857148362
+            },
+            "test": {
+              "trades": 184,
+              "expectancy_r": -0.07732918173785222,
+              "ci90": [
+                -0.2205327634773087,
+                0.07064169897498085
+              ],
+              "profit_factor": 0.8643682127549744,
+              "win_rate": 0.4076086956521739,
+              "max_drawdown_r": 28.23667640304467,
+              "worst_r": -2.584753363228758,
+              "tail5_r": -1.2669052868211628,
+              "total_r": -14.228569439764808
+            }
+          }
+        },
+        "test": {
+          "trades": 187,
+          "expectancy_r": -0.038262526551945376,
+          "ci90": [
+            -0.16917902517551944,
+            0.09537402934127318
+          ],
+          "profit_factor": 0.9266358684106714,
+          "win_rate": 0.44385026737967914,
+          "max_drawdown_r": 19.68085284258562,
+          "worst_r": -1.133580562659926,
+          "tail5_r": -1.0989075898925205,
+          "total_r": -7.1550924652137855
+        },
+        "baseline_test": {
+          "trades": 154,
+          "expectancy_r": -0.1175426465813026,
+          "ci90": [
+            -0.241855067944813,
+            0.01701629205081879
+          ],
+          "profit_factor": 0.7751642793104151,
+          "win_rate": 0.3961038961038961,
+          "max_drawdown_r": 19.125380015565675,
+          "worst_r": -1.1836831871751343,
+          "tail5_r": -1.0996620656403602,
+          "total_r": -18.1015675735206
+        },
+        "by_regime_test": {
+          "ranging": {
+            "trades": 178,
+            "total_r": -8.05973385437523
+          },
+          "trending_down": {
+            "trades": 4,
+            "total_r": 0.32058187630906376
+          },
+          "trending_up": {
+            "trades": 4,
+            "total_r": 1.6186123583808507
+          },
+          "quiet": {
+            "trades": 1,
+            "total_r": -1.0345528455284696
+          }
+        },
+        "rejections": {
+          "structural stop too wide": 27
+        },
+        "verdict": "rejected",
+        "notes": [
+          "test expectancy -0.038R after costs is not positive"
+        ],
+        "run_id": "research-71a835e6fce4",
+        "selected_key": "rr=1.5"
+      },
+      {
+        "setup": "failed_breakout",
+        "family": "failed breakout",
+        "regime": "ranging",
+        "selected": {
+          "setup": "failed_breakout",
+          "setup_params": {},
+          "risk_reward": 1.5,
+          "min_stop_atr": 0.3,
+          "max_stop_atr": 3.0,
+          "max_cost_r": 0.25,
+          "max_hold_seconds": 3600,
+          "signal_validity_seconds": 60,
+          "style": "scalp",
+          "timeframes": [
+            "M1",
+            "M5",
+            "M15"
+          ],
+          "trigger_tf": "M1",
+          "min_atr_spread": 0.0,
+          "tf_scale": "scalp"
+        },
+        "variants": {
+          "rr=1": {
+            "train": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "validation": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "test": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            }
+          },
+          "rr=1.5": {
+            "train": {
+              "trades": 925,
+              "expectancy_r": -0.24656708697860152,
+              "ci90": [
+                -0.3099006634241489,
+                -0.18450378604012316
+              ],
+              "profit_factor": 0.6555065651583317,
+              "win_rate": 0.3264864864864865,
+              "max_drawdown_r": 230.24556826620838,
+              "worst_r": -1.2759170653906609,
+              "tail5_r": -1.1657921442756438,
+              "total_r": -228.07455545520642
+            },
+            "validation": {
+              "trades": 419,
+              "expectancy_r": -0.2117726842341151,
+              "ci90": [
+                -0.3065895492630877,
+                -0.1138447356124348
+              ],
+              "profit_factor": 0.70005764564835,
+              "win_rate": 0.3412887828162291,
+              "max_drawdown_r": 93.08238574937246,
+              "worst_r": -1.3250631748220019,
+              "tail5_r": -1.1981461347919065,
+              "total_r": -88.73275469409423
+            },
+            "test": {
+              "trades": 470,
+              "expectancy_r": -0.21752386191052062,
+              "ci90": [
+                -0.31051119049223846,
+                -0.1270413170726153
+              ],
+              "profit_factor": 0.6951581763876432,
+              "win_rate": 0.3446808510638298,
+              "max_drawdown_r": 106.69817788540716,
+              "worst_r": -1.4464968747082736,
+              "tail5_r": -1.214500964455172,
+              "total_r": -102.2362150979447
+            }
+          },
+          "rr=2": {
+            "train": {
+              "trades": 925,
+              "expectancy_r": -0.27552701386643363,
+              "ci90": [
+                -0.34745946491944296,
+                -0.2058116830701368
+              ],
+              "profit_factor": 0.6443305145435012,
+              "win_rate": 0.27135135135135136,
+              "max_drawdown_r": 257.75956038146256,
+              "worst_r": -1.2759170653906609,
+              "tail5_r": -1.1724333082997145,
+              "total_r": -254.86248782645112
+            },
+            "validation": {
+              "trades": 419,
+              "expectancy_r": -0.249078437490544,
+              "ci90": [
+                -0.3574920440737871,
+                -0.139573524374933
+              ],
+              "profit_factor": 0.6759628279661792,
+              "win_rate": 0.28162291169451076,
+              "max_drawdown_r": 113.27784682308005,
+              "worst_r": -1.3250631748220019,
+              "tail5_r": -1.1983450165383835,
+              "total_r": -104.36386530853794
+            },
+            "test": {
+              "trades": 470,
+              "expectancy_r": -0.14107818107208175,
+              "ci90": [
+                -0.24532580498168116,
+                -0.03294784163873745
+              ],
+              "profit_factor": 0.8090345704035025,
+              "win_rate": 0.32127659574468087,
+              "max_drawdown_r": 72.88320290885086,
+              "worst_r": -1.4464968747082736,
+              "tail5_r": -1.219044978491968,
+              "total_r": -66.30674510387843
+            }
+          }
+        },
+        "test": {
+          "trades": 470,
+          "expectancy_r": -0.21752386191052062,
+          "ci90": [
+            -0.31051119049223846,
+            -0.1270413170726153
+          ],
+          "profit_factor": 0.6951581763876432,
+          "win_rate": 0.3446808510638298,
+          "max_drawdown_r": 106.69817788540716,
+          "worst_r": -1.4464968747082736,
+          "tail5_r": -1.214500964455172,
+          "total_r": -102.2362150979447
+        },
+        "baseline_test": {
+          "trades": 361,
+          "expectancy_r": -0.19671437991832325,
+          "ci90": [
+            -0.2979405605565971,
+            -0.0898958636790448
+          ],
+          "profit_factor": 0.7170087169369674,
+          "win_rate": 0.3518005540166205,
+          "max_drawdown_r": 76.05313856772054,
+          "worst_r": -1.268649817479897,
+          "tail5_r": -1.1734897075971789,
+          "total_r": -71.0138911505147
+        },
+        "by_regime_test": {
+          "ranging": {
+            "trades": 331,
+            "total_r": -71.84378568322185
+          },
+          "trending_down": {
+            "trades": 66,
+            "total_r": -13.917385078782502
+          },
+          "trending_up": {
+            "trades": 69,
+            "total_r": -17.13961019244877
+          },
+          "quiet": {
+            "trades": 4,
+            "total_r": 0.6645658565084132
+          }
+        },
+        "rejections": {
+          "costs too large for the stop": 301,
+          "structural stop too tight": 57,
+          "structural stop too wide": 37,
+          "position size below broker minimum": 24
+        },
+        "verdict": "rejected",
+        "notes": [
+          "test expectancy -0.218R after costs is not positive"
+        ],
+        "run_id": "research-6e89922f29f8",
+        "selected_key": "rr=1.5"
+      },
+      {
+        "setup": "range_reversion",
+        "family": "range mean reversion",
+        "regime": "ranging",
+        "selected": {
+          "setup": "range_reversion",
+          "setup_params": {},
+          "risk_reward": 1.5,
+          "min_stop_atr": 0.3,
+          "max_stop_atr": 3.0,
+          "max_cost_r": 0.25,
+          "max_hold_seconds": 3600,
+          "signal_validity_seconds": 60,
+          "style": "scalp",
+          "timeframes": [
+            "M1",
+            "M5",
+            "M15"
+          ],
+          "trigger_tf": "M1",
+          "min_atr_spread": 0.0,
+          "tf_scale": "scalp"
+        },
+        "variants": {
+          "rr=1": {
+            "train": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "validation": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "test": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            }
+          },
+          "rr=1.5": {
+            "train": {
+              "trades": 504,
+              "expectancy_r": -0.25186696291673727,
+              "ci90": [
+                -0.33507320695692416,
+                -0.16907456651576527
+              ],
+              "profit_factor": 0.6484266611608783,
+              "win_rate": 0.32936507936507936,
+              "max_drawdown_r": 130.10004156119177,
+              "worst_r": -4.384953504296323,
+              "tail5_r": -1.3098957862858611,
+              "total_r": -126.94094931003559
+            },
+            "validation": {
+              "trades": 254,
+              "expectancy_r": -0.21807707149454705,
+              "ci90": [
+                -0.34319708658264525,
+                -0.09923049178710008
+              ],
+              "profit_factor": 0.6864303088159108,
+              "win_rate": 0.3425196850393701,
+              "max_drawdown_r": 67.26557944755415,
+              "worst_r": -1.2939149122458082,
+              "tail5_r": -1.2114188339814804,
+              "total_r": -55.39157615961495
+            },
+            "test": {
+              "trades": 350,
+              "expectancy_r": -0.08079884242355623,
+              "ci90": [
+                -0.18451777102840794,
+                0.02967421173810265
+              ],
+              "profit_factor": 0.8729626590723173,
+              "win_rate": 0.39714285714285713,
+              "max_drawdown_r": 41.716914293378075,
+              "worst_r": -1.318806793852682,
+              "tail5_r": -1.1905544081611406,
+              "total_r": -28.279594848244678
+            }
+          },
+          "rr=2": {
+            "train": {
+              "trades": 495,
+              "expectancy_r": -0.24336570871276075,
+              "ci90": [
+                -0.3407265568525158,
+                -0.14513193665232177
+              ],
+              "profit_factor": 0.6803787054774082,
+              "win_rate": 0.28888888888888886,
+              "max_drawdown_r": 125.27705769771323,
+              "worst_r": -4.384953504296323,
+              "tail5_r": -1.3294329831646592,
+              "total_r": -120.46602581281657
+            },
+            "validation": {
+              "trades": 253,
+              "expectancy_r": -0.22983391465327793,
+              "ci90": [
+                -0.36932178787038195,
+                -0.07887770437750956
+              ],
+              "profit_factor": 0.695250821417618,
+              "win_rate": 0.30039525691699603,
+              "max_drawdown_r": 71.48743306051121,
+              "worst_r": -6.172120820544061,
+              "tail5_r": -1.6298283152741986,
+              "total_r": -58.14798040727932
+            },
+            "test": {
+              "trades": 347,
+              "expectancy_r": -0.028726553859182515,
+              "ci90": [
+                -0.1530798660557371,
+                0.09849577270193623
+              ],
+              "profit_factor": 0.9575682647085568,
+              "win_rate": 0.36023054755043227,
+              "max_drawdown_r": 28.376256026516838,
+              "worst_r": -2.2661748166805378,
+              "tail5_r": -1.2542561622361288,
+              "total_r": -9.968114189136333
+            }
+          }
+        },
+        "test": {
+          "trades": 350,
+          "expectancy_r": -0.08079884242355623,
+          "ci90": [
+            -0.18451777102840794,
+            0.02967421173810265
+          ],
+          "profit_factor": 0.8729626590723173,
+          "win_rate": 0.39714285714285713,
+          "max_drawdown_r": 41.716914293378075,
+          "worst_r": -1.318806793852682,
+          "tail5_r": -1.1905544081611406,
+          "total_r": -28.279594848244678
+        },
+        "baseline_test": {
+          "trades": 248,
+          "expectancy_r": -0.1888169875882186,
+          "ci90": [
+            -0.3113512944568334,
+            -0.06427808434935409
+          ],
+          "profit_factor": 0.7311075626849574,
+          "win_rate": 0.3548387096774194,
+          "max_drawdown_r": 61.59172842551962,
+          "worst_r": -3.1027649599978266,
+          "tail5_r": -1.3326236139051753,
+          "total_r": -46.826612921878215
+        },
+        "by_regime_test": {
+          "trending_up": {
+            "trades": 35,
+            "total_r": 3.7105895399528293
+          },
+          "ranging": {
+            "trades": 254,
+            "total_r": -17.825938165570534
+          },
+          "trending_down": {
+            "trades": 57,
+            "total_r": -17.46183516565595
+          },
+          "quiet": {
+            "trades": 4,
+            "total_r": 3.2975889430289804
+          }
+        },
+        "rejections": {
+          "costs too large for the stop": 102,
+          "structural stop too tight": 26,
+          "structural stop too wide": 14
+        },
+        "verdict": "rejected",
+        "notes": [
+          "test expectancy -0.081R after costs is not positive"
+        ],
+        "run_id": "research-72d5d232c1fb",
+        "selected_key": "rr=1.5"
+      },
+      {
+        "setup": "liquidity_sweep",
+        "family": "liquidity sweep / market structure",
+        "regime": "any",
+        "selected": {
+          "setup": "liquidity_sweep",
+          "setup_params": {},
+          "risk_reward": 1.5,
+          "min_stop_atr": 0.3,
+          "max_stop_atr": 3.0,
+          "max_cost_r": 0.25,
+          "max_hold_seconds": 3600,
+          "signal_validity_seconds": 60,
+          "style": "scalp",
+          "timeframes": [
+            "M1",
+            "M5",
+            "M15"
+          ],
+          "trigger_tf": "M1",
+          "min_atr_spread": 0.0,
+          "tf_scale": "scalp"
+        },
+        "variants": {
+          "rr=1": {
+            "train": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "validation": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "test": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            }
+          },
+          "rr=1.5": {
+            "train": {
+              "trades": 549,
+              "expectancy_r": -0.21866014972616685,
+              "ci90": [
+                -0.3074379325312918,
+                -0.13284594438900682
+              ],
+              "profit_factor": 0.6962530294199994,
+              "win_rate": 0.35154826958105645,
+              "max_drawdown_r": 124.91983744433911,
+              "worst_r": -7.868058979072362,
+              "tail5_r": -1.490247810668984,
+              "total_r": -120.0444221996656
+            },
+            "validation": {
+              "trades": 215,
+              "expectancy_r": -0.06191930596799882,
+              "ci90": [
+                -0.19662988947251628,
+                0.08639642264577424
+              ],
+              "profit_factor": 0.9047863532008716,
+              "win_rate": 0.40930232558139534,
+              "max_drawdown_r": 30.306042131532898,
+              "worst_r": -2.786661250414713,
+              "tail5_r": -1.354434297454055,
+              "total_r": -13.312650783119746
+            },
+            "test": {
+              "trades": 241,
+              "expectancy_r": -0.28899577265312515,
+              "ci90": [
+                -0.405883724698205,
+                -0.1628959204345547
+              ],
+              "profit_factor": 0.6164176496153655,
+              "win_rate": 0.31950207468879666,
+              "max_drawdown_r": 73.09935499841502,
+              "worst_r": -1.3189662623525062,
+              "tail5_r": -1.2350786925841601,
+              "total_r": -69.64798120940316
+            }
+          },
+          "rr=2": {
+            "train": {
+              "trades": 546,
+              "expectancy_r": -0.18354597905321146,
+              "ci90": [
+                -0.2848302698014003,
+                -0.08168231838997857
+              ],
+              "profit_factor": 0.7584669059880014,
+              "win_rate": 0.3131868131868132,
+              "max_drawdown_r": 105.4686411882488,
+              "worst_r": -7.868058979072362,
+              "tail5_r": -1.490247810668984,
+              "total_r": -100.21610456305346
+            },
+            "validation": {
+              "trades": 209,
+              "expectancy_r": -0.12319008489702034,
+              "ci90": [
+                -0.2823374523576381,
+                0.03742452226321592
+              ],
+              "profit_factor": 0.8332612163914869,
+              "win_rate": 0.3253588516746411,
+              "max_drawdown_r": 36.89147533577014,
+              "worst_r": -2.786661250414713,
+              "tail5_r": -1.3957429002335258,
+              "total_r": -25.74672774347725
+            },
+            "test": {
+              "trades": 240,
+              "expectancy_r": -0.33218769120340663,
+              "ci90": [
+                -0.4643091487767998,
+                -0.19262359253185404
+              ],
+              "profit_factor": 0.5970495758906001,
+              "win_rate": 0.25416666666666665,
+              "max_drawdown_r": 83.69196026583896,
+              "worst_r": -1.3189662623525062,
+              "tail5_r": -1.2350786925841601,
+              "total_r": -79.72504588881759
+            }
+          }
+        },
+        "test": {
+          "trades": 241,
+          "expectancy_r": -0.28899577265312515,
+          "ci90": [
+            -0.405883724698205,
+            -0.1628959204345547
+          ],
+          "profit_factor": 0.6164176496153655,
+          "win_rate": 0.31950207468879666,
+          "max_drawdown_r": 73.09935499841502,
+          "worst_r": -1.3189662623525062,
+          "tail5_r": -1.2350786925841601,
+          "total_r": -69.64798120940316
+        },
+        "baseline_test": {
+          "trades": 206,
+          "expectancy_r": -0.05765594285924879,
+          "ci90": [
+            -0.19201021706795482,
+            0.08297357900923151
+          ],
+          "profit_factor": 0.9107429752023657,
+          "win_rate": 0.41262135922330095,
+          "max_drawdown_r": 21.028562473042562,
+          "worst_r": -1.2261768563212616,
+          "tail5_r": -1.2043394964597283,
+          "total_r": -11.87712422900525
+        },
+        "by_regime_test": {
+          "trending_down": {
+            "trades": 25,
+            "total_r": -9.12909260038969
+          },
+          "ranging": {
+            "trades": 201,
+            "total_r": -48.83130177026825
+          },
+          "trending_up": {
+            "trades": 13,
+            "total_r": -11.907316495095454
+          },
+          "quiet": {
+            "trades": 2,
+            "total_r": 0.2197296563502098
+          }
+        },
+        "rejections": {
+          "costs too large for the stop": 251,
+          "structural stop too tight": 41,
+          "structural stop too wide": 1
+        },
+        "verdict": "rejected",
+        "notes": [
+          "test expectancy -0.289R after costs is not positive"
+        ],
+        "run_id": "research-7ffa12c9c948",
+        "selected_key": "rr=1.5"
+      },
+      {
+        "setup": "legacy_momentum",
+        "family": "momentum continuation (incumbent)",
+        "regime": "trending",
+        "selected": {
+          "setup": "legacy_momentum",
+          "setup_params": {},
+          "risk_reward": 2.0,
+          "min_stop_atr": 0.3,
+          "max_stop_atr": 3.0,
+          "max_cost_r": 0.25,
+          "max_hold_seconds": 3600,
+          "signal_validity_seconds": 60,
+          "style": "scalp",
+          "timeframes": [
+            "M1",
+            "M5",
+            "M15"
+          ],
+          "trigger_tf": "M1",
+          "min_atr_spread": 0.0,
+          "tf_scale": "scalp"
+        },
+        "variants": {
+          "rr=1": {
+            "train": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "validation": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "test": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            }
+          },
+          "rr=1.5": {
+            "train": {
+              "trades": 943,
+              "expectancy_r": -0.05903706075617388,
+              "ci90": [
+                -0.11526780642188175,
+                0.0018174391327860722
+              ],
+              "profit_factor": 0.8933298471993355,
+              "win_rate": 0.4178154825026511,
+              "max_drawdown_r": 76.16624932106747,
+              "worst_r": -1.2285916489737216,
+              "tail5_r": -1.083541502430105,
+              "total_r": -55.67194829307197
+            },
+            "validation": {
+              "trades": 434,
+              "expectancy_r": -0.0468880135163559,
+              "ci90": [
+                -0.12961460527432522,
+                0.04285150935050515
+              ],
+              "profit_factor": 0.9138719695532032,
+              "win_rate": 0.42626728110599077,
+              "max_drawdown_r": 41.71684092494063,
+              "worst_r": -1.1746926807260547,
+              "tail5_r": -1.0691233735182013,
+              "total_r": -20.34939786609846
+            },
+            "test": {
+              "trades": 482,
+              "expectancy_r": -0.12577815780993537,
+              "ci90": [
+                -0.20733740892622218,
+                -0.04231161611036992
+              ],
+              "profit_factor": 0.785185618178569,
+              "win_rate": 0.3900414937759336,
+              "max_drawdown_r": 73.0156206102643,
+              "worst_r": -1.1160696550353175,
+              "tail5_r": -1.0827420376186714,
+              "total_r": -60.62507206438885
+            }
+          },
+          "rr=2": {
+            "train": {
+              "trades": 934,
+              "expectancy_r": -0.029255540758659264,
+              "ci90": [
+                -0.09349216502601286,
+                0.03925898946584316
+              ],
+              "profit_factor": 0.9476516733352598,
+              "win_rate": 0.40364025695931477,
+              "max_drawdown_r": 79.13289114178465,
+              "worst_r": -1.2285916489737216,
+              "tail5_r": -1.0908723851378037,
+              "total_r": -27.32467506858775
+            },
+            "validation": {
+              "trades": 432,
+              "expectancy_r": -0.03179667594306409,
+              "ci90": [
+                -0.13232320839145337,
+                0.07134059391714423
+              ],
+              "profit_factor": 0.9445422855681396,
+              "win_rate": 0.4074074074074074,
+              "max_drawdown_r": 47.20683335715215,
+              "worst_r": -1.1746926807260547,
+              "tail5_r": -1.071115033931746,
+              "total_r": -13.736164007403685
+            },
+            "test": {
+              "trades": 477,
+              "expectancy_r": -0.1222212043791213,
+              "ci90": [
+                -0.20685642585378086,
+                -0.025598189181307268
+              ],
+              "profit_factor": 0.7973054790619355,
+              "win_rate": 0.36477987421383645,
+              "max_drawdown_r": 67.78167681377154,
+              "worst_r": -1.1160696550353175,
+              "tail5_r": -1.0840296267081642,
+              "total_r": -58.29951448884086
+            }
+          }
+        },
+        "test": {
+          "trades": 477,
+          "expectancy_r": -0.1222212043791213,
+          "ci90": [
+            -0.20685642585378086,
+            -0.025598189181307268
+          ],
+          "profit_factor": 0.7973054790619355,
+          "win_rate": 0.36477987421383645,
+          "max_drawdown_r": 67.78167681377154,
+          "worst_r": -1.1160696550353175,
+          "tail5_r": -1.0840296267081642,
+          "total_r": -58.29951448884086
+        },
+        "baseline_test": {
+          "trades": 304,
+          "expectancy_r": -0.12315597022651217,
+          "ci90": [
+            -0.23023225309060513,
+            -0.018833000133925925
+          ],
+          "profit_factor": 0.7764097885317798,
+          "win_rate": 0.3881578947368421,
+          "max_drawdown_r": 42.5139184937065,
+          "worst_r": -1.19506734006741,
+          "tail5_r": -1.085979204601414,
+          "total_r": -37.4394149488597
+        },
+        "by_regime_test": {
+          "ranging": {
+            "trades": 357,
+            "total_r": -41.999750642793224
+          },
+          "trending_down": {
+            "trades": 72,
+            "total_r": -11.072300675712013
+          },
+          "trending_up": {
+            "trades": 42,
+            "total_r": -10.13848722502681
+          },
+          "quiet": {
+            "trades": 6,
+            "total_r": 4.911024054691164
+          }
+        },
+        "rejections": {
+          "costs too large for the stop": 23,
+          "position size below broker minimum": 4
+        },
+        "verdict": "rejected",
+        "notes": [
+          "test expectancy -0.122R after costs is not positive"
+        ],
+        "run_id": "research-709bbad86ad5",
+        "selected_key": "rr=2"
+      },
+      {
+        "setup": "legacy_rejection",
+        "family": "S/R rejection (incumbent)",
+        "regime": "ranging",
+        "selected": {
+          "setup": "legacy_rejection",
+          "setup_params": {},
+          "risk_reward": 2.0,
+          "min_stop_atr": 0.3,
+          "max_stop_atr": 3.0,
+          "max_cost_r": 0.25,
+          "max_hold_seconds": 3600,
+          "signal_validity_seconds": 60,
+          "style": "scalp",
+          "timeframes": [
+            "M1",
+            "M5",
+            "M15"
+          ],
+          "trigger_tf": "M1",
+          "min_atr_spread": 0.0,
+          "tf_scale": "scalp"
+        },
+        "variants": {
+          "rr=1": {
+            "train": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "validation": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            },
+            "test": {
+              "trades": 0,
+              "expectancy_r": 0.0,
+              "ci90": null,
+              "profit_factor": null,
+              "win_rate": null,
+              "max_drawdown_r": 0.0,
+              "worst_r": null,
+              "tail5_r": null,
+              "total_r": 0.0
+            }
+          },
+          "rr=1.5": {
+            "train": {
+              "trades": 741,
+              "expectancy_r": -0.1271155083329357,
+              "ci90": [
+                -0.1935479156650641,
+                -0.060785595961988896
+              ],
+              "profit_factor": 0.7794939991527006,
+              "win_rate": 0.4008097165991903,
+              "max_drawdown_r": 101.86316909782119,
+              "worst_r": -1.1797260654939312,
+              "tail5_r": -1.0874306471844986,
+              "total_r": -94.19259167470535
+            },
+            "validation": {
+              "trades": 309,
+              "expectancy_r": -0.1637347502696692,
+              "ci90": [
+                -0.26189404869616445,
+                -0.0566585054202139
+              ],
+              "profit_factor": 0.7242650308453478,
+              "win_rate": 0.3786407766990291,
+              "max_drawdown_r": 57.78114655745219,
+              "worst_r": -1.4249290322579637,
+              "tail5_r": -1.1094685422596655,
+              "total_r": -50.59403783332778
+            },
+            "test": {
+              "trades": 368,
+              "expectancy_r": -0.03649228316571933,
+              "ci90": [
+                -0.13166395693222716,
+                0.0652110505108201
+              ],
+              "profit_factor": 0.9336886958554435,
+              "win_rate": 0.41847826086956524,
+              "max_drawdown_r": 20.475654362611262,
+              "worst_r": -1.161646650825279,
+              "tail5_r": -1.0912762354420573,
+              "total_r": -13.429160204984713
+            }
+          },
+          "rr=2": {
+            "train": {
+              "trades": 736,
+              "expectancy_r": -0.11788509520500164,
+              "ci90": [
+                -0.18692421643336452,
+                -0.045078422656350654
+              ],
+              "profit_factor": 0.8004810773211838,
+              "win_rate": 0.38315217391304346,
+              "max_drawdown_r": 94.47564486551376,
+              "worst_r": -1.8253578965379476,
+              "tail5_r": -1.1093450396342721,
+              "total_r": -86.7634300708812
+            },
+            "validation": {
+              "trades": 307,
+              "expectancy_r": -0.15139899275875207,
+              "ci90": [
+                -0.2639735570765868,
+                -0.04132767818580367
+              ],
+              "profit_factor": 0.7532439911991582,
+              "win_rate": 0.3583061889250814,
+              "max_drawdown_r": 52.20160662966751,
+              "worst_r": -1.4249290322579637,
+              "tail5_r": -1.1112459177559102,
+              "total_r": -46.479490776936885
+            },
+            "test": {
+              "trades": 367,
+              "expectancy_r": 0.016016131918182755,
+              "ci90": [
+                -0.08608207060230547,
+                0.12851886545551788
+              ],
+              "profit_factor": 1.0288641526430884,
+              "win_rate": 0.40599455040871935,
+              "max_drawdown_r": 14.573279176486743,
+              "worst_r": -1.1710231516056437,
+              "tail5_r": -1.0967151057155529,
+              "total_r": 5.8779204139730705
+            }
+          }
+        },
+        "test": {
+          "trades": 367,
+          "expectancy_r": 0.016016131918182755,
+          "ci90": [
+            -0.08608207060230547,
+            0.12851886545551788
+          ],
+          "profit_factor": 1.0288641526430884,
+          "win_rate": 0.40599455040871935,
+          "max_drawdown_r": 14.573279176486743,
+          "worst_r": -1.1710231516056437,
+          "tail5_r": -1.0967151057155529,
+          "total_r": 5.8779204139730705
+        },
+        "baseline_test": {
+          "trades": 247,
+          "expectancy_r": -0.10312778939134824,
+          "ci90": [
+            -0.22076452881073153,
+            0.015353645881953124
+          ],
+          "profit_factor": 0.811912830989744,
+          "win_rate": 0.38866396761133604,
+          "max_drawdown_r": 35.42701310829814,
+          "worst_r": -1.410579345087855,
+          "tail5_r": -1.1395818512345652,
+          "total_r": -25.472563979663015
+        },
+        "by_regime_test": {
+          "ranging": {
+            "trades": 222,
+            "total_r": -8.325557099146321
+          },
+          "trending_up": {
+            "trades": 70,
+            "total_r": 2.574308900561251
+          },
+          "trending_down": {
+            "trades": 73,
+            "total_r": 11.978252059187765
+          },
+          "quiet": {
+            "trades": 2,
+            "total_r": -0.3490834466296272
+          }
+        },
+        "rejections": {
+          "costs too large for the stop": 4,
+          "position size below broker minimum": 6
+        },
+        "verdict": "inconclusive",
+        "notes": [
+          "validation expectancy not positive"
+        ],
+        "run_id": "research-247f7c79d639",
+        "selected_key": "rr=2"
+      }
+    ],
+    "data_hash": "1b4cdc9ef050d5302418356dd655d1a0",
+    "label": "historical research on recorded ticks with modelled costs \u2014 NOT live or forward results; a 'candidate' still needs walk-forward and forward virtual evidence; account loss stops (drawdown, daily/weekly loss, loss cooldowns) are off while measuring, per-trade rules apply"
+  },
+  "features": {
+    "rows": 23922,
+    "train_rows": 12183,
+    "validation_rows": 5510,
+    "label": "bracket 1.0xATR(M5) stop, 1.5R target, 60 M1 bars, after slippage; bar-level approximation for ranking features only",
+    "features": [
+      {
+        "name": "ema20_m5_dist",
+        "rho_train_long": 0.083833658921307,
+        "rho_val_long": 0.009016827513014478,
+        "rho_train_short": 0.01749252052224489,
+        "rho_val_short": 0.007779583062075528,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": false,
+        "redundant_with": [
+          "rsi_m5",
+          "bb_pctb_m5",
+          "poc_dist",
+          "swing_high_dist",
+          "swing_low_dist"
+        ],
+        "kept": false
+      },
+      {
+        "name": "ema50_m15_slope",
+        "rho_train_long": 0.010190253259202822,
+        "rho_val_long": -0.06654323695599074,
+        "rho_train_short": 0.03999249154120976,
+        "rho_val_short": -0.08656118010405359,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": false,
+        "redundant_with": [
+          "di_diff_m15",
+          "vwap_dist"
+        ],
+        "kept": false
+      },
+      {
+        "name": "adx_m15",
+        "rho_train_long": 0.06300018049264203,
+        "rho_val_long": 0.12293588624341274,
+        "rho_train_short": 0.05413989933403302,
+        "rho_val_short": 0.13706826705768776,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": true,
+        "redundant_with": [],
+        "kept": true
+      },
+      {
+        "name": "di_diff_m15",
+        "rho_train_long": 0.04438629585504538,
+        "rho_val_long": -0.05248309177226981,
+        "rho_train_short": 0.03269066538134447,
+        "rho_val_short": -0.08361858124530329,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": false,
+        "redundant_with": [
+          "ema50_m15_slope"
+        ],
+        "kept": false
+      },
+      {
+        "name": "rsi_m5",
+        "rho_train_long": 0.08129278212004999,
+        "rho_val_long": 0.006175560360319533,
+        "rho_train_short": 0.024886395363315692,
+        "rho_val_short": -0.002119230559903101,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": false,
+        "redundant_with": [
+          "ema20_m5_dist",
+          "bb_pctb_m5",
+          "poc_dist"
+        ],
+        "kept": false
+      },
+      {
+        "name": "macd_hist_m5",
+        "rho_train_long": 0.04642043773333052,
+        "rho_val_long": 0.04547824325900569,
+        "rho_train_short": -0.006861926921760095,
+        "rho_val_short": 0.0146255495873328,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": true,
+        "redundant_with": [],
+        "kept": true
+      },
+      {
+        "name": "bb_pctb_m5",
+        "rho_train_long": 0.07351728121413141,
+        "rho_val_long": 0.021392355699185028,
+        "rho_train_short": 0.020033025033259547,
+        "rho_val_short": 0.00476208003220835,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": false,
+        "redundant_with": [
+          "ema20_m5_dist",
+          "rsi_m5"
+        ],
+        "kept": false
+      },
+      {
+        "name": "bb_bw_pctile_m5",
+        "rho_train_long": 0.3217122687683618,
+        "rho_val_long": 0.2967558141997419,
+        "rho_train_short": 0.27360536758292253,
+        "rho_val_short": 0.24943291281916996,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": true,
+        "redundant_with": [],
+        "kept": true
+      },
+      {
+        "name": "vwap_dist",
+        "rho_train_long": 0.010202788515704752,
+        "rho_val_long": -0.04701847987971191,
+        "rho_train_short": 0.016626258682448505,
+        "rho_val_short": -0.09988002297997006,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": false,
+        "redundant_with": [
+          "ema50_m15_slope"
+        ],
+        "kept": false
+      },
+      {
+        "name": "poc_dist",
+        "rho_train_long": 0.0742848221233259,
+        "rho_val_long": -0.008682656919371123,
+        "rho_train_short": 0.02456670121165123,
+        "rho_val_short": 0.009669177812623275,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": false,
+        "redundant_with": [
+          "ema20_m5_dist",
+          "rsi_m5"
+        ],
+        "kept": false
+      },
+      {
+        "name": "swing_high_dist",
+        "rho_train_long": -0.04836430919211585,
+        "rho_val_long": -0.007375668141902859,
+        "rho_train_short": 0.001748816646453384,
+        "rho_val_short": -0.022198042192470478,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": false,
+        "redundant_with": [
+          "ema20_m5_dist"
+        ],
+        "kept": false
+      },
+      {
+        "name": "swing_low_dist",
+        "rho_train_long": 0.08001852043510782,
+        "rho_val_long": 0.041463182451076205,
+        "rho_train_short": 0.03798991243376547,
+        "rho_val_short": 0.01797110478314735,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": true,
+        "redundant_with": [
+          "ema20_m5_dist"
+        ],
+        "kept": false
+      },
+      {
+        "name": "mom_m5_3",
+        "rho_train_long": 0.03098559717704815,
+        "rho_val_long": 0.00995222578489961,
+        "rho_train_short": 0.0002659012752717204,
+        "rho_val_short": 0.005480285156240702,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": false,
+        "redundant_with": [],
+        "kept": false
+      },
+      {
+        "name": "efficiency_m5",
+        "rho_train_long": 0.05452785258002292,
+        "rho_val_long": 0.03387658931837857,
+        "rho_train_short": 0.031952749026314405,
+        "rho_val_short": 0.02642988479093571,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": true,
+        "redundant_with": [],
+        "kept": true
+      },
+      {
+        "name": "spread_atr",
+        "rho_train_long": -0.4533524764773623,
+        "rho_val_long": -0.44704028823460845,
+        "rho_train_short": -0.4445120380956145,
+        "rho_val_short": -0.41440755721974826,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": true,
+        "redundant_with": [],
+        "kept": true
+      },
+      {
+        "name": "tick_rate_z",
+        "rho_train_long": -0.00786738468749964,
+        "rho_val_long": -0.014819887777484745,
+        "rho_train_short": -0.038791661912921736,
+        "rho_val_short": -0.03437219678170721,
+        "n_train": 12183,
+        "n_val": 5510,
+        "informative": true,
+        "redundant_with": [],
+        "kept": true
+      }
+    ],
+    "redundant_pairs": [
+      {
+        "a": "ema20_m5_dist",
+        "b": "rsi_m5",
+        "rho": 0.9270423306578625
+      },
+      {
+        "a": "ema20_m5_dist",
+        "b": "bb_pctb_m5",
+        "rho": 0.899602870003409
+      },
+      {
+        "a": "ema20_m5_dist",
+        "b": "poc_dist",
+        "rho": 0.8386268124927084
+      },
+      {
+        "a": "ema20_m5_dist",
+        "b": "swing_high_dist",
+        "rho": -0.8214995199948956
+      },
+      {
+        "a": "ema20_m5_dist",
+        "b": "swing_low_dist",
+        "rho": 0.8219213586983644
+      },
+      {
+        "a": "ema50_m15_slope",
+        "b": "di_diff_m15",
+        "rho": 0.835952093883249
+      },
+      {
+        "a": "ema50_m15_slope",
+        "b": "vwap_dist",
+        "rho": 0.8298733367994339
+      },
+      {
+        "a": "rsi_m5",
+        "b": "bb_pctb_m5",
+        "rho": 0.904242652423785
+      },
+      {
+        "a": "rsi_m5",
+        "b": "poc_dist",
+        "rho": 0.8524625821075053
+      }
+    ],
+    "kept": [
+      "adx_m15",
+      "macd_hist_m5",
+      "bb_bw_pctile_m5",
+      "efficiency_m5",
+      "spread_atr",
+      "tick_rate_z"
+    ],
+    "mean_long_r_train": -0.11055583974438861,
+    "mean_short_r_train": -0.07665594909929217
+  }
+}

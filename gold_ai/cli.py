@@ -189,7 +189,7 @@ def main(argv: list[str] | None = None) -> int:
     rs.add_argument("--setups", default=None, help="comma-separated setup names (default: all research setups)")
     rs.add_argument("--rr", default="1.0,1.5,2.0", help="reward:risk grid, chosen on the validation split")
     rs.add_argument("--variants", default="plain",
-                    help='preset name (plain, cost-round2) or a JSON list of rule overrides crossed with --rr, '
+                    help='preset name (plain, cost-round2, intraday-round3, volatility-round5) or a JSON list of rule overrides crossed with --rr, '
                          'e.g. \'[{}, {"min_atr_spread": 10}]\'')
     rs.add_argument("--min-test-trades", type=int, default=30)
     rs.add_argument("--no-features", action="store_true", help="skip the indicator evaluation")

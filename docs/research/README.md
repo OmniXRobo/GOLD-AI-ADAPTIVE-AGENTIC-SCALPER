@@ -99,3 +99,25 @@ What the run does show, from the variants that were measured on all three splits
 
 Fix: research lanes now measure with account-level loss stops switched off (`risk.engine.measurement_risk`).
 Per-trade rules still apply. Rerun the same command to get valid validation and test splits for every variant.
+
+## Round 4b: 4 months with the measurement fix (2026-10-31, `research-XAUUSD.sd-20261031T042938Z.md`)
+Same ticks (62.2 M, hash `1b4cdc9e…`) and splits as round 4, with account-level loss stops off while measuring.
+Two differences from round 4: the run used the default **scalp** variants (R:R grid only, M1 trigger, 1 h hold),
+not the `intraday-round3` preset. The calendar also had 43 high-impact events instead of 124. So it answers
+"do the setups work at scalping timeframes over four months?". It does not answer the round 4 intraday question.
+
+- Every setup now has a full sample (187 to 482 test trades). Six are **rejected** and **legacy_rejection** is
+  **inconclusive** (+0.016R test, 90% CI −0.086..+0.129, −0.151R validation). Nothing passes.
+- R:R 1.0 made no trades for any setup, because the risk engine's `min_risk_reward` of 1.2 vetoes it. That is
+  expected, not a defect.
+- Most setups lose less than random entry with the same exits. trend_pullback is −0.10R vs −0.15R random,
+  range_reversion −0.08R vs −0.19R, breakout −0.04R vs −0.12R, and legacy_rejection +0.02R vs −0.10R.
+  So the entries carry some information, but at scalping stops the costs take more than all of it.
+  The most common rejection is "costs too large for the stop".
+- The features agree. `spread_atr` is the strongest feature, at ρ ≈ −0.45 on both train and validation,
+  and `bb_bw_pctile_m5` is the strongest positive one, at ρ ≈ +0.30. Both are stable across splits.
+
+Next (round 5): preset `volatility-round5` runs the intraday variants, where stops are several times wider than
+the spread. Each is run unfiltered, then only when M15 ATR is at least 15 spreads (`min_atr_spread`), then only
+when the M15 Bollinger bandwidth is at or above its 60th percentile (`min_bb_bw_pctile`, new). With six variants
+per R:R, the validation choice has more chances to fit noise. The test split and the random baseline guard against this.
