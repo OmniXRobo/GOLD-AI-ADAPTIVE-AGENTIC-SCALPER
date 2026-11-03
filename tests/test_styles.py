@@ -177,7 +177,7 @@ def test_promoted_strategy_reaches_its_live_engine_and_survives_restart(settings
     assert c.post("/api/models/heal-gold-scalp/promote", headers=h).status_code == 200
     r = c.post("/api/models/heal-btc-swing/promote", headers=h).json()
     assert r["live_engine"]["applied"] and r["live_engine"]["engine"] == "virtual:equiti:BTCUSD.sd:swing"
-    assert eng.agent.params.risk_reward == 2.3 and eng.agent.params.exploration_rate == 0.2
+    assert eng.agent.params.risk_reward == 2.3 and eng.agent.params.exploration_rate == settings.virtual_exploration_rate == 0.05
     assert eng.agent.model is model_before                     # learning is kept
     stages = {m["version"]: m["stage"] for m in store.list_models() if m["version"].startswith("heal-")}
     assert stages == {"heal-btc-swing": "approved", "heal-gold-scalp": "approved"}   # scoped per engine

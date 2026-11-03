@@ -6,6 +6,7 @@ import { Card, DataView, Empty, PageHeader, Pill } from "../components/ui";
 import { fmtDuration, fmtMoney, fmtNum, fmtPct, fmtTime, humanize, signClass, useApi } from "../lib";
 import { useLive } from "../state";
 import { styleOf, StyleTag } from "../styles";
+import { ModeSplit } from "../components/ModeSplit";
 
 const RISK_KEYS = ["risk_per_trade_pct", "max_lots_per_trade", "max_daily_loss_pct", "max_drawdown_pct", "max_open_positions", "min_risk_reward", "min_confidence", "max_spread_points"];
 
@@ -68,7 +69,11 @@ export default function AutopilotPage() {
             <b>{typeof equity === "number" ? fmtNum(equity) : "n/a"}</b>
           </div>
         </div>
-        <p className="muted small">Recorded virtual trades only, with estimated fills. No real money is traded.</p>
+        <ModeSplit data={virt.data} />
+        <p className="muted small">
+          Recorded virtual trades only, with estimated fills. No real money is traded. Learning trades are ones the AI
+          rejected but took anyway to learn from.
+        </p>
       </Card>
 
       <Card title="AI engines">

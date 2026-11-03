@@ -7,6 +7,7 @@ import { latestSignals, SignalCard } from "../components/SignalCard";
 import { DomainBadge, Empty } from "../components/ui";
 import { instrumentChoices, instrumentLabel, priceDigits, SymbolChips, useInstruments } from "../instruments";
 import { fmtMoney, fmtNum, fmtPct, fmtTime, signClass, useApi } from "../lib";
+import { ModeSplit } from "../components/ModeSplit";
 import { useLive } from "../state";
 
 function PriceHero() {
@@ -160,8 +161,10 @@ export default function HomePage() {
           <div className={`stat-value ${signClass(m?.net_profit)}`}>{m?.total_trades ? fmtMoney(m.net_profit) : "n/a"}</div>
         </div>
       </div>
+      <ModeSplit data={virt.data} />
       <p className="muted small">
         Recorded virtual trades only (estimated fills, no real money). Nothing is shown until trades have actually closed.
+        Learning trades are ones the AI rejected but took anyway to learn from; its own record is the first row.
       </p>
 
       <div className="quick-grid">

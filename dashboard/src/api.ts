@@ -235,6 +235,8 @@ export interface TradesResponse {
   simulated: boolean;
   trades: Trade[];
   metrics: Metrics;
+  /** The same trades split into exploration (taken to learn) and the model's own approved picks. */
+  metrics_by_mode?: { exploration: Metrics; model_approved: Metrics };
 }
 
 export interface BacktestRequest {
