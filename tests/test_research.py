@@ -314,6 +314,22 @@ def test_band_width_filter_and_round5_preset(settings, spec):
     assert {v.get("min_atr_spread", 0) for v in r5} == {0, 15} and {v.get("min_bb_bw_pctile", 0) for v in r5} == {0, 0.6}
 
 
+def test_trading_hours_filter_and_round6_preset(settings, spec):
+    from gold_ai.research.setup_eval import VARIANT_PRESETS
+
+    tk = ticks(60_000)
+    p = RuleParams(setup="legacy_momentum", hours_utc=[12, 16])
+    assert p.hours_utc == (12, 16)
+    trades, agent = run_rules(settings, spec, tk, p)
+    assert all(12 <= t.entry_time.hour < 17 for t in trades)      # decided in hours, filled on the next tick
+    assert any("outside trading hours" in k for k in agent.rejected)
+    assert RuleParams(setup="breakout").version() == RuleParams(setup="breakout", hours_utc=None).version()
+    with pytest.raises(ValueError):
+        RuleParams(setup="breakout", hours_utc=(17, 7))
+    r6 = VARIANT_PRESETS["session-round6"]
+    assert len(r6) == 8 and {v["hours_utc"] for v in r6} == {(7, 17), (12, 16)}
+
+
 def test_intraday_scale_reads_every_timeframe_a_step_slower(settings, spec):
     from gold_ai.research.setup_eval import VARIANT_PRESETS
     from gold_ai.strategies.setups import scaled_tf

@@ -125,3 +125,26 @@ Next (round 5): preset `volatility-round5` runs the intraday variants, where sto
 the spread. Each is run unfiltered, then only when M15 ATR is at least 15 spreads (`min_atr_spread`), then only
 when the M15 Bollinger bandwidth is at or above its 60th percentile (`min_bb_bw_pctile`, new). With six variants
 per R:R, the validation choice has more chances to fit noise. The test split and the random baseline guard against this.
+
+## Round 5: volatility filters, intraday (2026-10-31, `research-XAUUSD.sd-20261031T132603Z.md`)
+Same ticks and splits, preset `volatility-round5`. Still no news coverage outside 28–30 October (33 events).
+
+**No setup is a candidate.** Six setups are rejected, and liquidity_sweep has insufficient data (19 test trades).
+The variant chosen on validation lost on test for every setup. Several were clearly positive on validation and
+negative on test: trend_pullback +0.21R → −0.14R, failed_breakout +0.20R → −0.19R, legacy_rejection
++0.16R → −0.31R. That is what selecting among 18 variants on one month looks like when there is no stable edge.
+Across all variants, results cluster between about −0.2R and +0.1R after costs.
+
+- `min_atr_spread=15` barely changed trade counts at intraday scale. M15 ATR is almost always more than 15
+  spreads, so on these timeframes the cost/volatility filter is not binding and costs are not the main problem.
+- `min_bb_bw_pctile=0.6` removed most signals (13 000+ rejections for failed_breakout and range_reversion).
+- breakout with an M5 trigger, or with the band-width filter, made no trades at all. The breakout setup needs
+  compressed bands, which the filter excludes.
+- One variant was not negative on any split: failed_breakout, M5 trigger, 8 h hold, `min_bb_bw_pctile=0.6`,
+  R:R 1.5. It made −0.00R train (102 trades), +0.15R validation (48), +0.12R test (63). It was found by
+  looking at all 126 setup×variant rows after the fact, so it is a **hypothesis, not a result**. It replaces the
+  unfiltered failed_breakout research lane, so it collects forward evidence on prices it has never seen.
+  It can only be promoted through the strategy selector's criteria.
+
+Next (round 6): preset `session-round6` runs the intraday variants only in the busiest UTC hours: 07–17 London +
+New York, and 12–16 the overlap. Each is run with and without the band-width filter (`hours_utc`, new).
