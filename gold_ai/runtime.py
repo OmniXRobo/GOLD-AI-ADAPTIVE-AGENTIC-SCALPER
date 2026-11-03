@@ -333,7 +333,7 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                                 ", ".join(STYLES))
                     continue
                 engine = LiveVirtualEngine(settings, spec, conn, store,
-                                           params=style_params(style, exploration_rate=0.2),
+                                           params=style_params(style, exploration_rate=settings.virtual_exploration_rate),
                                            account=f"virtual-{acct.login}")
                 sfx = "" if style == "scalp" else f":{style}"
                 state.virtual_engines[f"{spec.broker}:{spec.symbol}{sfx}"] = engine

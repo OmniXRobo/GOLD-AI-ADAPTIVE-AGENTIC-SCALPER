@@ -90,6 +90,10 @@ class Settings(BaseModel):
     # "rejection" (support/resistance wick rejection). Momentum is off: the root-cause audit found it made
     # ~97% of the losing virtual trades (docs/ROOT_CAUSE_AUDIT.md). An empty list stops new virtual entries.
     virtual_entry_rules: list[str] = Field(default_factory=lambda: ["rejection"])
+    # Share of model-rejected candidates the live-virtual engines still take to learn from (labelled exploration,
+    # simulation only). The 26 Oct - 3 Nov audit found 677 of 686 virtual trades were exploration, so it was cut
+    # from 0.2. 0 = trade only what the model approves (learning then needs far longer).
+    virtual_exploration_rate: float = Field(default=0.05, ge=0.0, le=0.5)
     # Forward research lanes (gold_ai/engines/research_lanes.py): research setups traded virtually on live quotes,
     # simulation only, labelled, no signals. Defaults: the intraday setups that were not negative on research
     # round 3's test split, with the variant chosen on validation (docs/research/README.md).
