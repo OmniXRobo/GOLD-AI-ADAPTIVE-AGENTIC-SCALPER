@@ -166,3 +166,10 @@ explained by each label, the hit rate of "trending" labels on the next-hour dire
 HMM's certain readings predict better than its uncertain ones. On synthetic switching-volatility test data the HMM
 explains most of the future volatility and the trending labels do not predict direction; that is a test of the
 code, not a market result.
+
+## Round 6: London / New York hours (2026-11-03, `research-XAUUSD.sd-20261103T104857Z.md`)
+Same ticks and splits, preset `session-round6` (`hours_utc` 07–17 or 12–16, with and without the band-width filter).
+**No candidate.** Restricting to those hours left five of seven setups below 30 test trades (insufficient data).
+The two with enough were rejected: range_reversion −0.03R (36 trades) and legacy_momentum −0.11R (110).
+breakout's +0.05R on 17 trades (90% CI −0.36..+0.51) is noise. Session hours alone do not create an edge here.
+Next: round 7 (`exits-round7`), break-even and trailing exits.
