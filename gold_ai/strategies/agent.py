@@ -41,6 +41,10 @@ class RuleParams:
     min_bb_bw_pctile: float = 0.0
     # Trade only when the UTC hour is in [start, end) (None = any hour), e.g. (12, 16) for the London/New York overlap.
     hours_utc: tuple[int, int] | None = None
+    # Exit management in R (0 = off): once the trade is this far in profit, trail the stop this far behind price.
+    # trail_start_r = trail_distance_r moves the stop to break-even at that profit, then trails.
+    trail_start_r: float = 0.0
+    trail_distance_r: float = 0.0
     # "scalp" or "intraday" (every timeframe a step slower: trigger M5/M15, ATR M15, trend H1); see setups.SCALES.
     # Trigger timeframes, stop/ATR limits and min_atr_spread are named in scalping timeframes and scaled with it.
     tf_scale: str = "scalp"
@@ -51,6 +55,9 @@ class RuleParams:
             self.hours_utc = tuple(self.hours_utc)
             if len(self.hours_utc) != 2 or not 0 <= self.hours_utc[0] < self.hours_utc[1] <= 24:
                 raise ValueError(f"hours_utc must be (start, end) with 0 <= start < end <= 24, got {self.hours_utc!r}")
+        if (self.trail_start_r > 0) != (self.trail_distance_r > 0) or self.trail_distance_r > self.trail_start_r:
+            raise ValueError("trail_start_r and trail_distance_r must both be set, with distance <= start "
+                             "(the stop never moves below break-even)")
         if self.trigger_tf not in ("M1", "M5"):
             raise ValueError(f"trigger_tf must be M1 or M5, got {self.trigger_tf!r}")
         if self.tf_scale not in SCALES:
@@ -62,7 +69,8 @@ class RuleParams:
     def version(self) -> str:
         d = asdict(self)
         for k, default in (("trigger_tf", "M1"), ("min_atr_spread", 0.0), ("tf_scale", "scalp"),
-                           ("min_bb_bw_pctile", 0.0), ("hours_utc", None)):   # keep earlier ids
+                           ("min_bb_bw_pctile", 0.0), ("hours_utc", None), ("trail_start_r", 0.0),
+                           ("trail_distance_r", 0.0)):   # keep earlier ids
             if d[k] == default:
                 d.pop(k)
         blob = json.dumps(d, sort_keys=True, default=str).encode()
@@ -149,6 +157,8 @@ class RuleAgent:
         prop = TradeProposal(
             side=sig.side, entry=entry, stop_loss=sig.stop, take_profit=tp, lots=lots, confidence=0.0,
             valid_until=tick.time + timedelta(seconds=p.signal_validity_seconds), expected_cost=cost,
+            trailing_start=p.trail_start_r * sl_d if p.trail_start_r > 0 else None,
+            trailing_distance=p.trail_distance_r * sl_d if p.trail_distance_r > 0 else None,
             explanation=expl, strategy_version=p.version(), model_version="none", style=p.style,
             meta={"setup": self.setup.name, "sl_atr": sl_atr, "cost_r": cost_r, "evidence": sig.evidence},
         )

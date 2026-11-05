@@ -330,6 +330,24 @@ def test_trading_hours_filter_and_round6_preset(settings, spec):
     assert len(r6) == 8 and {v["hours_utc"] for v in r6} == {(7, 17), (12, 16)}
 
 
+def test_break_even_trailing_exits_and_round7_preset(settings, spec):
+    from gold_ai.domain import ExitReason
+    from gold_ai.research.setup_eval import VARIANT_PRESETS
+
+    tk = ticks(60_000)
+    p = RuleParams(setup="legacy_momentum", trail_start_r=0.5, trail_distance_r=0.5)
+    trades, _ = run_rules(settings, spec, tk, p)
+    assert trades and any(t.exit_reason == ExitReason.TRAILING_STOP for t in trades)
+    # A trailing exit never closes beyond break-even on the losing side by more than costs and stop slippage.
+    assert all(t.r_multiple > -0.5 for t in trades if t.exit_reason == ExitReason.TRAILING_STOP)
+    assert RuleParams(setup="breakout").version() == RuleParams(setup="breakout", trail_start_r=0.0).version()
+    for bad in ({"trail_start_r": 0.5}, {"trail_start_r": 0.5, "trail_distance_r": 0.8}):
+        with pytest.raises(ValueError):
+            RuleParams(setup="breakout", **bad)
+    r7 = VARIANT_PRESETS["exits-round7"]
+    assert len(r7) == 6 and {v.get("trail_start_r", 0) for v in r7} == {0, 0.5, 1.0}
+
+
 def test_intraday_scale_reads_every_timeframe_a_step_slower(settings, spec):
     from gold_ai.research.setup_eval import VARIANT_PRESETS
     from gold_ai.strategies.setups import scaled_tf
