@@ -60,6 +60,13 @@ VARIANT_PRESETS: dict[str, tuple[dict, ...]] = {
                                          {"tf_scale": "intraday", "trigger_tf": "M5", "max_hold_seconds": 8 * 3600})
                             for hours in ({"hours_utc": (7, 17)}, {"hours_utc": (12, 16)})
                             for flt in ({}, {"min_bb_bw_pctile": 0.6})),
+    # Round 7: exit management. The 26 Oct - 3 Nov virtual audit found 80 losing trades had been +0.5R in profit.
+    # The intraday variants with no trailing, break-even at +0.5R (then trailing 0.5R), and trailing 0.75R from +1R.
+    "exits-round7": tuple({**base, **ex}
+                          for base in ({"tf_scale": "intraday", "max_hold_seconds": 4 * 3600},
+                                       {"tf_scale": "intraday", "trigger_tf": "M5", "max_hold_seconds": 8 * 3600})
+                          for ex in ({}, {"trail_start_r": 0.5, "trail_distance_r": 0.5},
+                                     {"trail_start_r": 1.0, "trail_distance_r": 0.75})),
 }
 
 
