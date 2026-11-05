@@ -1,5 +1,5 @@
 {
-  "updated": "2026-10-27",
+  "updated": "2026-11-05",
   "real_money_execution": "DISABLED",
   "tasks": [
     {
@@ -503,8 +503,9 @@
       "id": "T-REGIME-AGENT",
       "phase": 6,
       "title": "Regime agent with uncertainty (HMM / change-point benchmarked OOS), WAIT when uncertain",
-      "status": "todo",
-      "priority": 1
+      "status": "in_progress",
+      "priority": 1,
+      "notes": "2026-11-05: agents/regime.py (Gaussian HMM + Bayesian online change-point, uncertain flag, NO TRADE reason) and research/regime_eval.py + `regime-eval` CLI (rule vs HMM vs random, OOS future-vol R\u00b2, trend hit rate, certain vs uncertain). Tested on synthetic data only. Next: run on real XAUUSD.sd ticks on the VPS; wire a WAIT gate into the planner only if the HMM beats the rule labels and the uncertainty flag helps."
     },
     {
       "id": "T-ENSEMBLE-META",
@@ -578,6 +579,14 @@
       "status": "done",
       "priority": 1,
       "notes": "No lane is eligible yet (round 3 insufficient_data; forward lanes just started). Waiting on 4-month research rerun and ~30 forward trades per lane."
+    },
+    {
+      "id": "T-MT5-RECONNECT",
+      "phase": 6,
+      "title": "MT5 terminal link lost (IPC send failed) stopped live data for a day: auto-reconnect, log throttling, feed-down banner",
+      "status": "done",
+      "priority": 1,
+      "notes": "2026-11-04 14:43 UTC the terminal link dropped; collectors failed every 5 s for 23 h (111 MB log) and never reconnected. Connector now reconnects (shutdown+initialize, 5 s..5 min backoff). Needs deploy on the VPS."
     }
   ]
 }

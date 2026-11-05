@@ -324,6 +324,7 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
             tag = "" if i == 0 else f":{spec.symbol}"
             collector = TickCollector(conn, store, spec.broker, spec.symbol)
             collectors[spec.symbol] = collector
+            state.collectors[spec.symbol] = collector
             supervisor.register(f"collector{tag}", collector.run)
             # One engine per trade style: scalping (M1/M5/M15, held up to 1 h) and swing (M15/H1/H4, up to
             # 3 days). Each has its own virtual account, open position, learning model and trade history.

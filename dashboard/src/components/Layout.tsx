@@ -103,6 +103,26 @@ function PriceTicker() {
   );
 }
 
+function FeedBanner() {
+  // Shown only when the server reports that market data stopped arriving from MT5 (not when the market is closed).
+  const f = useApi(api.feed, [], 15000);
+  const d = f.data;
+  if (!d || d.ok || !d.live) return null;
+  const n = d.down_symbols.length;
+  return (
+    <div className="banner banner-feed" role="alert">
+      <div className="banner-text">
+        <span className="banner-dot" aria-hidden="true" />
+        <strong>LIVE MARKET DATA STOPPED{d.failing_since ? ` since ${fmtTime(d.failing_since)}` : ""}</strong>
+        <span className="banner-meta small">
+          The MT5 terminal on the server is not answering ({n} market{n === 1 ? "" : "s"}). Prices, signals and practice
+          trades are paused. Reconnecting automatically; if this stays, open MT5 on the VPS and check it is running and logged in.
+        </span>
+      </div>
+    </div>
+  );
+}
+
 const THEME_ICON = { dark: "moon", light: "sun", auto: "auto" } as const;
 
 export default function Layout() {
@@ -121,6 +141,7 @@ export default function Layout() {
   return (
     <div className="app">
       <RealTradingBanner />
+      <FeedBanner />
       <div className="body">
         <nav className={`sidebar ${drawer ? "open" : ""}`} aria-label="Main">
           <div className="sidebar-brand">

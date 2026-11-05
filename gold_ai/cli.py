@@ -103,6 +103,36 @@ def _research(a, settings, store: MemoryStore) -> int:
     return 0
 
 
+def _regime_eval(a, settings, store: MemoryStore) -> int:
+    from pathlib import Path
+
+    from .agents.regime import RegimeConfig
+    from .market.candles import CandleBuilder
+    from .research.regime_eval import RegimeEvalConfig, evaluate_regimes, regime_markdown
+    from .research.stream import TickStream
+
+    ticks = TickStream.from_store(store, a.broker, a.symbol, _dt(a.start), _dt(a.end))
+    if ticks is None:
+        sys.exit("no stored ticks for that broker/symbol/period")
+    b = CandleBuilder(a.tf)
+    bars = [c for t in ticks if (c := b.update(t)) is not None]   # streamed: only bars are kept in memory
+    log.info("regime benchmark on %d %s bars (%s -> %s)", len(bars), a.tf, ticks.start, ticks.end)
+    rep = evaluate_regimes(bars, RegimeEvalConfig(horizon=a.horizon), RegimeConfig(n_states=a.states),
+                           timeframe=a.tf, progress=lambda m: log.info("regime-eval: %s", m))
+    rep.update(broker=a.broker, symbol=a.symbol)
+    md = regime_markdown(rep)
+    dest = Path(a.out or Path(settings.data_dir) / "research")
+    dest.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    (dest / f"regime-{a.symbol}-{stamp}.md").write_text(md, encoding="utf-8")
+    (dest / f"regime-{a.symbol}-{stamp}.json").write_text(json.dumps(rep, indent=2, default=str), encoding="utf-8")
+    store.audit("cli", "regime_eval", {"broker": a.broker, "symbol": a.symbol, "bars": rep["bars"],
+                                       "verdict": rep["verdict"]})
+    print(md)
+    print(f"report written to {dest}")
+    return 0
+
+
 def _audit_trades(a, settings, store: MemoryStore) -> int:
     from pathlib import Path
 
@@ -194,6 +224,17 @@ def main(argv: list[str] | None = None) -> int:
     rs.add_argument("--min-test-trades", type=int, default=30)
     rs.add_argument("--no-features", action="store_true", help="skip the indicator evaluation")
     rs.add_argument("--out", default=None, help="report directory (default <data_dir>/research)")
+
+    rg = sub.add_parser("regime-eval", help="out-of-sample benchmark of regime labels (rule vs HMM vs random) on "
+                                            "stored ticks; research only, writes a report to <data_dir>/research")
+    rg.add_argument("--broker", required=True)
+    rg.add_argument("--symbol", required=True)
+    rg.add_argument("--start")
+    rg.add_argument("--end")
+    rg.add_argument("--tf", default="M5", choices=["M1", "M5", "M15", "H1"])
+    rg.add_argument("--states", type=int, default=4)
+    rg.add_argument("--horizon", type=int, default=12, help="bars ahead for the future-volatility target")
+    rg.add_argument("--out", default=None)
 
     au = sub.add_parser("audit-trades", help="read-only audit of stored trades (reconciles dashboard figures, "
                                              "breaks results down by rule, exit, regime, costs; checks integrity)")
@@ -302,6 +343,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if a.cmd == "research":
         return _research(a, settings, store)
+
+    if a.cmd == "regime-eval":
+        return _regime_eval(a, settings, store)
 
     if a.cmd == "audit-trades":
         return _audit_trades(a, settings, store)

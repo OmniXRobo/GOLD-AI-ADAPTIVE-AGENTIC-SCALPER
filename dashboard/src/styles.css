@@ -230,6 +230,14 @@ code,
   background: color-mix(in srgb, var(--warn-bg) 80%, var(--surface));
   color: var(--warn-fg);
 }
+.banner-feed {
+  position: static;
+  background: color-mix(in srgb, var(--bad-bg) 85%, var(--surface));
+  color: var(--bad-fg);
+}
+.banner-feed .banner-text {
+  flex-wrap: wrap;
+}
 .banner-dot {
   width: 8px;
   height: 8px;

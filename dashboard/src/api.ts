@@ -114,6 +114,15 @@ export interface BrokerStatus {
   [k: string]: unknown;
 }
 
+export interface FeedStatus {
+  live: boolean;
+  ok: boolean;
+  down_symbols: string[];
+  failing_since: string | null;
+  last_error: string | null;
+  links: { broker: string; connected: boolean; reconnects: number; reconnect_failures: number; last_error: string | null }[];
+}
+
 export interface LastTick {
   time: string;
   bid: number;
@@ -632,6 +641,7 @@ export const api = {
   health: () => get<Health>("/api/health"),
   overview: () => get<Overview>("/api/overview"),
   brokers: () => get<BrokerStatus[]>("/api/brokers"),
+  feed: () => get<FeedStatus>("/api/feed/status"),
   market: (symbol?: string | null) => get<MarketState>(`/api/market/state${symbol ? `?symbol=${enc(symbol)}` : ""}`),
   instruments: () => get<Instrument[]>("/api/instruments"),
   agentsBoard: (domain: "virtual" | "real") => get<AgentsBoard>(`/api/agents/leaderboard?domain=${domain}`),

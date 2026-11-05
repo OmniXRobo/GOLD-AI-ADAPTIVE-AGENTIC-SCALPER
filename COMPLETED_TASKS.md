@@ -1,5 +1,11 @@
 # Completed tasks
 
+## Session 6 — 2026-11-05 (MT5 reconnect)
+- `MT5ReadOnlyConnector`: reconnects after MetaTrader5 IPC errors (-10001..-10005), shared by all workers, with
+  backoff; `link_status()`. `TickCollector`: throttled error logging, `status()`. `GET /api/feed/status`.
+- Dashboard: "LIVE MARKET DATA STOPPED" banner (also in the Android app, which loads the dashboard).
+- T-REGIME-AGENT (part 1): `agents/regime.py`, `research/regime_eval.py`, CLI `regime-eval`, docs/research/README.md.
+
 ## Session 5d — 2026-10-27 (AI agents leaderboard)
 - `gold_ai/agents/leaderboard.py`: totals per AI agent (adaptive scalp/swing agents and research lanes) and per
   strategy version, computed only from recorded closed trades: trades, won/lost, win rate, net P/L, profit factor,

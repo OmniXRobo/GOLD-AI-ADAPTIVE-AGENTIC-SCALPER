@@ -148,3 +148,21 @@ Across all variants, results cluster between about −0.2R and +0.1R after costs
 
 Next (round 6): preset `session-round6` runs the intraday variants only in the busiest UTC hours: 07–17 London +
 New York, and 12–16 the overlap. Each is run with and without the band-width filter (`hours_utc`, new).
+
+## Regime benchmark (prepared 2026-11-05, not yet run on real data)
+`gold_ai/agents/regime.py` is a regime agent with uncertainty: a Gaussian hidden Markov model on M5 bars
+(log return, log range, efficiency), fitted on the train split only and read causally with the forward filter, plus
+Bayesian online change-point detection on the volatility level. Each reading has a probability per regime, a
+change-point probability and an `uncertain` flag (max probability < 0.6 or change-point probability > 0.5), with a
+"NO TRADE: regime uncertain" reason for a planner.
+
+It is research only. No live engine uses it until this benchmark passes on real ticks:
+
+    python -m gold_ai --config config.local.json regime-eval --broker equiti --symbol XAUUSD.sd --tf M5
+
+The benchmark compares the rule labels, the HMM and random labels with the same frequencies on the same chronological
+split, sampling every `horizon` bars so targets do not overlap. It reports out-of-sample R² of next-hour volatility
+explained by each label, the hit rate of "trending" labels on the next-hour direction (z vs 50 %), and whether the
+HMM's certain readings predict better than its uncertain ones. On synthetic switching-volatility test data the HMM
+explains most of the future volatility and the trending labels do not predict direction; that is a test of the
+code, not a market result.
