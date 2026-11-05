@@ -1,5 +1,17 @@
 # Project status — 2026-10-26 (session 4, root-cause audit)
 
+## Session 6 (app "not working", 2026-11-05)
+- Cause: on 2026-11-04 at 14:43 UTC the link between the service and the Equiti MT5 terminal broke
+  (`IPC send failed`, usually the terminal closing, hanging or restarting for an update). The service kept running and
+  answering the app, but no market data arrived for every instrument: no new ticks after 14:19 UTC, frozen prices,
+  no new signals or virtual trades. It never tried to reconnect, and wrote a 111 MB log of identical tracebacks.
+- Fixed: the MT5 connector reconnects by itself (shutdown + initialize with the same terminal path; retries back off
+  from 5 s to 5 min while the terminal is down). The collector logs one traceback per outage, then one line every
+  5 minutes, and logs when collection resumes. New `GET /api/feed/status`; the dashboard and app show a red
+  "LIVE MARKET DATA STOPPED" banner while the feed is down (a closed market does not trigger it). 279 tests pass.
+  Needs `git pull`, a dashboard rebuild and a service restart on the VPS; no new APK.
+- Seen on the VPS: database 16.6 GB plus a 3.4 GB write-ahead log, and "database is locked" on tick inserts at start-up.
+
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.
 No strategy has shown an edge after costs (168 virtual trades, net -533.99 USD; all exploration trades).
 

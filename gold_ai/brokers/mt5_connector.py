@@ -8,6 +8,7 @@ so the connector can be tested with a fake on Linux/CI.
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
@@ -79,6 +80,13 @@ _OFFSET_MAX_S = 14 * 3600
 _FRESH_TICK_S = 60
 _REMEASURE_GAP_S = 1800
 
+# MetaTrader5 package error codes meaning the link to the terminal is gone (terminal closed, restarted
+# by a live update, or hung): IPC send/receive/initialize failed, no IPC, IPC timeout. The package never
+# recovers from these on its own; only shutdown() + initialize() does.
+IPC_ERROR_CODES = frozenset({-10001, -10002, -10003, -10004, -10005})
+_RECONNECT_MIN_S = 5.0
+_RECONNECT_MAX_S = 300.0
+
 
 class MT5ReadOnlyConnector:
     """Times returned by this connector are true UTC.
@@ -107,6 +115,16 @@ class MT5ReadOnlyConnector:
                                             if server_utc_offset_hours is not None else None)
         self._last_raw_msc: dict[str, int] = {}
         self._last_move_wall: dict[str, float] = {}
+        # Reconnect state, shared by every worker using this connector.
+        self._init_kwargs: dict[str, Any] = {}
+        self._reconnect_lock = threading.Lock()
+        self._reconnect_delay = _RECONNECT_MIN_S
+        self._next_reconnect = 0.0
+        self._clock = time.monotonic
+        self.reconnects = 0
+        self.reconnect_failures = 0
+        self.last_error_text: str | None = None
+        self.last_ipc_error_at: datetime | None = None
 
     # -- server time ---------------------------------------------------------
     @property
@@ -149,6 +167,7 @@ class MT5ReadOnlyConnector:
             kwargs["path"] = self.terminal_path
         if login:
             kwargs.update(login=login, password=password, server=server)
+        self._init_kwargs = kwargs
         ok = bool(self.mt5.initialize(**kwargs))
         if not ok:
             log.error("MT5 initialize failed: %s", self.mt5.last_error())
@@ -159,12 +178,58 @@ class MT5ReadOnlyConnector:
         self.mt5.shutdown()
         self.connected = False
 
+    def _failed(self) -> str:
+        """Call right after an MT5 call returned None. Returns the error text; when the error means the
+        terminal link is lost, reconnects (throttled, backing off from 5 s to 5 min while it keeps failing)."""
+        err = self.mt5.last_error()
+        self.last_error_text = str(err)
+        code = err[0] if isinstance(err, tuple) and err else None
+        if code in IPC_ERROR_CODES:
+            self.connected = False
+            self.last_ipc_error_at = datetime.now(timezone.utc)
+            self.reconnect()
+        return self.last_error_text
+
+    def reconnect(self, force: bool = False) -> bool:
+        """shutdown() + initialize() with the original arguments. Read-only: no order call is involved."""
+        if not self._reconnect_lock.acquire(blocking=False):
+            return False   # another worker is reconnecting right now
+        try:
+            now = self._clock()
+            if not force and now < self._next_reconnect:
+                return False
+            try:
+                self.mt5.shutdown()
+            except Exception:   # pragma: no cover - the link is already broken
+                pass
+            ok = bool(self.mt5.initialize(**self._init_kwargs))
+            self.connected = ok
+            if ok:
+                self.reconnects += 1
+                self._reconnect_delay = _RECONNECT_MIN_S
+                self._next_reconnect = now + _RECONNECT_MIN_S
+                log.warning("MT5 terminal link restored (reconnect #%d)", self.reconnects)
+            else:
+                self.reconnect_failures += 1
+                self._next_reconnect = now + self._reconnect_delay
+                log.error("MT5 reconnect failed: %s; next try in %.0f s (is the terminal running and logged in?)",
+                          self.mt5.last_error(), self._reconnect_delay)
+                self._reconnect_delay = min(self._reconnect_delay * 2, _RECONNECT_MAX_S)
+            return ok
+        finally:
+            self._reconnect_lock.release()
+
+    def link_status(self) -> dict:
+        return {"connected": self.connected, "reconnects": self.reconnects,
+                "reconnect_failures": self.reconnect_failures, "last_error": self.last_error_text,
+                "last_ipc_error_at": self.last_ipc_error_at.isoformat() if self.last_ipc_error_at else None}
+
     def health(self) -> dict:
         t0 = time.perf_counter()
         info = self.mt5.terminal_info()
         self.last_latency_ms = (time.perf_counter() - t0) * 1000
         if info is None:
-            return {"connected": False, "error": str(self.mt5.last_error())}
+            return {"connected": False, "error": self._failed()}
         return {
             "connected": bool(getattr(info, "connected", False)),
             "trade_allowed": bool(getattr(info, "trade_allowed", False)),
@@ -176,7 +241,7 @@ class MT5ReadOnlyConnector:
     def account(self) -> AccountSnapshot:
         a = self.mt5.account_info()
         if a is None:
-            raise RuntimeError(f"account_info failed: {self.mt5.last_error()}")
+            raise RuntimeError(f"account_info failed: {self._failed()}")
         broker = identify_broker(a.server, getattr(a, "company", ""))
         return AccountSnapshot(
             broker=broker, server=a.server, login=str(a.login), currency=a.currency,
@@ -221,6 +286,7 @@ class MT5ReadOnlyConnector:
     def latest_tick(self, symbol: str) -> Tick | None:
         t = self.mt5.symbol_info_tick(symbol)
         if t is None:
+            self._failed()
             return None
         self._observe_offset(symbol, int(t.time_msc))
         if not self.server_offset_known:
@@ -236,7 +302,7 @@ class MT5ReadOnlyConnector:
         flags = getattr(self.mt5, "COPY_TICKS_ALL", -1)
         arr = self.mt5.copy_ticks_range(symbol, start + off, end + off, flags)
         if arr is None:
-            raise RuntimeError(f"copy_ticks_range failed: {self.mt5.last_error()}")
+            raise RuntimeError(f"copy_ticks_range failed: {self._failed()}")
         out = []
         for r in arr:
             bid, ask = float(r["bid"]), float(r["ask"])
@@ -263,7 +329,7 @@ class MT5ReadOnlyConnector:
             return []
         arr = fn(symbol, tf, 0, count)
         if arr is None:
-            log.warning("copy_rates_from_pos(%s, %s) failed: %s", symbol, timeframe, self.mt5.last_error())
+            log.warning("copy_rates_from_pos(%s, %s) failed: %s", symbol, timeframe, self._failed())
             return []
         out = []
         for r in arr:

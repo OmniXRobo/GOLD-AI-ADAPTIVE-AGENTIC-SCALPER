@@ -113,6 +113,7 @@ class AppState:
         self.research_lanes: dict[str, Any] = {}      # key -> ResearchLaneEngine (simulation only)
         self.specs: dict[tuple[str, str], SymbolSpec] = {}
         self.connectors: dict[str, Any] = {}          # broker -> MT5ReadOnlyConnector
+        self.collectors: dict[str, Any] = {}          # broker symbol -> TickCollector
         self.extras: dict[str, Callable[..., Any]] = {}  # optional providers: news, signals, maturity...
 
 
@@ -191,6 +192,20 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             row["symbols"] = [sp.symbol for (b, _), sp in s.specs.items() if b == broker]
             out.append(row)
         return out
+
+    # A collector counts as down after this many failed attempts in a row (about 15 s at 5 s intervals).
+    FEED_DOWN_AFTER = 3
+
+    @app.get("/api/feed/status")
+    def feed_status(u: User = Depends(current_user)):
+        """Is live market data arriving from the MT5 terminal? Read-only; a closed market is not an error."""
+        links = [{"broker": b, **c.link_status()} for b, c in s.connectors.items() if hasattr(c, "link_status")]
+        cols = [c.status() for c in s.collectors.values()]
+        down = [c for c in cols if c["consecutive_errors"] >= FEED_DOWN_AFTER]
+        since = min((c["failing_since"] for c in down if c["failing_since"]), default=None)
+        return {"live": bool(cols), "ok": not down, "down_symbols": [c["symbol"] for c in down],
+                "failing_since": since, "last_error": down[0]["last_error"] if down else None,
+                "links": links, "collectors": cols}
 
     def style_of(e) -> str:
         return getattr(e, "style", "scalp")

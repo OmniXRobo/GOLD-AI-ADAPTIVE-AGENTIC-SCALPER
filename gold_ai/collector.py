@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 import threading
+import time
 from datetime import datetime, timedelta, timezone
 
 from .brokers.mt5_connector import MT5ReadOnlyConnector
@@ -24,6 +25,11 @@ class TickCollector:
         self._stop = threading.Event()
         self.collected = 0
         self.errors = 0
+        self.consecutive_errors = 0
+        self.last_error: str | None = None
+        self.last_success_at: datetime | None = None
+        self.failing_since: datetime | None = None
+        self._last_logged = 0.0
 
     def _cursor_key(self) -> str:
         return f"collector:{self.broker}:{self.symbol}:last"
@@ -52,10 +58,38 @@ class TickCollector:
         while not stopped():
             try:
                 self.collect_once()
-            except Exception:
-                self.errors += 1
-                log.exception("tick collection failed")
+            except Exception as e:
+                self._on_error(e)
+            else:
+                if self.consecutive_errors:
+                    log.warning("tick collection for %s resumed after %d failed attempts",
+                                self.symbol, self.consecutive_errors)
+                self.consecutive_errors = 0
+                self.failing_since = None
+                self.last_success_at = datetime.now(timezone.utc)
             (stop or self._stop).wait(self.interval)
+
+    def _on_error(self, e: Exception) -> None:
+        """Full traceback for the first failure of a streak, then one line at most every 5 minutes, so a
+        terminal outage does not fill the disk with identical tracebacks (it wrote 110 MB a day before)."""
+        self.errors += 1
+        self.consecutive_errors += 1
+        self.last_error = f"{type(e).__name__}: {e}"
+        now = time.monotonic()
+        if self.consecutive_errors == 1:
+            self.failing_since = datetime.now(timezone.utc)
+            log.exception("tick collection failed for %s", self.symbol)
+            self._last_logged = now
+        elif now - self._last_logged >= 300:
+            log.error("tick collection for %s still failing (%d attempts in a row): %s",
+                      self.symbol, self.consecutive_errors, self.last_error)
+            self._last_logged = now
+
+    def status(self) -> dict:
+        return {"symbol": self.symbol, "collected": self.collected, "errors": self.errors,
+                "consecutive_errors": self.consecutive_errors, "last_error": self.last_error,
+                "failing_since": self.failing_since.isoformat() if self.failing_since else None,
+                "last_success_at": self.last_success_at.isoformat() if self.last_success_at else None}
 
     def stop(self) -> None:
         self._stop.set()

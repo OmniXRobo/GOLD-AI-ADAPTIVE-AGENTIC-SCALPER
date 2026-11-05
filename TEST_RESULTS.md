@@ -1,5 +1,10 @@
 # Test results
 
+## 2026-11-05 — session 6 (cloud container, MT5 reconnect)
+- `python -m pytest -q` → **279 passed, 1 skipped** (adds tests/test_mt5_reconnect.py: reconnect on IPC errors with the
+  original terminal path, backoff while the terminal is down, no reconnect on other errors, one traceback per outage,
+  `/api/feed/status`). Dashboard `tsc --noEmit` and build pass. Not yet run against the real terminal.
+
 ## 2026-10-27 — session 5d (cloud container, AI agents leaderboard)
 - `python -m pytest -q` → **271 passed, 1 skipped** (adds tests/test_leaderboard.py). Dashboard `tsc --noEmit` and
   build pass.

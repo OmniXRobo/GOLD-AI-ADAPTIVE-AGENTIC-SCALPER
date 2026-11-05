@@ -1,5 +1,9 @@
 # Next actions
 
+Y. (VPS thread) After the MT5 reconnect PR is merged: check the Equiti MT5 terminal (MT5_2) is open and logged in,
+   `git pull`, `cd dashboard && npm ci && npm run build`, restart GoldAI-Equiti. Confirm new ticks arrive (Home price
+   moves while the market is open) and the log no longer repeats `IPC send failed`. The old 111 MB log can be deleted.
+
 X. (VPS thread) After the AI-agents-leaderboard PR is merged: `git pull`, `cd dashboard && npm ci && npm run build`,
    restart GoldAI-Equiti. No new APK needed. Open "AI Agents" and check the totals match Results.
 
