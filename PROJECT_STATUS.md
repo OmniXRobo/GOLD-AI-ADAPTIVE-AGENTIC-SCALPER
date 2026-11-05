@@ -8,8 +8,11 @@
 - Fixed: the MT5 connector reconnects by itself (shutdown + initialize with the same terminal path; retries back off
   from 5 s to 5 min while the terminal is down). The collector logs one traceback per outage, then one line every
   5 minutes, and logs when collection resumes. New `GET /api/feed/status`; the dashboard and app show a red
-  "LIVE MARKET DATA STOPPED" banner while the feed is down (a closed market does not trigger it). 279 tests pass.
+  "LIVE MARKET DATA STOPPED" banner while the feed is down (a closed market does not trigger it). 288 tests pass.
   Needs `git pull`, a dashboard rebuild and a service restart on the VPS; no new APK.
+- Next queue task started, T-REGIME-AGENT: regime agent with uncertainty (Gaussian HMM + change-point detection,
+  "NO TRADE: regime uncertain") and an out-of-sample benchmark against the rule labels (`regime-eval`). Research
+  only; tested on synthetic data. It joins the live engines only if it beats the rule labels on real ticks.
 - Seen on the VPS: database 16.6 GB plus a 3.4 GB write-ahead log, and "database is locked" on tick inserts at start-up.
 
 **Real-money execution: DISABLED. Demo execution: DISABLED.** No order has been sent to any broker.

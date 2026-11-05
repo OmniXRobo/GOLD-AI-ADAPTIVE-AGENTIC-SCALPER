@@ -503,8 +503,9 @@
       "id": "T-REGIME-AGENT",
       "phase": 6,
       "title": "Regime agent with uncertainty (HMM / change-point benchmarked OOS), WAIT when uncertain",
-      "status": "todo",
-      "priority": 1
+      "status": "in_progress",
+      "priority": 1,
+      "notes": "2026-11-05: agents/regime.py (Gaussian HMM + Bayesian online change-point, uncertain flag, NO TRADE reason) and research/regime_eval.py + `regime-eval` CLI (rule vs HMM vs random, OOS future-vol R\u00b2, trend hit rate, certain vs uncertain). Tested on synthetic data only. Next: run on real XAUUSD.sd ticks on the VPS; wire a WAIT gate into the planner only if the HMM beats the rule labels and the uncertainty flag helps."
     },
     {
       "id": "T-ENSEMBLE-META",

@@ -4,6 +4,10 @@ Y. (VPS thread) After the MT5 reconnect PR is merged: check the Equiti MT5 termi
    `git pull`, `cd dashboard && npm ci && npm run build`, restart GoldAI-Equiti. Confirm new ticks arrive (Home price
    moves while the market is open) and the log no longer repeats `IPC send failed`. The old 111 MB log can be deleted.
 
+Z. (VPS thread) After that, run the regime benchmark on the 4 months of ticks:
+   `python -m gold_ai --config config.local.json regime-eval --broker equiti --symbol XAUUSD.sd --tf M5`, and share
+   the report from data/research as-is.
+
 X. (VPS thread) After the AI-agents-leaderboard PR is merged: `git pull`, `cd dashboard && npm ci && npm run build`,
    restart GoldAI-Equiti. No new APK needed. Open "AI Agents" and check the totals match Results.
 
