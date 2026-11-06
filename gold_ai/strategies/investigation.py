@@ -26,7 +26,7 @@ INITIAL_INVESTIGATIONS: dict[str, str] = {
 
 def family_of(strategy_version: str | None) -> str | None:
     v = strategy_version or ""
-    if v.startswith(("strat-", "heal-")):
+    if v.startswith(("strat-", "heal-", "learn-")):
         return ADAPTIVE_FAMILY
     if v.startswith("rule-"):
         return "family:rule-" + v[5:].rsplit("-", 1)[0]

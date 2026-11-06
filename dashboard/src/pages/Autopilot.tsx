@@ -7,6 +7,7 @@ import { fmtDuration, fmtMoney, fmtNum, fmtPct, fmtTime, humanize, signClass, us
 import { useLive } from "../state";
 import { styleOf, StyleTag } from "../styles";
 import { ModeSplit } from "../components/ModeSplit";
+import { TradeLearningCard } from "../components/TradeLearning";
 
 const RISK_KEYS = ["risk_per_trade_pct", "max_lots_per_trade", "max_daily_loss_pct", "max_drawdown_pct", "max_open_positions", "min_risk_reward", "min_confidence", "max_spread_points"];
 
@@ -75,6 +76,8 @@ export default function AutopilotPage() {
           rejected but took anyway to learn from.
         </p>
       </Card>
+
+      <TradeLearningCard />
 
       <Card title="AI engines">
         {!overview ? (

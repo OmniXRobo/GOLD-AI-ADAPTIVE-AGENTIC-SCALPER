@@ -24,6 +24,8 @@ from .agents.health import HeartbeatRegistry, Supervisor, SystemHealthAgent
 from .agents.institutional import InstitutionalFlowAgent
 from .agents.maturity import assess, assess_all_brokers
 from .agents.self_healing import SelfHealingAgent, model_scope
+from .market.trade_context import IntermarketMonitor, TradeContextAgent
+from .agents.trade_learner import THRESHOLDS as TRADE_LEARNER_THRESHOLDS, TradeHistoryLearner
 from .api.app import AppState, create_app, json_safe_any
 from .backup import BackupService
 from .brokers.mock_feed import synthetic_spec
@@ -179,6 +181,8 @@ def register_services(state: AppState, *, news: NewsAgent | None = None,
         "rollback": rollback,
         "backups": backup_list,
         "create_backup": create_backup,
+        "trade_learner": lambda: json_safe_any({"latest": TradeHistoryLearner(state.store).latest(),
+                                                "thresholds": list(TRADE_LEARNER_THRESHOLDS)}),
     })
     return {"news": news, "institutional": institutional, "signals": signals, "healer": healer,
             "backups": backups, "health": health, "heartbeats": heartbeats, "dashboard_channel": dashboard}
@@ -220,6 +224,23 @@ def scheduled_self_healing(engine, healer: SelfHealingAgent, store: MemoryStore,
                      actor="self_healing_scheduler", feed_ticks=feed)
     store.kv_set(key, now.isoformat())
     return healer.history()[-1]
+
+
+TRADE_LEARN_INTERVAL = timedelta(hours=24)
+
+
+def scheduled_trade_learning(engine, learner: TradeHistoryLearner, store: MemoryStore, *,
+                             now: datetime | None = None, interval: timedelta = TRADE_LEARN_INTERVAL):
+    """Once a day per engine: replay its closed virtual trades and register a validated threshold candidate when
+    the held-out evidence supports one (agents/trade_learner.py). Activation always needs the owner."""
+    now = now or datetime.now(timezone.utc)
+    key = f"trade_learner:last_run:{engine.key}"
+    last = store.kv_get(key)
+    if last and now - datetime.fromisoformat(last) < interval:
+        return None
+    rep = learner.run(engine, actor="trade_learner_scheduler")
+    store.kv_set(key, now.isoformat())
+    return rep
 
 
 def _blackout(state: AppState, now: datetime) -> bool:
@@ -366,6 +387,18 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                                   signals.create(p, tick, e.spec.broker, e.spec.symbol,
                                                  max_hold_seconds=e.agent.params.max_hold_seconds))
 
+        # Technical, news, intermarket and regime context recorded with every virtual and research trade.
+        intermarket = IntermarketMonitor()
+        context_agent = TradeContextAgent(news=news, intermarket=intermarket)
+        for engine in [*engines, *lanes]:
+            engine.loop.context_provider = (lambda tick, st, e=engine: context_agent.snapshot(e.spec.symbol, tick, st))
+
+        def intermarket_sampler(stop: threading.Event) -> None:
+            while not stop.wait(60):
+                for e in engines:
+                    intermarket.observe(e.spec.symbol, e.loop.last_tick)
+        supervisor.register("intermarket", intermarket_sampler)
+
         def news_sync(stop: threading.Event) -> None:
             while True:   # refresh at start, then every 5 minutes
                 now = datetime.now(timezone.utc)
@@ -393,6 +426,18 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                         log.exception("self-healing check failed for %s", e.key)
                 delay = 600
         supervisor.register("self_healing", self_healing)
+
+        def trade_learning(stop: threading.Event) -> None:
+            # Re-reads every engine's closed virtual trades once a day (first check 2 h after start).
+            learner, delay = TradeHistoryLearner(store), 7200
+            while not stop.wait(delay):
+                for e in engines:
+                    try:
+                        scheduled_trade_learning(e, learner, store)
+                    except Exception:
+                        log.exception("trade-history learning failed for %s", e.key)
+                delay = 600
+        supervisor.register("trade_learner", trade_learning)
 
         def db_maintenance(stop: threading.Event) -> None:
             # SQLite WAL: readers that never pause let the -wal file grow (3.4 GB on the VPS). Copy it back

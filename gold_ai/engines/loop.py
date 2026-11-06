@@ -59,6 +59,9 @@ class TradingLoop:
         self.on_decision = on_decision
         self.on_close = on_close
         self.last_tick: Tick | None = None
+        # Optional (tick, market state) -> dict stored as trade.context["context"] when an order is placed
+        # (market/trade_context.py). Recorded for later measurement only; it never changes a decision.
+        self.context_provider: Callable | None = None
 
     def step(self, tick: Tick) -> list[SimTrade]:
         return self.process(tick, self.market.on_tick(tick))
@@ -119,6 +122,11 @@ class TradingLoop:
                        "style": self.agent.params.style,
                        "exploration": "[EXPLORATION]" in d.proposal.explanation,
                        "ev_after_cost_r": d.proposal.ev_after_cost_r, **d.proposal.meta}
+                if self.context_provider is not None:
+                    try:
+                        ctx["context"] = self.context_provider(tick, state)
+                    except Exception as e:
+                        ctx["context"] = {"errors": [type(e).__name__]}
                 self.pending = (d.proposal, ctx)
             else:
                 self.stats.risk_rejections += 1

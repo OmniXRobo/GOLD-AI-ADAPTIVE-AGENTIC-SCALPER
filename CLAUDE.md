@@ -19,7 +19,8 @@ Read this first in every session, then PROJECT_STATUS.md, TASK_QUEUE.json and RE
 - `gold_ai/market/` candles (M1..D1 + M10), features/regimes (Market Intelligence Agent), tick ingestion/validation
 - `gold_ai/market/indicators.py` EMA/ADX/Bollinger/tick-VWAP/tick-volume profile/swings/sweeps
 - `gold_ai/strategies/` setup library + rule agent · `gold_ai/research/` setup harness, feature evaluation (docs/AGENTIC_REDESIGN.md)
-- `gold_ai/agents/` decision (adaptive model + calibration), institutional, maturity, self_healing, health
+- `gold_ai/agents/` decision (adaptive model + calibration), institutional, maturity, self_healing, health,
+  trade_learner (daily replay of past virtual trades; proposes, owner approves) · `gold_ai/market/trade_context.py` news/intermarket/regime snapshot per trade
 - `gold_ai/engines/` simulator, loop, backtest (A), walkforward (B), live_virtual (C), metrics
 - `gold_ai/risk/engine.py` independent risk veto · `gold_ai/security/auth.py` auth, roles, owner grant, approvals
 - `gold_ai/memory/store.py` persistence · `gold_ai/news/` · `gold_ai/notifications/` · `gold_ai/execution.py` gated MT5 execution
