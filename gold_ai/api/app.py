@@ -203,8 +203,10 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
         cols = [c.status() for c in s.collectors.values()]
         down = [c for c in cols if c["consecutive_errors"] >= FEED_DOWN_AFTER]
         since = min((c["failing_since"] for c in down if c["failing_since"]), default=None)
-        return {"live": bool(cols), "ok": not down, "down_symbols": [c["symbol"] for c in down],
+        mismatch = next((l["account_mismatch"] for l in links if l.get("account_mismatch")), None)
+        return {"live": bool(cols), "ok": not down and not mismatch, "down_symbols": [c["symbol"] for c in down],
                 "failing_since": since, "last_error": down[0]["last_error"] if down else None,
+                "account_mismatch": mismatch,
                 "links": links, "collectors": cols}
 
     def style_of(e) -> str:

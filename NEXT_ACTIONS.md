@@ -1,5 +1,9 @@
 # Next actions
 
+AA. (Owner) Log MT5_2 into Equiti 1281361 and tick "Save password". Decide whether the OMNIX_OCL EA should stay on
+    the GOLD AI data terminal. (VPS thread) After the account-guard PR is merged: `git pull`, rebuild the dashboard,
+    restart GoldAI-Equiti (stop the task and any leftover python first), confirm XAUUSD.pr ticks arrive.
+
 Y. (VPS thread) After the MT5 reconnect PR is merged: check the Equiti MT5 terminal (MT5_2) is open and logged in,
    `git pull`, `cd dashboard && npm ci && npm run build`, restart GoldAI-Equiti. Confirm new ticks arrive (Home price
    moves while the market is open) and the log no longer repeats `IPC send failed`. The old 111 MB log can be deleted.

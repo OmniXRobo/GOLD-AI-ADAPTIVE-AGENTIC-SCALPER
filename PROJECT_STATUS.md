@@ -1,5 +1,15 @@
 # Project status — 2026-10-26 (session 4, root-cause audit)
 
+## Session 6b (live data stopped again, 2026-11-06)
+- MT5_2 closed at about 19:31 UTC on 5 Nov. The reconnect relaunched it at 20:28, and it logged into its last saved
+  account (Exness demo 474869353) instead of Equiti 1281361, so every XAUUSD.pr read failed ("Terminal: Not found")
+  with no clear warning. The start script had also hung (`Start-Process -Wait` waits for the MT5 child process).
+- Fixed: the connector remembers the account it started on, reads no data while the terminal is on another
+  account, tries to log back in with the terminal's saved password, re-selects symbols when it is back, and the
+  app banner names the wrong account. start.ps1 waits for the Python process only. 292 tests pass.
+- Owner action: log MT5_2 into Equiti 1281361 with "Save password". MT5_2 also runs an EA (OMNIX_OCL) that placed
+  orders on 1281361 on 5 Nov; GOLD AI itself sends none.
+
 ## Session 6 (app "not working", 2026-11-05)
 - Cause: on 2026-11-04 at 14:43 UTC the link between the service and the Equiti MT5 terminal broke
   (`IPC send failed`, usually the terminal closing, hanging or restarting for an update). The service kept running and

@@ -1,5 +1,9 @@
 # Test results
 
+## 2026-11-06 — session 6b (cloud container, MT5 account guard)
+- `python -m pytest -q` → **292 passed, 1 skipped** (account mismatch stops reads and is reported, log back in with the
+  saved password after a relaunch, feed status names the account). Dashboard `tsc --noEmit` and build pass.
+
 ## 2026-11-05 — session 6 (cloud container, MT5 reconnect)
 - `python -m pytest -q` → **288 passed, 1 skipped** (adds tests/test_regime_agent.py and tests/test_mt5_reconnect.py: reconnect on IPC errors with the
   original terminal path, backoff while the terminal is down, no reconnect on other errors, one traceback per outage,

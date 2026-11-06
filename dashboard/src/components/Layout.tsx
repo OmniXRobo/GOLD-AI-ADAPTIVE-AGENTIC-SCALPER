@@ -114,10 +114,17 @@ function FeedBanner() {
       <div className="banner-text">
         <span className="banner-dot" aria-hidden="true" />
         <strong>LIVE MARKET DATA STOPPED{d.failing_since ? ` since ${fmtTime(d.failing_since)}` : ""}</strong>
+        {d.account_mismatch ? (
+          <span className="banner-meta small">
+            {d.account_mismatch}. Prices, signals and practice trades are paused. On the VPS, log that MT5 terminal back
+            into the expected account (File, Login to Trade Account) and tick "Save password".
+          </span>
+        ) : (
         <span className="banner-meta small">
           The MT5 terminal on the server is not answering ({n} market{n === 1 ? "" : "s"}). Prices, signals and practice
           trades are paused. Reconnecting automatically; if this stays, open MT5 on the VPS and check it is running and logged in.
         </span>
+        )}
       </div>
     </div>
   );

@@ -24,8 +24,13 @@ Remove-Item logs\STOP -ErrorAction SilentlyContinue
 $quoted = $pyArgs | ForEach-Object { if ("$_" -match '\s') { "`"$_`"" } else { "$_" } }
 while ($true) {
     $stamp = Get-Date -Format yyyyMMdd_HHmmss
-    $p = Start-Process -FilePath ".\.venv\Scripts\python.exe" -ArgumentList $quoted -NoNewWindow -Wait -PassThru `
+    # No -Wait: Start-Process -Wait also waits for child processes, and the MT5 terminal that the service
+    # relaunches after a lost link is a child of Python. On 2026-11-05 the service exited but this loop kept
+    # waiting on that terminal and never restarted it. WaitForExit() waits for the Python process only.
+    $p = Start-Process -FilePath ".\.venv\Scripts\python.exe" -ArgumentList $quoted -NoNewWindow -PassThru `
         -RedirectStandardOutput "logs\gold_ai_$stamp.out.log" -RedirectStandardError "logs\gold_ai_$stamp.log"
+    $null = $p.Handle   # keeps the process handle so ExitCode is available after it exits
+    $p.WaitForExit()
     Add-Content logs\restarts.log "$(Get-Date -Format o) service exited with code $($p.ExitCode)"
     if ($Once -or (Test-Path logs\STOP)) { exit $p.ExitCode }
     Start-Sleep -Seconds 10
