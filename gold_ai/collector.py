@@ -45,11 +45,17 @@ class TickCollector:
             if not self.c.server_offset_known:
                 return 0
         now = now or datetime.now(timezone.utc)
-        last =self.store.kv_get(self._cursor_key())
-        start = datetime.fromisoformat(last) + timedelta(milliseconds=1) if last else now - self.backfill
+        last = self.store.kv_get(self._cursor_key())
+        cursor = datetime.fromisoformat(last) if last else None
+        start = cursor + timedelta(milliseconds=1) if cursor else now - self.backfill
         end = min(now, start + self.max_span)
         self.behind = end < now
         ticks = self.c.ticks_range(self.symbol, start, end)
+        if cursor is not None:
+            # MT5's copy_ticks_range takes whole seconds, so it returns again the ticks earlier in the cursor's
+            # second. Keep only newer ones: otherwise they are stored twice, and when the cursor tick is the last
+            # before a market break (gold, 2026-11-05 21:58:59.984) the cursor never moves past it.
+            ticks = [t for t in ticks if t.time > cursor]
         if not ticks:
             if self.behind:   # an empty slice (market closed) still moves the cursor forward
                 self.store.kv_set(self._cursor_key(), (end - timedelta(milliseconds=1)).isoformat())
