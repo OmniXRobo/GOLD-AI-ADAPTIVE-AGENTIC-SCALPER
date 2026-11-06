@@ -174,3 +174,91 @@ def test_feed_status_endpoint(settings, store):
     r = c.get("/api/feed/status", headers=h).json()
     assert r["ok"] is False and r["down_symbols"] == ["XAUUSD.sd"]
     assert "IPC send failed" in r["last_error"] and r["failing_since"]
+
+
+class SwitchingMT5(DroppingMT5):
+    """A relaunched terminal that comes back on whatever account it saved last."""
+
+    def __init__(self, can_log_back=False):
+        super().__init__()
+        self.account = (1281361, "EquitiSecurities-Demo")
+        self.can_log_back = can_log_back
+        self.login_calls = []
+        self.selected = []
+
+    def account_info(self):
+        login, server = self.account
+        return self._Obj(login=login, server=server, currency="USD", trade_mode=0, trade_allowed=True,
+                         balance=1.0, equity=1.0, leverage=100, company="x")
+
+    def login(self, login, server=None, **kw):
+        self.login_calls.append((login, server))
+        if self.can_log_back:
+            self.account = (login, server)
+            return True
+        self._err = (-6, "Terminal: Authorization failed")
+        return False
+
+    def symbol_select(self, name, enable):
+        self.selected.append(name)
+        return True
+
+    def copy_ticks_range(self, symbol, start, end, flags):
+        if self.account[0] != 1281361:
+            self._err = (-4, "Terminal: Not found")
+            return None
+        return super().copy_ticks_range(symbol, start, end, flags)
+
+
+def test_relaunch_on_another_account_stops_reading_and_reports_it():
+    fake = SwitchingMT5()
+    c = make(fake)
+    c.symbol_spec("XAUUSDm", "equiti")
+    assert c.expected_account == (1281361, "EquitiSecurities-Demo")
+    fake.account = (474869353, "Exness-MT5Trial15")      # terminal relaunched on the saved Exness login
+    c._clock.t += 61
+    now = datetime.now(timezone.utc)
+    try:
+        c.ticks_range("XAUUSDm", now - timedelta(minutes=1), now)
+        raise AssertionError("expected RuntimeError")
+    except RuntimeError as e:
+        assert "474869353" in str(e) and "expected 1281361" in str(e)
+    assert fake.login_calls == [(1281361, "EquitiSecurities-Demo")]   # tried the saved Equiti password
+    assert c.link_status()["account_mismatch"] and not c.connected
+    assert c.rates("XAUUSDm", "M1") == [] and c.latest_tick("XAUUSDm") is None
+    fake.account = (1281361, "EquitiSecurities-Demo")    # owner logs back in
+    c._clock.t += 61
+    assert c.ticks_range("XAUUSDm", now - timedelta(minutes=1), now) == []
+    assert c.account_mismatch is None and fake.selected.count("XAUUSDm") == 2   # symbols re-selected
+
+
+def test_wrong_account_after_reconnect_logs_back_in_with_saved_password():
+    fake = SwitchingMT5(can_log_back=True)
+    c = make(fake)
+    fake.broken = True
+    real_init = fake.initialize
+
+    def relaunch(**kw):
+        fake.account = (474869353, "Exness-MT5Trial15")
+        return real_init(**kw)
+    fake.initialize = relaunch
+    c.rates("XAUUSDm", "M1")                             # IPC failure -> reconnect -> wrong account -> login
+    assert fake.login_calls == [(1281361, "EquitiSecurities-Demo")]
+    assert c.account_mismatch is None and c.connected
+
+
+def test_feed_status_reports_wrong_account(settings, store):
+    from gold_ai.api.app import AppState, create_app
+    st = AppState(settings, store)
+    st.auth.create_user("owner", "owner-pass-123", "owner")
+    fake = SwitchingMT5()
+    conn = make(fake)
+    st.connectors["equiti"] = conn
+    st.collectors["XAUUSD.pr"] = TickCollector(conn, store, "equiti", "XAUUSD.pr")
+    fake.account = (474869353, "Exness-MT5Trial15")
+    conn._clock.t += 61
+    conn.rates("XAUUSD.pr", "M1")
+    c = TestClient(create_app(st))
+    tok = c.post("/api/auth/login", json={"username": "owner", "password": "owner-pass-123"}).json()["token"]
+    r = c.get("/api/feed/status", headers={"Authorization": f"Bearer {tok}"}).json()
+    assert r["ok"] is False and "474869353" in r["account_mismatch"]

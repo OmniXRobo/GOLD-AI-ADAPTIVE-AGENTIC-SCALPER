@@ -86,6 +86,7 @@ _REMEASURE_GAP_S = 1800
 IPC_ERROR_CODES = frozenset({-10001, -10002, -10003, -10004, -10005})
 _RECONNECT_MIN_S = 5.0
 _RECONNECT_MAX_S = 300.0
+_ACCOUNT_CHECK_S = 60.0
 
 
 class MT5ReadOnlyConnector:
@@ -125,6 +126,13 @@ class MT5ReadOnlyConnector:
         self.reconnect_failures = 0
         self.last_error_text: str | None = None
         self.last_ipc_error_at: datetime | None = None
+        # The account the service started on. A relaunched terminal logs into whatever account it saved last
+        # (on 2026-11-05 MT5_2 came back on an Exness demo instead of Equiti), so data is only read while the
+        # terminal is on this account; otherwise another broker's prices could be stored under this broker.
+        self.expected_account: tuple[int, str] | None = None
+        self.account_mismatch: str | None = None
+        self._next_account_check = 0.0
+        self._selected: set[str] = set()
 
     # -- server time ---------------------------------------------------------
     @property
@@ -171,8 +179,61 @@ class MT5ReadOnlyConnector:
         ok = bool(self.mt5.initialize(**kwargs))
         if not ok:
             log.error("MT5 initialize failed: %s", self.mt5.last_error())
+        else:
+            a = self.mt5.account_info()
+            if a is not None:
+                self.expected_account = (int(a.login), str(a.server))
         self.connected = ok
         return ok
+
+    def _check_account(self, force: bool = False) -> bool:
+        """True when the terminal is on the expected account. Throttled to once a minute unless forced. On a
+        mismatch it asks the terminal to log back in with its saved password (read-only `login`, no orders)."""
+        if self.expected_account is None:
+            return True
+        now = self._clock()
+        if not force and now < self._next_account_check:
+            return self.account_mismatch is None
+        self._next_account_check = now + _ACCOUNT_CHECK_S
+        a = self.mt5.account_info()
+        if a is None:
+            return self.account_mismatch is None
+        want_login, want_server = self.expected_account
+        if (int(a.login), str(a.server)) == (want_login, want_server):
+            if self.account_mismatch:
+                log.warning("MT5 terminal is back on account %s (%s)", want_login, want_server)
+                self._reselect()
+            self.account_mismatch = None
+            return True
+        text = (f"MT5 terminal is logged into account {a.login} ({a.server}), "
+                f"expected {want_login} ({want_server})")
+        if text != self.account_mismatch:
+            log.error("%s; market data is not read until it is back on the expected account", text)
+        self.account_mismatch = text
+        self.connected = False
+        login = getattr(self.mt5, "login", None)
+        if login is not None:
+            try:
+                if login(want_login, server=want_server):   # uses the password saved in the terminal
+                    a = self.mt5.account_info()
+                    if a is not None and (int(a.login), str(a.server)) == (want_login, want_server):
+                        log.warning("MT5 terminal logged back into account %s (%s)", want_login, want_server)
+                        self.account_mismatch = None
+                        self.connected = True
+                        self._reselect()
+                        return True
+                log.error("MT5 could not log back into %s (%s): %s. Log in on the terminal and tick "
+                          "'Save password'.", want_login, want_server, self.mt5.last_error())
+            except Exception:   # pragma: no cover - terminal specific
+                log.exception("MT5 login to the expected account failed")
+        return False
+
+    def _reselect(self) -> None:
+        for sym in self._selected:
+            try:
+                self.mt5.symbol_select(sym, True)
+            except Exception:   # pragma: no cover
+                pass
 
     def shutdown(self) -> None:
         self.mt5.shutdown()
@@ -188,6 +249,8 @@ class MT5ReadOnlyConnector:
             self.connected = False
             self.last_ipc_error_at = datetime.now(timezone.utc)
             self.reconnect()
+        else:
+            self._check_account()   # e.g. "Terminal: Not found" after the terminal switched account
         return self.last_error_text
 
     def reconnect(self, force: bool = False) -> bool:
@@ -204,6 +267,11 @@ class MT5ReadOnlyConnector:
                 pass
             ok = bool(self.mt5.initialize(**self._init_kwargs))
             self.connected = ok
+            if ok and not self._check_account(force=True):
+                ok = False   # relaunched on another account; _check_account logged it and tried to log back in
+                self._reconnect_delay = _RECONNECT_MIN_S
+                self._next_reconnect = now + _RECONNECT_MIN_S
+                return False
             if ok:
                 self.reconnects += 1
                 self._reconnect_delay = _RECONNECT_MIN_S
@@ -221,6 +289,7 @@ class MT5ReadOnlyConnector:
 
     def link_status(self) -> dict:
         return {"connected": self.connected, "reconnects": self.reconnects,
+                "account_mismatch": self.account_mismatch,
                 "reconnect_failures": self.reconnect_failures, "last_error": self.last_error_text,
                 "last_ipc_error_at": self.last_ipc_error_at.isoformat() if self.last_ipc_error_at else None}
 
@@ -262,6 +331,7 @@ class MT5ReadOnlyConnector:
     def symbol_spec(self, symbol: str, broker: str) -> SymbolSpec:
         if not self.mt5.symbol_select(symbol, True):
             raise RuntimeError(f"symbol_select({symbol}) failed: {self.mt5.last_error()}")
+        self._selected.add(symbol)
         s = self.mt5.symbol_info(symbol)
         if s is None:
             raise RuntimeError(f"symbol_info({symbol}) failed")
@@ -284,6 +354,8 @@ class MT5ReadOnlyConnector:
 
     # -- market data --------------------------------------------------------
     def latest_tick(self, symbol: str) -> Tick | None:
+        if not self._check_account():
+            return None
         t = self.mt5.symbol_info_tick(symbol)
         if t is None:
             self._failed()
@@ -296,6 +368,8 @@ class MT5ReadOnlyConnector:
 
     def ticks_range(self, symbol: str, start: datetime, end: datetime) -> list[Tick]:
         """Ticks between UTC `start` and `end` (converted to and from broker server time)."""
+        if not self._check_account():
+            raise RuntimeError(self.account_mismatch or "MT5 terminal is not on the expected account")
         if not self.server_offset_known:
             raise RuntimeError("broker server time offset not known yet (needs a live tick)")
         off = timedelta(seconds=self.server_offset_s)
@@ -323,6 +397,8 @@ class MT5ReadOnlyConnector:
             self.latest_tick(symbol)
             if not self.server_offset_known:
                 return []
+        if not self._check_account():
+            return []
         tf = getattr(self.mt5, f"TIMEFRAME_{timeframe}", None)
         fn = getattr(self.mt5, "copy_rates_from_pos", None)
         if tf is None or fn is None:

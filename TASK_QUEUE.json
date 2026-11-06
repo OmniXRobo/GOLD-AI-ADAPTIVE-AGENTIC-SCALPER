@@ -1,5 +1,5 @@
 {
-  "updated": "2026-11-05",
+  "updated": "2026-11-06",
   "real_money_execution": "DISABLED",
   "tasks": [
     {
@@ -587,6 +587,14 @@
       "status": "done",
       "priority": 1,
       "notes": "2026-11-04 14:43 UTC the terminal link dropped; collectors failed every 5 s for 23 h (111 MB log) and never reconnected. Connector now reconnects (shutdown+initialize, 5 s..5 min backoff). Needs deploy on the VPS."
+    },
+    {
+      "id": "T-MT5-ACCOUNT-GUARD",
+      "phase": 6,
+      "title": "Reconnect relaunched MT5_2 on the wrong saved account (Exness): account guard, auto log-back with saved password, banner; start.ps1 hang",
+      "status": "done",
+      "priority": 1,
+      "notes": "2026-11-05 20:28 UTC the terminal reopened on Exness 474869353; XAUUSD.pr reads failed with 'Terminal: Not found' and nothing flagged it. start.ps1 hung on Start-Process -Wait (waits for the MT5 child). Needs deploy on the VPS."
     }
   ]
 }

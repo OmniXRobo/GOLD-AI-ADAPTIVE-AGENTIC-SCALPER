@@ -120,6 +120,7 @@ export interface FeedStatus {
   down_symbols: string[];
   failing_since: string | null;
   last_error: string | null;
+  account_mismatch?: string | null;
   links: { broker: string; connected: boolean; reconnects: number; reconnect_failures: number; last_error: string | null }[];
 }
 
