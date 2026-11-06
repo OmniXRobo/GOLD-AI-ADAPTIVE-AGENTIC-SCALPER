@@ -595,6 +595,14 @@
       "status": "done",
       "priority": 1,
       "notes": "2026-11-05 20:28 UTC the terminal reopened on Exness 474869353; XAUUSD.pr reads failed with 'Terminal: Not found' and nothing flagged it. start.ps1 hung on Start-Process -Wait (waits for the MT5 child). Needs deploy on the VPS."
+    },
+    {
+      "id": "T-DB-WRITE-CONTENTION",
+      "phase": 6,
+      "title": "Live ticks blocked by 'database is locked' after a long gap: bulk tick inserts in 5k batches, collector catches up 15 min at a time, WAL checkpoint worker",
+      "status": "done",
+      "priority": 1,
+      "notes": "2026-11-06: after a 14 h gap each collector copied and inserted hours of ticks through the ORM in one transaction; with the service CPU-bound, the write lock was held for minutes and other writers timed out. WAL 3.4 GB never shrank. Needs deploy."
     }
   ]
 }

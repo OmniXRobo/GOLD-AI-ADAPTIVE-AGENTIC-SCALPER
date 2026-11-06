@@ -1,5 +1,14 @@
 # Project status — 2026-10-26 (session 4, root-cause audit)
 
+## Session 6c (prices blocked by database locks, 2026-11-06)
+- After MT5_2 was back on Equiti and the service restarted, live ticks were still mostly not saved ("database is
+  locked"). Cause: after the 14 h gap each collector copied all missing hours from MT5 and inserted them through the
+  ORM in a single transaction; with the service busy replaying history, one such write held SQLite's single write
+  lock for minutes, the other writers (collectors, decisions, closed practice trades) timed out and retried the
+  same huge batch. The 3.4 GB write-ahead log also never shrank.
+- Fixed: ticks are bulk-inserted and committed every 5,000 rows; a collector that is behind catches up 15 minutes of
+  broker history per step; a maintenance worker checkpoints the WAL every 10 minutes and tries to shrink it hourly.
+
 ## Session 6b (live data stopped again, 2026-11-06)
 - MT5_2 closed at about 19:31 UTC on 5 Nov. The reconnect relaunched it at 20:28, and it logged into its last saved
   account (Exness demo 474869353) instead of Equiti 1281361, so every XAUUSD.pr read failed ("Terminal: Not found")

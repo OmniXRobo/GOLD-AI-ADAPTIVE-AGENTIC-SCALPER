@@ -72,3 +72,39 @@ def test_backfill_stops_at_first_stored_tick(store):
     assert n == 40
     stored = store.load_ticks("exness", "XAUUSDm")
     assert len(stored) == 60 and len({t.time for t in stored}) == 60
+
+
+def test_collector_catches_up_in_short_slices(store):
+    """After a long gap the collector copies `max_span` at a time instead of hours in one read and one write."""
+    t0 = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    ticks = [Tick(t0 + timedelta(seconds=i), 2000 + i % 7, 2000.2 + i % 7) for i in range(0, 3600, 2)]
+    conn = FakeConn(ticks)
+    c = TickCollector(conn, store, "exness", "XAUUSDm", backfill=timedelta(hours=1), max_span=timedelta(minutes=10))
+    now = t0 + timedelta(hours=1)
+    total, calls = 0, 0
+    while True:
+        total += c.collect_once(now=now)
+        calls += 1
+        if not c.behind:
+            break
+    assert calls == 6 and total == len(ticks)
+    assert all(end - start <= timedelta(minutes=10) for start, end in conn.calls)
+    assert len(store.load_ticks("exness", "XAUUSDm")) == len(ticks)
+
+
+def test_collector_skips_an_empty_slice(store):
+    t0 = datetime(2024, 1, 6, tzinfo=timezone.utc)          # weekend gap, then ticks
+    ticks = [Tick(t0 + timedelta(minutes=50, seconds=i), 2000.0, 2000.2) for i in range(10)]
+    conn = FakeConn(ticks)
+    c = TickCollector(conn, store, "exness", "XAUUSDm", backfill=timedelta(hours=1), max_span=timedelta(minutes=10))
+    got = sum(c.collect_once(now=t0 + timedelta(hours=1)) for _ in range(6))
+    assert got == 10
+
+
+def test_save_ticks_commits_in_batches(store):
+    t0 = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    ticks = [Tick(t0 + timedelta(milliseconds=i), 2000.0, 2000.2) for i in range(12_345)]
+    assert store.save_ticks("exness", "XAUUSDm", ticks, source="mt5", batch=5000) == 12_345
+    assert len(store.load_ticks("exness", "XAUUSDm")) == 12_345
+    r = store.checkpoint("TRUNCATE")
+    assert r is None or set(r) == {"busy", "wal_pages", "checkpointed"}

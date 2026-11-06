@@ -1,5 +1,10 @@
 # Test results
 
+## 2026-11-06 — session 6c (cloud container, write contention)
+- `python -m pytest -q` → 294 passed, 1 skipped, 1 failed: `test_virtual_engine_warms_up_from_stored_ticks` is
+  timing-dependent and also fails intermittently on main without this change (1 of 2 runs); it passed 2 of 2 runs
+  with the change. New tests: collector catch-up slices, empty slice, batched tick saves.
+
 ## 2026-11-06 — session 6b (cloud container, MT5 account guard)
 - `python -m pytest -q` → **292 passed, 1 skipped** (account mismatch stops reads and is reported, log back in with the
   saved password after a relaunch, feed status names the account). Dashboard `tsc --noEmit` and build pass.

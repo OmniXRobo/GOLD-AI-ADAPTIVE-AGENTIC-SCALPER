@@ -1,5 +1,8 @@
 # Next actions
 
+AB. (VPS thread) After the write-contention PR is merged: `git pull`, stop GoldAI-Equiti and leftover python, start it,
+    confirm every symbol's newest tick advances within ~15 minutes, and that the -wal file shrinks within the hour.
+
 AA. (Owner) Log MT5_2 into Equiti 1281361 and tick "Save password". Decide whether the OMNIX_OCL EA should stay on
     the GOLD AI data terminal. (VPS thread) After the account-guard PR is merged: `git pull`, rebuild the dashboard,
     restart GoldAI-Equiti (stop the task and any leftover python first), confirm XAUUSD.pr ticks arrive.
