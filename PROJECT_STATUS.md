@@ -1,5 +1,13 @@
 # Project status — 2026-10-26 (session 4, root-cause audit)
 
+## Session 6d (gold collector stuck at the daily break, 2026-11-06)
+- After PR #26 was deployed, 8 of 9 symbols caught up within 15 min, but XAUUSD.pr stayed at 12:05 with its cursor
+  pinned at 2026-11-05 21:58:59.984 (last tick before the daily break). MT5's copy_ticks_range takes whole seconds,
+  so a start of :59.985 returned the :59.984 tick again, the cursor was reset to it and the slice never reached the
+  empty break. The same rounding stored the ticks earlier in the cursor's second twice on every poll, for every
+  symbol. Fix: the collector drops returned ticks that are not newer than its cursor. Existing duplicate rows are
+  left in place (not deleted); counting them on the VPS is a follow-up.
+
 ## Session 6c (prices blocked by database locks, 2026-11-06)
 - After MT5_2 was back on Equiti and the service restarted, live ticks were still mostly not saved ("database is
   locked"). Cause: after the 14 h gap each collector copied all missing hours from MT5 and inserted them through the

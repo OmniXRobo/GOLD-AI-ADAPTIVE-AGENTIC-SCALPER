@@ -101,6 +101,31 @@ def test_collector_skips_an_empty_slice(store):
     assert got == 10
 
 
+class SecondsConn(FakeConn):
+    """Like MT5: copy_ticks_range only takes whole seconds, so the start is floored."""
+    def ticks_range(self, symbol, start, end):
+        return super().ticks_range(symbol, start.replace(microsecond=0), end)
+
+
+def test_collector_passes_a_break_after_a_fractional_second_tick(store):
+    t0 = datetime(2024, 1, 2, 21, 58, 59, 984000, tzinfo=timezone.utc)   # last tick before the daily break
+    ticks = [Tick(t0 - timedelta(milliseconds=500), 2000.0, 2000.2), Tick(t0, 2000.1, 2000.3),
+             Tick(t0 + timedelta(hours=1, minutes=1), 2001.0, 2001.2)]
+    conn = SecondsConn(ticks)
+    c = TickCollector(conn, store, "exness", "XAUUSDm", backfill=timedelta(seconds=5), max_span=timedelta(minutes=15))
+    now = t0 + timedelta(seconds=1)
+    assert c.collect_once(now=now) == 2
+    now = t0 + timedelta(hours=1, minutes=2)
+    got = 0
+    for _ in range(10):
+        got += c.collect_once(now=now)
+        if not c.behind:
+            break
+    assert got == 1 and not c.behind
+    stored = store.load_ticks("exness", "XAUUSDm")
+    assert len(stored) == 3 and len({t.time for t in stored}) == 3   # nothing stored twice
+
+
 def test_save_ticks_commits_in_batches(store):
     t0 = datetime(2024, 1, 2, tzinfo=timezone.utc)
     ticks = [Tick(t0 + timedelta(milliseconds=i), 2000.0, 2000.2) for i in range(12_345)]

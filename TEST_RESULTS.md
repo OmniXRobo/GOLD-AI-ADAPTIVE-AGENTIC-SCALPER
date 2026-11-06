@@ -1,5 +1,9 @@
 # Test results
 
+## 2026-11-06 — session 6d (cloud container, collector second rounding)
+- `python -m pytest -q` → **296 passed, 1 skipped**. New test: a fractional-second tick right before a market break,
+  with a connector that floors the start to whole seconds like MT5; it fails without the fix.
+
 ## 2026-11-06 — session 6c (cloud container, write contention)
 - `python -m pytest -q` → 294 passed, 1 skipped, 1 failed: `test_virtual_engine_warms_up_from_stored_ticks` is
   timing-dependent and also fails intermittently on main without this change (1 of 2 runs); it passed 2 of 2 runs
