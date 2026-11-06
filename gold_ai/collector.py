@@ -18,10 +18,15 @@ log = logging.getLogger(__name__)
 
 class TickCollector:
     def __init__(self, connector: MT5ReadOnlyConnector, store: MemoryStore, broker: str, symbol: str,
-                 interval_seconds: float = 5.0, backfill: timedelta = timedelta(hours=1)):
+                 interval_seconds: float = 5.0, backfill: timedelta = timedelta(hours=1),
+                 max_span: timedelta = timedelta(minutes=15)):
         self.c, self.store, self.broker, self.symbol = connector, store, broker, symbol
         self.interval = interval_seconds
         self.backfill = backfill
+        # After a gap, catch up `max_span` of broker history per call (short reads, short write transactions),
+        # looping without the poll wait until caught up, instead of copying and inserting hours at once.
+        self.max_span = max_span
+        self.behind = False
         self._stop = threading.Event()
         self.collected = 0
         self.errors = 0
@@ -42,8 +47,12 @@ class TickCollector:
         now = now or datetime.now(timezone.utc)
         last =self.store.kv_get(self._cursor_key())
         start = datetime.fromisoformat(last) + timedelta(milliseconds=1) if last else now - self.backfill
-        ticks = self.c.ticks_range(self.symbol, start, now)
+        end = min(now, start + self.max_span)
+        self.behind = end < now
+        ticks = self.c.ticks_range(self.symbol, start, end)
         if not ticks:
+            if self.behind:   # an empty slice (market closed) still moves the cursor forward
+                self.store.kv_set(self._cursor_key(), (end - timedelta(milliseconds=1)).isoformat())
             return 0
         n = self.store.save_ticks(self.broker, self.symbol, ticks, source="mt5")
         self.store.kv_set(self._cursor_key(), ticks[-1].time.isoformat())
@@ -67,6 +76,9 @@ class TickCollector:
                 self.consecutive_errors = 0
                 self.failing_since = None
                 self.last_success_at = datetime.now(timezone.utc)
+                if self.behind:
+                    (stop or self._stop).wait(0.2)   # catching up: next slice soon, but yield to other writers
+                    continue
             (stop or self._stop).wait(self.interval)
 
     def _on_error(self, e: Exception) -> None:

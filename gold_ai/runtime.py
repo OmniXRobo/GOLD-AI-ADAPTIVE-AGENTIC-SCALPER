@@ -393,5 +393,19 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                         log.exception("self-healing check failed for %s", e.key)
                 delay = 600
         supervisor.register("self_healing", self_healing)
+
+        def db_maintenance(stop: threading.Event) -> None:
+            # SQLite WAL: readers that never pause let the -wal file grow (3.4 GB on the VPS). Copy it back
+            # every 10 minutes and try to shrink it every hour; both give up at once if they would block.
+            n = 0
+            while not stop.wait(600):
+                n += 1
+                try:
+                    r = store.checkpoint("TRUNCATE" if n % 6 == 0 else "PASSIVE")
+                    if r is not None:
+                        log.info("database checkpoint: %s", r)
+                except Exception:
+                    log.exception("database checkpoint failed")
+        supervisor.register("db_maintenance", db_maintenance)
     app = create_app(state, dashboard_dir)
     return app, supervisor

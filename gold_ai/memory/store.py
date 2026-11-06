@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 from sqlalchemy import (JSON, Boolean, DateTime, Float, Index, Integer, String, Text, create_engine, event,
-                        func, select)
+                        func, insert, select, text)
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from ..domain import ExitReason, MemoryDomain, Side, SimTrade, Tick
@@ -273,12 +273,36 @@ class MemoryStore:
         )
 
     # -- ticks -----------------------------------------------------------------
-    def save_ticks(self, broker: str, symbol: str, ticks: Iterable[Tick], source: str) -> int:
-        rows = [TickRow(broker=broker, symbol=symbol, time=t.time, bid=t.bid, ask=t.ask, volume=t.volume,
-                        source=source) for t in ticks]
+    def save_ticks(self, broker: str, symbol: str, ticks: Iterable[Tick], source: str,
+                   batch: int = 5000) -> int:
+        """Bulk insert (executemany, no ORM objects), committed every `batch` rows so no single write
+        transaction holds SQLite's one write lock for long. On 2026-11-06, after a 14 h gap, each collector
+        tried to insert hours of ticks through the ORM in one transaction and the others timed out."""
+        n = 0
+        rows: list[dict] = []
+        for t in ticks:
+            rows.append({"broker": broker, "symbol": symbol, "time": t.time, "bid": t.bid, "ask": t.ask,
+                         "volume": t.volume, "source": source})
+            if len(rows) >= batch:
+                n += self._insert_ticks(rows)
+                rows = []
+        if rows:
+            n += self._insert_ticks(rows)
+        return n
+
+    def _insert_ticks(self, rows: list[dict]) -> int:
         with self.Session.begin() as s:
-            s.add_all(rows)
+            s.execute(insert(TickRow), rows)
         return len(rows)
+
+    def checkpoint(self, mode: str = "PASSIVE") -> dict | None:
+        """SQLite only: copy the write-ahead log back into the database. TRUNCATE also shrinks the -wal file,
+        but only succeeds when no reader is active; it never blocks writers for long (busy -> returns)."""
+        if not str(self.engine.url).startswith("sqlite") or mode not in ("PASSIVE", "FULL", "RESTART", "TRUNCATE"):
+            return None
+        with self.engine.connect() as c:
+            busy, log_pages, done = c.execute(text(f"PRAGMA wal_checkpoint({mode})")).one()
+        return {"busy": bool(busy), "wal_pages": log_pages, "checkpointed": done}
 
     def load_ticks(self, broker: str, symbol: str, start: datetime | None = None, end: datetime | None = None,
                    source: str | None = None) -> list[Tick]:
