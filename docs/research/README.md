@@ -149,7 +149,7 @@ Across all variants, results cluster between about −0.2R and +0.1R after costs
 Next (round 6): preset `session-round6` runs the intraday variants only in the busiest UTC hours: 07–17 London +
 New York, and 12–16 the overlap. Each is run with and without the band-width filter (`hours_utc`, new).
 
-## Regime benchmark (prepared 2026-11-05, not yet run on real data)
+## Regime benchmark (prepared 2026-11-05; first real run below)
 `gold_ai/agents/regime.py` is a regime agent with uncertainty: a Gaussian hidden Markov model on M5 bars
 (log return, log range, efficiency), fitted on the train split only and read causally with the forward filter, plus
 Bayesian online change-point detection on the volatility level. Each reading has a probability per regime, a
@@ -173,3 +173,26 @@ Same ticks and splits, preset `session-round6` (`hours_utc` 07–17 or 12–16, 
 The two with enough were rejected: range_reversion −0.03R (36 trades) and legacy_momentum −0.11R (110).
 breakout's +0.05R on 17 trades (90% CI −0.36..+0.51) is noise. Session hours alone do not create an edge here.
 Next: round 7 (`exits-round7`), break-even and trailing exits.
+
+## Regime benchmark on real ticks (2026-11-07, `regime-XAUUSD.sd-20261107T084241Z.md`)
+25,170 M5 bars, 28 Jun → 4 Nov (a slightly shorter window than round 7). **Verdict: hmm_better_than_rule.**
+On the test split the HMM's labels explain 11 % of next-hour volatility (R² 0.114) against −0.06 for the rule labels
+and −0.12 for random labels, and its uncertain readings (about 9 % of bars) have larger errors than its certain ones.
+The HMM found no trending state, and the rule's "trending" calls hit 50.0 % on direction: neither predicts direction.
+So the regime agent is useful for *volatility* (sizing stops, standing aside when uncertain), not for picking a side.
+It stays research only; the Trade Context Agent records its label with each virtual trade so the Trade-History
+Learner can measure whether it relates to outcomes.
+
+## Round 7: break-even and trailing exits (2026-11-07, `research-XAUUSD.sd-20261107T075743Z.md`)
+Same pinned window (`--start 2026-06-28T22:00:00 --end 2026-10-29T11:17:12`), preset `exits-round7`.
+**No candidate.** Two setups are inconclusive, five rejected.
+- failed_breakout, best variant rr 2, M5 trigger, 8 h hold, no trailing: +0.113R on 94 test trades, 90 % CI
+  −0.122..+0.344, validation +0.035R, baseline −0.148R. The same variant was also positive on test in round 5.
+  This is the most consistent lead so far, but the interval still includes zero, so it is not an edge yet.
+- legacy_momentum, rr 2, 4 h hold, trail from 1.0R at 0.75R: +0.002R on 324 trades (flat).
+- Rejected: trend_pullback −0.142R, breakout −0.085R (break-even at 0.5R plus trail), range_reversion −0.067R,
+  liquidity_sweep −0.102R, legacy_rejection −0.309R.
+
+Break-even and trailing exits did not turn any losing setup into a winning one; where they helped, they mostly
+shrank the loss. Next: forward-test failed_breakout rr 2 / M5 / 8 h as a virtual research lane to collect more
+out-of-sample trades, and test "no trade when the regime is uncertain" as a research filter.
