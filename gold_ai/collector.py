@@ -27,6 +27,11 @@ class TickCollector:
         # looping without the poll wait until caught up, instead of copying and inserting hours at once.
         self.max_span = max_span
         self.behind = False
+        # An empty slice is skipped only when MT5 says so twice, `empty_confirm` apart: a terminal that is still
+        # downloading history answers "nothing" at first, and skipping on that loses the ticks for good.
+        self.empty_confirm = timedelta(seconds=10)
+        self._empty_seen: tuple[datetime, float] | None = None   # (slice start, monotonic time first seen empty)
+        self.skipped: list[tuple[datetime, datetime]] = []
         self._stop = threading.Event()
         self.collected = 0
         self.errors = 0
@@ -57,9 +62,19 @@ class TickCollector:
             # before a market break (gold, 2026-11-05 21:58:59.984) the cursor never moves past it.
             ticks = [t for t in ticks if t.time > cursor]
         if not ticks:
-            if self.behind:   # an empty slice (market closed) still moves the cursor forward
-                self.store.kv_set(self._cursor_key(), (end - timedelta(milliseconds=1)).isoformat())
+            if self.behind:   # an empty slice (market closed) moves the cursor forward once confirmed
+                seen = self._empty_seen
+                mono = time.monotonic()
+                if seen is None or seen[0] != start:
+                    self._empty_seen = (start, mono)
+                elif mono - seen[1] >= self.empty_confirm.total_seconds():
+                    self._empty_seen = None
+                    self.skipped = (self.skipped + [(start, end)])[-50:]
+                    log.info("tick collection for %s: no ticks %s .. %s, skipping", self.symbol,
+                             start.isoformat(), end.isoformat())
+                    self.store.kv_set(self._cursor_key(), (end - timedelta(milliseconds=1)).isoformat())
             return 0
+        self._empty_seen = None
         n = self.store.save_ticks(self.broker, self.symbol, ticks, source="mt5")
         self.store.kv_set(self._cursor_key(), ticks[-1].time.isoformat())
         self.collected += n
@@ -82,7 +97,7 @@ class TickCollector:
                 self.consecutive_errors = 0
                 self.failing_since = None
                 self.last_success_at = datetime.now(timezone.utc)
-                if self.behind:
+                if self.behind and self._empty_seen is None:
                     (stop or self._stop).wait(0.2)   # catching up: next slice soon, but yield to other writers
                     continue
             (stop or self._stop).wait(self.interval)

@@ -1,5 +1,12 @@
 # Project status — 2026-10-26 (session 4, root-cause audit)
 
+## Session 6e (empty-slice skip needs confirmation, 2026-11-07)
+- Friday's check against MT5's own history: EURUSD/USDJPY/AUDUSD.pr had no ticks in MT5 after 15:38 UTC (feed, not
+  the app), but GBPUSD.pr was missing ~5k ticks in hour 15 and ~8k in hour 16 versus MT5. The catch-up skipped an
+  empty slice on the first empty answer, which loses ticks for good when the terminal is still downloading history.
+  The collector now skips a slice only after MT5 answers empty twice at least 10 s apart, and logs every skip
+  (`TickCollector.skipped`). The missing GBPUSD ticks are not backfilled yet.
+
 ## Session 6d (gold collector stuck at the daily break, 2026-11-06)
 - After PR #26 was deployed, 8 of 9 symbols caught up within 15 min, but XAUUSD.pr stayed at 12:05 with its cursor
   pinned at 2026-11-05 21:58:59.984 (last tick before the daily break). MT5's copy_ticks_range takes whole seconds,

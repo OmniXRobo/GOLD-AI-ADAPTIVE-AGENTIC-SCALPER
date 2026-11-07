@@ -1,5 +1,10 @@
 # Test results
 
+## 2026-11-07 — session 6e (cloud container, empty-slice confirmation)
+- `python -m pytest -q` → 296 passed, 1 skipped, 1 failed: `test_virtual_engine_warms_up_from_stored_ticks`
+  (timing-dependent; tests/test_runtime.py also fails 2 tests on unchanged main in this container). New test: a
+  terminal whose first answer for a range is empty does not lose ticks.
+
 ## 2026-11-06 — session 6d (cloud container, collector second rounding)
 - `python -m pytest -q` → **296 passed, 1 skipped**. New test: a fractional-second tick right before a market break,
   with a connector that floors the start to whole seconds like MT5; it fails without the fix.
