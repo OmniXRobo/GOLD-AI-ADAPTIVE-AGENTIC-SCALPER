@@ -97,8 +97,32 @@ def test_collector_skips_an_empty_slice(store):
     ticks = [Tick(t0 + timedelta(minutes=50, seconds=i), 2000.0, 2000.2) for i in range(10)]
     conn = FakeConn(ticks)
     c = TickCollector(conn, store, "exness", "XAUUSDm", backfill=timedelta(hours=1), max_span=timedelta(minutes=10))
-    got = sum(c.collect_once(now=t0 + timedelta(hours=1)) for _ in range(6))
-    assert got == 10
+    c.empty_confirm = timedelta(0)
+    got = sum(c.collect_once(now=t0 + timedelta(hours=1)) for _ in range(10))   # 4 empty slices, each confirmed
+    assert got == 10 and len(c.skipped) == 4
+
+
+class LateHistoryConn(FakeConn):
+    """A terminal still downloading history: the first request for a range answers nothing."""
+    def __init__(self, ticks):
+        super().__init__(ticks)
+        self.asked = set()
+
+    def ticks_range(self, symbol, start, end):
+        if start not in self.asked:
+            self.asked.add(start)
+            return []
+        return super().ticks_range(symbol, start, end)
+
+
+def test_collector_does_not_skip_on_a_single_empty_answer(store):
+    t0 = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    ticks = [Tick(t0 + timedelta(minutes=i), 2000.0, 2000.2) for i in range(60)]
+    c = TickCollector(LateHistoryConn(ticks), store, "exness", "XAUUSDm", backfill=timedelta(hours=1),
+                      max_span=timedelta(minutes=15))
+    now = t0 + timedelta(hours=1)
+    got = sum(c.collect_once(now=now) for _ in range(20))
+    assert got == 60 and c.skipped == []
 
 
 class SecondsConn(FakeConn):
@@ -116,6 +140,7 @@ def test_collector_passes_a_break_after_a_fractional_second_tick(store):
     now = t0 + timedelta(seconds=1)
     assert c.collect_once(now=now) == 2
     now = t0 + timedelta(hours=1, minutes=2)
+    c.empty_confirm = timedelta(0)
     got = 0
     for _ in range(10):
         got += c.collect_once(now=now)
