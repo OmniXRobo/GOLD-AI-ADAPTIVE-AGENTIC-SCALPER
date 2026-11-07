@@ -508,7 +508,7 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
         ("/api/maturity", "maturity", None), ("/api/self-healing", "self_healing", None),
         ("/api/system/health", "system_health", None), ("/api/news", "news", None),
         ("/api/institutional", "institutional", None), ("/api/signals", "signals", None),
-        ("/api/backups", "backups", None),
+        ("/api/backups", "backups", None), ("/api/learning/trade-history", "trade_learner", None),
     ]:
         def make(name=name):
             def handler(broker: str | None = None, u: User = Depends(current_user)):

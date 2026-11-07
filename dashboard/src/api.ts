@@ -338,6 +338,43 @@ export interface SelfHealing {
   current_diagnosis: Record<string, unknown> | null;
 }
 
+/** One engine's latest Trade-History Learner report (agents/trade_learner.py). */
+export interface LearnerSummary {
+  trades: number;
+  expectancy_r: number;
+  ci90: [number, number] | null;
+  win_rate: number | null;
+}
+
+export interface LearnerReport {
+  report_id: string;
+  created_at: string;
+  broker: string;
+  symbol: string;
+  style: string;
+  trades: number;
+  trades_with_context: number;
+  period: [string, string] | null;
+  current_threshold: number;
+  all_trades: LearnerSummary;
+  chosen_threshold: number | null;
+  holdout_current: LearnerSummary | null;
+  holdout_chosen: LearnerSummary | null;
+  holdout_all: LearnerSummary | null;
+  brier: number | null;
+  top_features: Record<string, [string, number][]>;
+  context_signals: { field: string; rho_earlier: number | null; rho_later: number | null; n_earlier: number; n_later: number; informative: boolean }[];
+  registered_version: string | null;
+  verdict: string;
+  reasons: string[];
+  label: string;
+}
+
+export interface TradeLearning {
+  latest: Record<string, LearnerReport>;
+  thresholds: number[];
+}
+
 export interface HealthCheck {
   name: string;
   status: string;
@@ -656,6 +693,7 @@ export const api = {
   rollback: (version: string) => post<unknown>(`/api/models/${enc(version)}/rollback`),
   maturity: (broker?: string) => get<Maturity>(`/api/maturity${broker ? `?broker=${enc(broker)}` : ""}`),
   selfHealing: () => get<SelfHealing>("/api/self-healing"),
+  tradeLearning: () => get<TradeLearning>("/api/learning/trade-history"),
   systemHealth: () => get<SystemHealth>("/api/system/health"),
   signals: () => get<Signal[]>("/api/signals"),
   profitCloses: (limit = 30) => get<ProfitAlert[]>(`/api/alerts/profit-closes?limit=${limit}`),

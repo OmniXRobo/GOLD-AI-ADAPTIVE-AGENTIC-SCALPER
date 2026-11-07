@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api, type MaturityStages, type ModelInfo } from "../api";
 import { Card, ConfirmDialog, DataView, Empty, JsonBlock, KVTable, PageHeader, Pill, Stat, Table, toneFor } from "../components/ui";
 import { fmtNum, fmtTime, fmtValue, humanize, useApi } from "../lib";
+import { TradeLearningCard } from "../components/TradeLearning";
 
 // ---------------------------------------------------------------- maturity
 
@@ -155,6 +156,7 @@ export function SelfHealingPage() {
   return (
     <>
       <PageHeader title="Self-Healing History" subtitle="Diagnoses of performance degradation and the corrective actions taken." />
+      <TradeLearningCard />
       <DataView state={st}>
         {(d) => (
           <>
