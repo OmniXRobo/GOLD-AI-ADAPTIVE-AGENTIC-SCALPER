@@ -101,7 +101,8 @@ class MT5ReadOnlyConnector:
     """
 
     def __init__(self, mt5_module: Any | None = None, terminal_path: str | None = None,
-                 server_utc_offset_hours: float | None = None):
+                 server_utc_offset_hours: float | None = None,
+                 expected_account: tuple[int, str] | None = None):
         if mt5_module is None:
             try:
                 import MetaTrader5 as mt5_module  # type: ignore
@@ -129,7 +130,10 @@ class MT5ReadOnlyConnector:
         # The account the service started on. A relaunched terminal logs into whatever account it saved last
         # (on 2026-11-05 MT5_2 came back on an Exness demo instead of Equiti), so data is only read while the
         # terminal is on this account; otherwise another broker's prices could be stored under this broker.
-        self.expected_account: tuple[int, str] | None = None
+        # A configured account (settings mt5_login/mt5_server) is pinned up front instead.
+        self._pinned_account = expected_account is not None
+        self.expected_account: tuple[int, str] | None = (
+            (int(expected_account[0]), str(expected_account[1])) if expected_account else None)
         self.account_mismatch: str | None = None
         self._next_account_check = 0.0
         self._selected: set[str] = set()
@@ -179,6 +183,14 @@ class MT5ReadOnlyConnector:
         ok = bool(self.mt5.initialize(**kwargs))
         if not ok:
             log.error("MT5 initialize failed: %s", self.mt5.last_error())
+        elif self._pinned_account:
+            # Never read data from another account: try the saved-password login, else refuse to start.
+            self.connected = True
+            if not self._check_account(force=True):
+                log.error("MT5 terminal is not on the configured account %s (%s): %s", *self.expected_account,
+                          self.account_mismatch)
+                self.connected = False
+                return False
         else:
             a = self.mt5.account_info()
             if a is not None:
@@ -385,6 +397,19 @@ class MT5ReadOnlyConnector:
             out.append(Tick(self._to_utc(int(r["time_msc"])),
                             bid, ask, float(r["volume_real"]) if "volume_real" in r.dtype.names else 0.0))
         return out
+
+    def next_tick_time(self, symbol: str, start: datetime) -> datetime | None:
+        """UTC time of the first tick the broker has at or after `start` (read-only copy_ticks_from, one tick),
+        or None when it has none or the terminal cannot say. Lets the collector jump over a long gap, e.g. a
+        new account whose tick history begins weeks after the stored cursor."""
+        copy_from = getattr(self.mt5, "copy_ticks_from", None)
+        if copy_from is None or not self.server_offset_known or not self._check_account():
+            return None
+        off = timedelta(seconds=self.server_offset_s)
+        arr = copy_from(symbol, start + off, 1, getattr(self.mt5, "COPY_TICKS_ALL", -1))
+        if arr is None or len(arr) == 0:
+            return None
+        return self._to_utc(int(arr[0]["time_msc"]))
 
     def rates(self, symbol: str, timeframe: str, count: int = 500) -> list[Candle]:
         """The broker's most recent `count` bars (Bid based, like MT5 charts), oldest first, in UTC.

@@ -80,6 +80,11 @@ class Settings(BaseModel):
     # Economic-calendar files read by the news agent (e.g. Common\Files\goldai_calendar.csv written by
     # mql5/GoldAICalendar.mq5). Re-read on every refresh.
     news_calendar_files: list[str] = Field(default_factory=list)
+    # The MT5 account the live service reads from (read-only). When set, the service only reads data while the
+    # terminal is on this login+server and asks the terminal to log back into it (saved password, no orders)
+    # if it has been switched. When unset, the account the terminal is on at startup is used.
+    mt5_login: int | None = None
+    mt5_server: str | None = None
     # Instruments the live service analyses (signals + virtual trades only), canonical names; each is matched
     # to the broker's own symbol (e.g. EURUSD -> EURUSD.sd) and skipped if the broker does not offer it.
     symbols: list[str] = Field(default_factory=lambda: list(DEFAULT_SYMBOLS))

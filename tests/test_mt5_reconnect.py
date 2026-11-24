@@ -262,3 +262,24 @@ def test_feed_status_reports_wrong_account(settings, store):
     tok = c.post("/api/auth/login", json={"username": "owner", "password": "owner-pass-123"}).json()["token"]
     r = c.get("/api/feed/status", headers={"Authorization": f"Bearer {tok}"}).json()
     assert r["ok"] is False and "474869353" in r["account_mismatch"]
+
+
+def test_configured_account_is_pinned_and_logged_into_at_startup():
+    fake = SwitchingMT5(can_log_back=True)
+    fake.account = (1288619, "EquitiBrokerageSC-Demo")    # terminal was switched to another demo
+    c = MT5ReadOnlyConnector(fake, terminal_path=r"C:\MT5_1\terminal64.exe", server_utc_offset_hours=3,
+                             expected_account=(1281361, "EquitiSecurities-Demo"))
+    c._clock = Clock()
+    assert c.connect() and c.connected
+    assert fake.login_calls == [(1281361, "EquitiSecurities-Demo")]
+    assert c.expected_account == (1281361, "EquitiSecurities-Demo") and c.account_mismatch is None
+
+
+def test_configured_account_refuses_to_start_on_another_account():
+    fake = SwitchingMT5(can_log_back=False)
+    fake.account = (1288619, "EquitiBrokerageSC-Demo")
+    c = MT5ReadOnlyConnector(fake, terminal_path=r"C:\MT5_1\terminal64.exe", server_utc_offset_hours=3,
+                             expected_account=(1281361, "EquitiSecurities-Demo"))
+    c._clock = Clock()
+    assert not c.connect() and not c.connected
+    assert "1288619" in c.account_mismatch
