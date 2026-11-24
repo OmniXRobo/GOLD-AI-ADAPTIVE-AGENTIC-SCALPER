@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Iterable, Iterator
 
 from sqlalchemy import (JSON, Boolean, DateTime, Float, Index, Integer, String, Text, create_engine, event,
-                        func, insert, select, text)
+                        delete, func, insert, select, text)
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, sessionmaker
 
 from ..domain import ExitReason, MemoryDomain, Side, SimTrade, Tick
@@ -80,8 +80,10 @@ TRADE_TABLES = {
 class TickRow(Base):
     __tablename__ = "ticks"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    broker: Mapped[str] = mapped_column(String(64), index=True)
-    symbol: Mapped[str] = mapped_column(String(32), index=True)
+    # broker/symbol have no index of their own: ix_ticks_broker_symbol_time covers every lookup by them
+    # (the single-column ones were dropped on the VPS on 2026-11-24 to free ~3.5 GB).
+    broker: Mapped[str] = mapped_column(String(64))
+    symbol: Mapped[str] = mapped_column(String(32))
     time: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     bid: Mapped[float] = mapped_column(Float)
     ask: Mapped[float] = mapped_column(Float)
@@ -196,6 +198,8 @@ class MemoryStore:
         for ix in TickRow.__table__.indexes:
             ix.create(self.engine, checkfirst=True)
         self.Session = sessionmaker(self.engine, expire_on_commit=False)
+        # Optional compressed archive of old ticks (memory/tick_archive.py); read transparently by load_ticks.
+        self.tick_archive = None
 
     # -- trades ------------------------------------------------------------------
     def save_trade(self, domain: MemoryDomain, t: SimTrade, run_id: str | None = None) -> None:
@@ -313,8 +317,51 @@ class MemoryStore:
             q = q.where(TickRow.time < end)
         if source:
             q = q.where(TickRow.source == source)
+        archived: list[Tick] = []
+        if self.tick_archive is not None:
+            first_db = self.first_db_tick_time(broker, symbol)
+            if first_db is None or start is None or start < first_db:
+                arch_end = end if first_db is None or (end is not None and end < first_db) else first_db
+                archived = self.tick_archive.read(broker, symbol, start, arch_end, source)
         with self.Session() as s:
-            return [Tick(_aware(r.time), r.bid, r.ask, r.volume) for r in s.scalars(q)]
+            return archived + [Tick(_aware(r.time), r.bid, r.ask, r.volume) for r in s.scalars(q)]
+
+    # -- tick archive helpers (memory/tick_archive.py) ----------------------------
+    def tick_pairs(self) -> list[tuple[str, str]]:
+        """Distinct (broker, symbol) pairs, found by stepping through ix_ticks_broker_symbol_time (a plain
+        DISTINCT scans all rows: minutes on tens of millions of ticks)."""
+        out: list[tuple[str, str]] = []
+        q = (select(TickRow.broker, TickRow.symbol).order_by(TickRow.broker, TickRow.symbol, TickRow.time)
+             .limit(1))
+        with self.Session() as s:
+            row = s.execute(q).first()
+            while row is not None:
+                b, sy = row
+                out.append((b, sy))
+                row = s.execute(q.where((TickRow.broker > b) | ((TickRow.broker == b) & (TickRow.symbol > sy)))
+                                ).first()
+        return out
+
+    def first_db_tick_time(self, broker: str, symbol: str) -> datetime | None:
+        """First tick still in the database (archived days excluded)."""
+        with self.Session() as s:
+            t = s.scalar(select(func.min(TickRow.time)).where(TickRow.broker == broker, TickRow.symbol == symbol))
+        return _aware(t) if t else None
+
+    def load_tick_rows(self, broker: str, symbol: str, start: datetime, end: datetime) -> list[tuple[int, Tick, str]]:
+        q = (select(TickRow).where(TickRow.broker == broker, TickRow.symbol == symbol, TickRow.time >= start,
+                                   TickRow.time < end).order_by(TickRow.time))
+        with self.Session() as s:
+            return [(r.id, Tick(_aware(r.time), r.bid, r.ask, r.volume), r.source) for r in s.scalars(q)]
+
+    def delete_tick_ids(self, ids: list[int], batch: int = 20_000) -> int:
+        """Deletes ticks by id in short transactions (only used after they were archived and verified)."""
+        n = 0
+        for i in range(0, len(ids), batch):
+            chunk = ids[i:i + batch]
+            with self.Session.begin() as s:
+                n += s.execute(delete(TickRow).where(TickRow.id.in_(chunk))).rowcount or 0
+        return n
 
     def iter_ticks(self, broker: str, symbol: str, start: datetime, end: datetime,
                    chunk: timedelta = timedelta(hours=6)) -> Iterator[Tick]:
@@ -336,12 +383,23 @@ class MemoryStore:
             q = q.where(TickRow.time < end)
         with self.Session() as s:
             a, z = s.execute(q).one()
-        return (_aware(a), _aware(z)) if a else None
+        a, z = (_aware(a), _aware(z)) if a else (None, None)
+        if self.tick_archive is not None:
+            arch = self.tick_archive.range(broker, symbol)
+            if arch and (start is None or arch[1] >= start) and (end is None or arch[0] < end):
+                lo = arch[0] if start is None else max(arch[0], start)
+                a = lo if a is None else min(a, lo)
+                hi = arch[1] if end is None else min(arch[1], end)
+                z = hi if z is None else max(z, hi)
+        return (a, z) if a else None
 
     def first_tick_time(self, broker: str, symbol: str) -> datetime | None:
-        with self.Session() as s:
-            t = s.scalar(select(func.min(TickRow.time)).where(TickRow.broker == broker, TickRow.symbol == symbol))
-        return _aware(t) if t else None
+        t = self.first_db_tick_time(broker, symbol)
+        if self.tick_archive is not None:
+            arch = self.tick_archive.range(broker, symbol)
+            if arch and (t is None or arch[0] < t):
+                return arch[0]
+        return t
 
     def trade_symbols(self, domain: MemoryDomain) -> list[str]:
         table = TRADE_TABLES[domain]

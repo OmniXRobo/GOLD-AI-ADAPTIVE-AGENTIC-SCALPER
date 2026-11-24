@@ -85,6 +85,14 @@ class Settings(BaseModel):
     # if it has been switched. When unset, the account the terminal is on at startup is used.
     mt5_login: int | None = None
     mt5_server: str | None = None
+    # Ticks older than this many days are moved from the database to compressed daily files under
+    # tick_archive_dir (default <data_dir>/tick_archive) once a day by the live service, and read back
+    # transparently by research/backtests. None keeps every tick in the database.
+    tick_retention_days: int | None = None
+    tick_archive_dir: str | None = None
+
+    def archive_dir(self) -> str:
+        return self.tick_archive_dir or str(Path(self.data_dir) / "tick_archive")
     # Instruments the live service analyses (signals + virtual trades only), canonical names; each is matched
     # to the broker's own symbol (e.g. EURUSD -> EURUSD.sd) and skipped if the broker does not offer it.
     symbols: list[str] = Field(default_factory=lambda: list(DEFAULT_SYMBOLS))

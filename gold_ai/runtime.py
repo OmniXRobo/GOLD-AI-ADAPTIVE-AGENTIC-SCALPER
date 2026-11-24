@@ -456,5 +456,24 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                 except Exception:
                     log.exception("database checkpoint failed")
         supervisor.register("db_maintenance", db_maintenance)
+
+        if settings.tick_retention_days and store.tick_archive is not None:
+            from .memory.tick_archive import archive_old_ticks
+
+            def tick_retention(stop: threading.Event) -> None:
+                # Once a day (first run 15 min after start): move ticks older than the retention window to the
+                # compressed archive. Each day's file is verified before its rows are deleted.
+                delay = 900
+                while not stop.wait(delay):
+                    try:
+                        cutoff = datetime.now(timezone.utc) - timedelta(days=settings.tick_retention_days)
+                        done = archive_old_ticks(store, store.tick_archive, cutoff, stop=stop)
+                        if done:
+                            log.info("tick retention: archived %s", done)
+                            store.audit("runtime", "ticks_archived", {"before": cutoff.isoformat(), **done})
+                    except Exception:
+                        log.exception("tick retention failed")
+                    delay = 86400
+            supervisor.register("tick_retention", tick_retention)
     app = create_app(state, dashboard_dir)
     return app, supervisor

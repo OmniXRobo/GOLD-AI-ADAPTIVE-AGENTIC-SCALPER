@@ -249,6 +249,11 @@ def main(argv: list[str] | None = None) -> int:
     bk.add_argument("--owner", default="owner")
     bk.add_argument("--dest", default=None)
 
+    ar = sub.add_parser("archive-ticks", help="move ticks older than N days from the database to compressed "
+                                              "daily files (<data_dir>/tick_archive); research still reads them")
+    ar.add_argument("--older-than-days", type=int, default=None,
+                    help="default: config tick_retention_days")
+
     sv = sub.add_parser("serve")
     sv.add_argument("--host", default="127.0.0.1")
     sv.add_argument("--port", type=int, default=8000)
@@ -263,6 +268,19 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     settings = load_settings(a.config)
     store = MemoryStore(settings.database_url)
+    from .memory.tick_archive import TickArchive
+    store.tick_archive = TickArchive(settings.archive_dir())
+
+    if a.cmd == "archive-ticks":
+        from datetime import timedelta as _td
+        from .memory.tick_archive import archive_old_ticks
+        days = a.older_than_days or settings.tick_retention_days
+        if not days:
+            raise SystemExit("pass --older-than-days or set tick_retention_days in the config")
+        done = archive_old_ticks(store, store.tick_archive, datetime.now(timezone.utc) - _td(days=days))
+        store.audit("cli", "ticks_archived", {"older_than_days": days, **done})
+        print(json.dumps(done, indent=2))
+        return
 
     if a.cmd == "create-user":
         pw = getpass.getpass("Password (min 10 chars): ")

@@ -16,6 +16,14 @@
 - MT5_1 also runs a third-party EA (Gold_EMA_Cross_EA_v1.04) with Algo Trading on; it is not part of this app.
   GoldAIBridge is not needed for the live service (it reads MT5 through the Python API); it is only a tick exporter.
 - Real-money and demo execution stay disabled (`real_trading_enabled` and `demo_execution_enabled` false).
+- Disk (owner-approved cleanup, drive C had ~0-2 GB free): deleted MT5 Strategy Tester caches/logs (~3 GB);
+  dropped ix_ticks_broker and ix_ticks_symbol (covered by ix_ticks_broker_symbol_time; ~3.5 GB of pages freed
+  inside gold_ai.db for reuse). New tick retention: `tick_retention_days` (VPS config: 30) moves older ticks to
+  `<data_dir>/tick_archive/<broker>/<symbol>/<day>.csv.gz` (written, read back and verified before the rows are
+  deleted); `MemoryStore.load_ticks`/`tick_range`/`first_tick_time` read the archive transparently. Daily
+  `tick_retention` worker in the live service, plus `archive-ticks` CLI. The SQLite file does not shrink (VACUUM
+  needs free space about the size of the remaining DB); freed pages are reused, so it stops growing.
+- Phone app: "not working" was Tailscale off on the phone (VPS side answered); fixed by the owner.
 
 ## Session 6e (empty-slice skip needs confirmation, 2026-11-07)
 - Friday's check against MT5's own history: EURUSD/USDJPY/AUDUSD.pr had no ticks in MT5 after 15:38 UTC (feed, not
