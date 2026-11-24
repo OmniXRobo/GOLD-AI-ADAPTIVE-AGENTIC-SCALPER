@@ -1,5 +1,8 @@
 # Test results
 
+## 2026-11-24 (session 7)
+- `python -m pytest -q`: 306 passed, 1 skipped (3 new: pinned MT5 account at startup, refuse to start on another account, collector jumps a long history gap).
+
 ## 2026-11-07 — session 6e (cloud container, empty-slice confirmation)
 - `python -m pytest -q` → 296 passed, 1 skipped, 1 failed: `test_virtual_engine_warms_up_from_stored_ticks`
   (timing-dependent; tests/test_runtime.py also fails 2 tests on unchanged main in this container). New test: a

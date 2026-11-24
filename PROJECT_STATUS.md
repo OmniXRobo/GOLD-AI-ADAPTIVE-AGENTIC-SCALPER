@@ -1,5 +1,22 @@
 # Project status — 2026-10-26 (session 4, root-cause audit)
 
+## Session 7 (service moved to Equiti demo 417770 on MT5_1, 2026-11-24)
+- Owner reported the app "not working". Cause: the service (task GoldAI-Equiti, MT5_2) had read no market data
+  since 2026-11-11, when MT5_2 was switched to EquitiBrokerageSC-Demo 1288619 and later closed; the service kept
+  waiting for its startup account 1281361 (216k failed reads per symbol, visible as `account_mismatch`).
+- Owner asked to use EquitiSecurities-Demo 417770 (demo, hedging), logged in on MT5_1 since 2026-11-24 15:19 UTC.
+  New settings `mt5_login` / `mt5_server` pin the account explicitly: at startup the service logs the terminal back
+  into it (saved password, read-only) or refuses to start, instead of pinning whatever account it finds.
+  config.local.json now has 417770 / EquitiSecurities-Demo; the task runs `start.ps1 -TerminalPath MT5_1 -Port 8001`
+  without `--symbol` (previous task exported locally to deploy/windows/GoldAI-Equiti.backup-20261124.xml, not committed).
+- On 417770 plain `XAUUSD` is trade-disabled (symbol trade_mode 0); discovery picks `XAUUSD.sd` and the `.sd`
+  forex symbols. Tick history on this account starts 2026-11-20 01:00 server time.
+- Collector: a confirmed empty slice now jumps to the broker's next tick (`copy_ticks_from`, one tick) instead of
+  confirming every 15-minute slice of a long gap (the Nov 4 cursor would have taken ~6 h to reach Nov 20).
+- MT5_1 also runs a third-party EA (Gold_EMA_Cross_EA_v1.04) with Algo Trading on; it is not part of this app.
+  GoldAIBridge is not needed for the live service (it reads MT5 through the Python API); it is only a tick exporter.
+- Real-money and demo execution stay disabled (`real_trading_enabled` and `demo_execution_enabled` false).
+
 ## Session 6e (empty-slice skip needs confirmation, 2026-11-07)
 - Friday's check against MT5's own history: EURUSD/USDJPY/AUDUSD.pr had no ticks in MT5 after 15:38 UTC (feed, not
   the app), but GBPUSD.pr was missing ~5k ticks in hour 15 and ~8k in hour 16 versus MT5. The catch-up skipped an

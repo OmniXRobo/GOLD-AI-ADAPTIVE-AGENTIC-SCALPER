@@ -326,9 +326,13 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
         from .engines.live_virtual import LiveVirtualEngine
         from .engines.research_lanes import ResearchLaneEngine, lane_params
         from .instruments import canonical
-        conn = connector_factory() if connector_factory else MT5ReadOnlyConnector(terminal_path=terminal_path)
+        pinned = ((settings.mt5_login, settings.mt5_server)
+                  if settings.mt5_login and settings.mt5_server else None)
+        conn = connector_factory() if connector_factory else MT5ReadOnlyConnector(
+            terminal_path=terminal_path, expected_account=pinned)
         if not conn.connect():
-            raise RuntimeError("could not connect to the MT5 terminal")
+            raise RuntimeError("could not connect to the MT5 terminal"
+                               + (f" on account {pinned[0]} ({pinned[1]})" if pinned else ""))
         acct = conn.account()
         specs = resolve_symbols(conn, acct.broker, settings.symbols, override=symbol)
         if not specs:

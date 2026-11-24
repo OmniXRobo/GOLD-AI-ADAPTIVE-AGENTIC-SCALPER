@@ -69,6 +69,17 @@ class TickCollector:
                     self._empty_seen = (start, mono)
                 elif mono - seen[1] >= self.empty_confirm.total_seconds():
                     self._empty_seen = None
+                    # Jump straight to the broker's next tick instead of confirming every 15-minute slice of a
+                    # long gap one by one (a fresh account's history can start weeks after the cursor).
+                    nxt = None
+                    finder = getattr(self.c, "next_tick_time", None)
+                    if finder is not None:
+                        try:
+                            nxt = finder(self.symbol, end)
+                        except Exception:   # pragma: no cover - terminal specific; fall back to one slice
+                            nxt = None
+                    if nxt is not None and nxt > end:
+                        end = min(nxt, now)
                     self.skipped = (self.skipped + [(start, end)])[-50:]
                     log.info("tick collection for %s: no ticks %s .. %s, skipping", self.symbol,
                              start.isoformat(), end.isoformat())

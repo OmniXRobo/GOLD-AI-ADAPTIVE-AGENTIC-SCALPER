@@ -158,3 +158,23 @@ def test_save_ticks_commits_in_batches(store):
     assert len(store.load_ticks("exness", "XAUUSDm")) == 12_345
     r = store.checkpoint("TRUNCATE")
     assert r is None or set(r) == {"busy", "wal_pages", "checkpointed"}
+
+
+class NextTickConn(FakeConn):
+    """Like MT5's copy_ticks_from: can say when the broker's next tick after a time is."""
+    def next_tick_time(self, symbol, start):
+        return next((t.time for t in self.ticks if t.time >= start), None)
+
+
+def test_collector_jumps_over_a_long_gap_in_one_step(store):
+    """A new account whose history starts days after the cursor: one confirmed empty slice, then a jump."""
+    t0 = datetime(2024, 1, 2, tzinfo=timezone.utc)
+    later = t0 + timedelta(days=3)
+    ticks = [Tick(later + timedelta(seconds=i), 2000.0, 2000.2) for i in range(10)]
+    conn = NextTickConn(ticks)
+    c = TickCollector(conn, store, "exness", "XAUUSDm", backfill=timedelta(days=3, hours=1),
+                      max_span=timedelta(minutes=15))
+    c.empty_confirm = timedelta(0)
+    now = later + timedelta(minutes=1)
+    got = sum(c.collect_once(now=now) for _ in range(4))
+    assert got == 10 and len(c.skipped) == 1 and c.skipped[0][1] == later
