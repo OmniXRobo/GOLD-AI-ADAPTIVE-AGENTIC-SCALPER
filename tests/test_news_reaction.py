@@ -70,3 +70,13 @@ def test_stale_calendar_file_is_reported(tmp_path):
     os.utime(p, (old, old))
     assert len(src.fetch(REL - timedelta(days=1), REL + timedelta(days=1))) == 1
     assert "not updated for 3.0 days" in src.stale_reason
+
+
+def test_released_events_round_trip_through_persistence():
+    from gold_ai.news.agent import NewsAgent
+    a = NewsAgent()
+    a.add_events([ev(0.5), EconomicEvent(REL + timedelta(days=1), "Retail Sales", "USD", "high", forecast=0.4)])
+    recs = a.released_records(REL - timedelta(days=14))
+    assert len(recs) == 1                                   # only events with an actual figure
+    b = NewsAgent()
+    assert b.restore_released(recs) == 1 and b.events[0].actual == 0.5 and b.events[0].time == REL

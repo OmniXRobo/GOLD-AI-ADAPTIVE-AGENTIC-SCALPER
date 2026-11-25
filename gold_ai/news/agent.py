@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from typing import Protocol
 
@@ -79,6 +79,29 @@ class NewsAgent:
     @property
     def events(self) -> list[EconomicEvent]:
         return sorted(self._events.values(), key=lambda e: e.time)
+
+    # -- released-data history ------------------------------------------------------
+    def released_records(self, since: datetime) -> list[dict]:
+        """Released events (with an actual figure) since `since`, as plain dicts for persistence."""
+        out = []
+        for e in self.events:
+            if e.actual is not None and e.time >= since:
+                d = asdict(e)
+                d["time"] = e.time.isoformat()
+                out.append(d)
+        return out
+
+    def restore_released(self, records: list[dict]) -> int:
+        """Re-add persisted released events (the MT5 calendar export only looks one day back)."""
+        evs = []
+        for d in records or []:
+            try:
+                evs.append(EconomicEvent(**{**d, "time": datetime.fromisoformat(d["time"])}))
+            except (TypeError, ValueError, KeyError):
+                continue
+        for ev in evs:
+            self._events.setdefault(ev.key, ev)
+        return len(evs)
 
     def prune(self, before: datetime) -> None:
         self._events = {k: e for k, e in self._events.items() if e.time >= before}

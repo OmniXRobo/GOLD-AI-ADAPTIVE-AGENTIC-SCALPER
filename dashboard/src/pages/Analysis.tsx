@@ -159,9 +159,10 @@ function TechnicalView({ t }: { t: Technical }) {
   );
 }
 
-// Released US data: which way did it surprise? Higher inflation/growth/jobs usually lifts the dollar and weighs on gold.
-const USD_POSITIVE_WHEN_HIGHER = new Set(["cpi", "ppi", "nfp", "pce", "gdp"]);
+// Released US data: which way did it surprise? Higher inflation/growth/jobs/activity usually lifts the dollar and weighs on gold.
 const USD_POSITIVE_WHEN_LOWER = new Set(["unemployment", "jobless_claims"]);
+// Events without a forecast-vs-actual reading for the dollar (decisions, speeches, auctions, headlines).
+const NO_SURPRISE_READ = new Set(["fomc", "fed_speech", "treasury_auction", "geopolitical"]);
 
 function num(v: unknown): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -179,9 +180,11 @@ function goldRead(e: NewsEvent): -1 | 1 | 0 {
   const s = surprise(e);
   const c = String(e.category ?? "");
   if (!s || s === "inline" || String(e.currency ?? "USD").toUpperCase() !== "USD") return 0;
-  if (USD_POSITIVE_WHEN_HIGHER.has(c)) return s === "above" ? -1 : 1;
+  if (e.impact !== "high" && e.impact !== "medium") return 0;
+  if (NO_SURPRISE_READ.has(c)) return 0;
   if (USD_POSITIVE_WHEN_LOWER.has(c)) return s === "below" ? -1 : 1;
-  return 0;
+  // Inflation, jobs, growth, activity, sentiment and spending data: a beat usually lifts the dollar.
+  return s === "above" ? -1 : 1;
 }
 
 function FundamentalTab() {
@@ -213,7 +216,7 @@ function FundamentalTab() {
                   </p>
                 </>
               ) : (
-                <Empty>No released US data with both actual and forecast in the loaded calendar window.</Empty>
+                <Empty>No high- or medium-impact US release with both actual and forecast in the last 14 days yet.</Empty>
               )}
             </Card>
             <Card title="Event risk now">

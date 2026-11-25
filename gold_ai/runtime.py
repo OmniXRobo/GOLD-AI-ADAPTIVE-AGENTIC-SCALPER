@@ -424,10 +424,14 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
         supervisor.register("intermarket", intermarket_sampler)
 
         def news_sync(stop: threading.Event) -> None:
+            # Released figures are kept for 14 days in kv (the MT5 export only covers yesterday onwards), so the
+            # Fundamental tab and the news agent still see last week's releases after a restart.
+            news.restore_released(store.kv_get("news_released_events", []) or [])
             while True:   # refresh at start, then every 5 minutes
                 now = datetime.now(timezone.utc)
                 try:
                     n = news.refresh(now - timedelta(days=1), now + timedelta(days=7))
+                    store.kv_set("news_released_events", news.released_records(now - timedelta(days=14)))
                     for e in [*engines, *lanes]:
                         news.sync_risk_engine(e.loop.risk)
                     log.info("news refresh: %d events loaded, %d upcoming high-impact in 24 h", n,
