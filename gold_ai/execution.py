@@ -203,7 +203,8 @@ class MT5ExecutionAdapter:
 
         # 4. fresh independent risk evaluation (live open positions, current equity)
         try:
-            open_n = len(self._open_positions())
+            # Only this adapter's own positions count (other engines/EAs on the same symbol use other magics).
+            open_n = sum(1 for p in self._open_positions() if int(getattr(p, "magic", self.magic)) == self.magic)
         except Exception as e:
             return self._refuse("risk", [f"cannot read open positions: {e}"], acct_mode)
         self.risk.on_equity(snap.equity, now)

@@ -253,3 +253,4 @@
 ## Performance results
 See session 2 above for the first runs on real Equiti ticks (no edge shown; sample too small). Session 1 runs used synthetic data only.
 walk-forward or virtual result exists yet, and none is claimed.
+- 2026-11-25 demo mirror + cost filter: 315 passed, 1 skipped (tests/test_demo_mirror.py new).

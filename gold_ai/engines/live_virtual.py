@@ -60,6 +60,7 @@ class LiveVirtualEngine:
         self._seed_before: datetime | None = None
         # Called with (proposal, tick) for risk-approved, non-exploratory proposals (signal-only mode).
         self.signal_hook = None
+        self.demo_mirror = None   # demo_mirror.DemoMirror when demo execution is on for this engine
 
     def _rule_switches(self, p: StrategyParams) -> StrategyParams:
         """Settings decide which candidate rules may trade, whatever a promoted strategy says."""
@@ -231,6 +232,11 @@ class LiveVirtualEngine:
         self.loop.step(tick)
         if len(self.loop.sim.positions) != opened_before:
             self._persist()
+        if getattr(self, "demo_mirror", None) is not None:
+            try:
+                self.demo_mirror.sync()
+            except Exception:
+                log.exception("demo mirror sync failed")
         return tick
 
     def run(self, max_seconds: float | None = None) -> None:

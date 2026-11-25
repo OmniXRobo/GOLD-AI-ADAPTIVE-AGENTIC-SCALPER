@@ -331,15 +331,16 @@ class MemoryStore:
         """Distinct (broker, symbol) pairs, found by stepping through ix_ticks_broker_symbol_time (a plain
         DISTINCT scans all rows: minutes on tens of millions of ticks)."""
         out: list[tuple[str, str]] = []
-        q = (select(TickRow.broker, TickRow.symbol).order_by(TickRow.broker, TickRow.symbol, TickRow.time)
-             .limit(1))
-        with self.Session() as s:
-            row = s.execute(q).first()
+        first = text("SELECT broker, symbol FROM ticks ORDER BY broker, symbol LIMIT 1")
+        # A row-value comparison lets SQLite seek in the composite index (an OR of two terms scans the table).
+        nxt = text("SELECT broker, symbol FROM ticks WHERE (broker, symbol) > (:b, :s) "
+                   "ORDER BY broker, symbol LIMIT 1")
+        with self.engine.connect() as c:
+            row = c.execute(first).first()
             while row is not None:
                 b, sy = row
                 out.append((b, sy))
-                row = s.execute(q.where((TickRow.broker > b) | ((TickRow.broker == b) & (TickRow.symbol > sy)))
-                                ).first()
+                row = c.execute(nxt, {"b": b, "s": sy}).first()
         return out
 
     def first_db_tick_time(self, broker: str, symbol: str) -> datetime | None:
@@ -354,13 +355,23 @@ class MemoryStore:
         with self.Session() as s:
             return [(r.id, Tick(_aware(r.time), r.bid, r.ask, r.volume), r.source) for r in s.scalars(q)]
 
-    def delete_tick_ids(self, ids: list[int], batch: int = 20_000) -> int:
-        """Deletes ticks by id in short transactions (only used after they were archived and verified)."""
+    def delete_tick_ids(self, ids: list[int], batch: int = 5_000, retries: int = 20) -> int:
+        """Deletes ticks by id in short transactions (only used after they were archived and verified). The live
+        collectors keep writing meanwhile, so a "database is locked" answer is retried instead of giving up."""
+        import time as _time
+        from sqlalchemy.exc import OperationalError
         n = 0
         for i in range(0, len(ids), batch):
             chunk = ids[i:i + batch]
-            with self.Session.begin() as s:
-                n += s.execute(delete(TickRow).where(TickRow.id.in_(chunk))).rowcount or 0
+            for attempt in range(retries):
+                try:
+                    with self.Session.begin() as s:
+                        n += s.execute(delete(TickRow).where(TickRow.id.in_(chunk))).rowcount or 0
+                    break
+                except OperationalError as e:
+                    if "locked" not in str(e) or attempt == retries - 1:
+                        raise
+                    _time.sleep(2)
         return n
 
     def iter_ticks(self, broker: str, symbol: str, start: datetime, end: datetime,

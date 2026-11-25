@@ -386,6 +386,23 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
         signals: SignalService = svc["signals"]
         healers = {e.key: (svc["healer"] if i == 0 else SelfHealingAgent(settings, e.spec, store))
                    for i, e in enumerate(engines)}
+        if settings.demo_execution_enabled:
+            from .demo_mirror import DemoMirror
+            from .instruments import canonical as _canon
+            wanted = {_canon(x) or x for x in settings.demo_execution_symbols}
+            for e in engines:
+                if (_canon(e.spec.symbol) or e.spec.symbol) in wanted and e.style in settings.demo_execution_styles:
+                    try:
+                        m = DemoMirror(e, state.connectors[e.spec.broker], state.auth, store, settings,
+                                       lots=settings.demo_execution_lots,
+                                       max_risk_per_trade_pct=settings.demo_execution_max_risk_pct)
+                        state.demo_mirrors[e.key] = m
+                        rep = m.adapter.reconcile()
+                        log.info("demo mirror on for %s (magic %s, %s lots); reconcile: %d matched, %d orphans",
+                                 e.key, m.magic, m.lots, len(rep.matched), len(rep.orphans))
+                    except Exception:
+                        log.exception("demo mirror for %s not started", e.key)
+
         for engine in [*engines, *lanes]:   # lanes signal only while promoted to champion
             engine.signal_hook = (lambda p, tick, e=engine:
                                   signals.create(p, tick, e.spec.broker, e.spec.symbol,

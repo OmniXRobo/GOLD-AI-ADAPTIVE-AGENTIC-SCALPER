@@ -15,6 +15,8 @@ from typing import Callable, Iterable
 from ..agents.decision import TradingDecisionAgent
 from ..config import Settings
 from ..costs import CostModel
+import logging
+
 from ..domain import Decision, ExitReason, Side, SimTrade, SymbolSpec, Tick, TradeProposal
 from ..instruments import settings_for
 from ..market.features import MarketIntelligenceAgent
@@ -58,6 +60,8 @@ class TradingLoop:
         self.stats = LoopStats()
         self.on_decision = on_decision
         self.on_close = on_close
+        # Optional (proposal, opened virtual trade, fill tick) callback, e.g. the demo-account mirror.
+        self.on_fill: Callable[[TradeProposal, SimTrade, Tick], None] | None = None
         self.last_tick: Tick | None = None
         # Optional (tick, market state) -> dict stored as trade.context["context"] when an order is placed
         # (market/trade_context.py). Recorded for later measurement only; it never changes a decision.
@@ -82,8 +86,14 @@ class TradingLoop:
             prop, ctx = self.pending
             self.pending = None
             if tick.time <= prop.valid_until:
-                if self.sim.open(prop, tick, ctx) is not None:
+                opened = self.sim.open(prop, tick, ctx)
+                if opened is not None:
                     self.risk.on_trade_opened(tick.time, prop)
+                    if self.on_fill is not None:
+                        try:
+                            self.on_fill(prop, opened, tick)
+                        except Exception:
+                            log.exception("on_fill hook failed")
             else:
                 self.stats.expired_signals += 1
 
@@ -113,7 +123,9 @@ class TradingLoop:
         if d.side != Side.WAIT and d.proposal is not None:
             self.stats.proposals += 1
             market = {"vol_ratio": state.features.get("vol_ratio"), "spread_z": state.features.get("spread_z")}
-            v = self.risk.evaluate(d.proposal, tick, self.equity, len(self.sim.positions), market=market)
+            v = self.risk.evaluate(d.proposal, tick, self.equity, len(self.sim.positions), market=market,
+                                   est_cost=self.costs.estimated_round_trip(d.proposal.lots, tick)
+                                   if d.proposal.lots > 0 else None)
             verdict_info = {"approved": v.approved, "reasons": v.reasons, "lots": v.lots,
                             "style": self.agent.params.style, "risk_rule_version": v.rule_version}
             if v.approved:

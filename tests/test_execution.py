@@ -177,7 +177,7 @@ def test_order_send_never_called_when_a_gate_fails(tmp_path, gate, stage):
     elif gate == "risk_stale":
         now = tick.time + timedelta(minutes=5)
     elif gate == "max_positions":
-        mt5.positions.append(O(ticket=1, symbol="XAUUSD", type=0, volume=0.1, sl=0, tp=0, magic=1))
+        mt5.positions.append(O(ticket=1, symbol="XAUUSD", type=0, volume=0.1, sl=0, tp=0, magic=DEFAULT_MAGIC))
     r = ad.execute(p, snap, tick, now=now)
     assert not r.executed and r.stage == stage, r
     assert mt5.sent == []
@@ -290,3 +290,10 @@ def test_no_order_during_startup_observation_window(tmp_path):
     assert not res.executed and res.stage == "risk"
     assert any("observation window" in r for r in res.reasons)
     assert mt5.sent == []
+
+
+def test_foreign_positions_do_not_use_up_the_position_limit(tmp_path):
+    ad, mt5, _, _, snap, tick = make(tmp_path, demo_execution_enabled=True)
+    mt5.positions.append(O(ticket=1, symbol="XAUUSD", type=0, volume=0.1, sl=0, tp=0, magic=999))  # another EA
+    r = ad.execute(proposal(tick), snap, tick, now=tick.time)
+    assert r.executed

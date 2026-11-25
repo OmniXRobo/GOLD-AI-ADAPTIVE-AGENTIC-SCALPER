@@ -44,6 +44,11 @@ class RiskConfig(BaseModel):
     max_vol_ratio: float = 3.0                 # short/long tick volatility; above = abnormal volatility
     max_spread_z: float = 4.0                  # spread z-score vs recent spreads; above = abnormal widening
     min_ev_after_cost_r: float = 0.05          # model proposals need this expectancy after costs (R)
+    # Estimated round-trip cost (spread + commission + slippage) as % of the money at risk. Virtual trades from
+    # 2026-10-01 to 11-25: trades whose cost was < 10% of risk averaged +0.11..+0.99 R in both halves of the
+    # period on gold, BTC and forex; everything above lost (docs/COST_FILTER.md). 12% on the estimate ~ 10%
+    # on recorded costs (the estimate adds exit slippage). None disables the check.
+    max_cost_to_risk_pct: float | None = 12.0
     max_margin_use_pct: float = 30.0           # required margin / free margin, when margin data is known
     duplicate_window_seconds: float = 60.0
     observation_minutes: float = 5.0           # after start, demo/real execution waits; virtual is allowed
@@ -68,6 +73,12 @@ class Settings(BaseModel):
     # Execution safety. Both must be true AND an unexpired owner grant must exist.
     real_trading_enabled: bool = False
     demo_execution_enabled: bool = False
+    # Demo mirror (demo_mirror.py): instruments whose virtual entries are copied to the MT5 demo account,
+    # at a fixed lot, refused when the stop would risk more than demo_execution_max_risk_pct of demo equity.
+    demo_execution_symbols: list[str] = Field(default_factory=lambda: ["XAUUSD"])
+    demo_execution_styles: list[str] = Field(default_factory=lambda: ["scalp", "swing"])
+    demo_execution_lots: float = 0.01
+    demo_execution_max_risk_pct: float = 1.5
     account_allowlist: list[str] = Field(default_factory=list)
     risk: RiskConfig = Field(default_factory=RiskConfig)
     costs: CostConfig = Field(default_factory=CostConfig)

@@ -114,6 +114,7 @@ class AppState:
         self.specs: dict[tuple[str, str], SymbolSpec] = {}
         self.connectors: dict[str, Any] = {}          # broker -> MT5ReadOnlyConnector
         self.collectors: dict[str, Any] = {}          # broker symbol -> TickCollector
+        self.demo_mirrors: dict[str, Any] = {}        # engine key -> DemoMirror (demo account execution)
         self.extras: dict[str, Callable[..., Any]] = {}  # optional providers: news, signals, maturity...
 
 
@@ -163,6 +164,24 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
         return {"token": token, "role": u.role}
 
     # -- overview -------------------------------------------------------------
+    def demo_data() -> dict:
+        from ..demo_mirror import summarize_demo_log
+        entries = list(s.store.kv_get("demo_execution_log", []) or [])
+        today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        mirrors = []
+        for m in s.demo_mirrors.values():
+            try:
+                mirrors.append(m.status())
+            except Exception as e:
+                mirrors.append({"engine": m.engine.key, "error": str(e)})
+        return {"enabled": s.settings.demo_execution_enabled, "lots": s.settings.demo_execution_lots,
+                "today": summarize_demo_log(entries, today), "all_time": summarize_demo_log(entries),
+                "mirrors": mirrors, "recent": entries[-20:]}
+
+    @app.get("/api/demo")
+    def demo(u: User = Depends(current_user)):
+        return json_safe_any(demo_data())
+
     def overview_data() -> dict:
         return {
             "memory_counts": {d.value: s.store.count_trades(d) for d in MemoryDomain},
@@ -171,6 +190,7 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             "emergency_stop": bool(s.store.kv_get("emergency_stop", False)),
             "virtual_engines": [e.status() for e in s.virtual_engines.values()],
             "research_lanes": [e.status() for e in s.research_lanes.values()],
+            "demo_execution": demo_data(),
             "latest_runs": [_run_summary(r) for r in s.store.list_runs()[:10]],
         }
 
@@ -458,6 +478,11 @@ def create_app(state: AppState, dashboard_dir: str | Path | None = None) -> Fast
             if body.active:
                 e.loop.risk.trigger_emergency_stop(body.reason or "manual")
                 e.emergency_close()
+                if getattr(e, "demo_mirror", None) is not None:
+                    try:
+                        e.demo_mirror.emergency_close()
+                    except Exception:
+                        pass
             else:
                 e.loop.risk.clear_emergency_stop()
         if body.active and "emergency_close_real" in s.extras:

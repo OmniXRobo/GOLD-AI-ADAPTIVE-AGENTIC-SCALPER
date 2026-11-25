@@ -15,7 +15,8 @@
   confirming every 15-minute slice of a long gap (the Nov 4 cursor would have taken ~6 h to reach Nov 20).
 - MT5_1 also runs a third-party EA (Gold_EMA_Cross_EA_v1.04) with Algo Trading on; it is not part of this app.
   GoldAIBridge is not needed for the live service (it reads MT5 through the Python API); it is only a tick exporter.
-- Real-money and demo execution stay disabled (`real_trading_enabled` and `demo_execution_enabled` false).
+- Real-money execution stays disabled. Demo execution ON since 2026-11-25 (owner request) on Equiti demo 417770:
+  XAUUSD + BTCUSD virtual entries mirrored at 0.01 lot (docs/COST_FILTER.md). New risk rule max_cost_to_risk_pct.
 - Disk (owner-approved cleanup, drive C had ~0-2 GB free): deleted MT5 Strategy Tester caches/logs (~3 GB);
   dropped ix_ticks_broker and ix_ticks_symbol (covered by ix_ticks_broker_symbol_time; ~3.5 GB of pages freed
   inside gold_ai.db for reuse). New tick retention: `tick_retention_days` (VPS config: 30) moves older ticks to

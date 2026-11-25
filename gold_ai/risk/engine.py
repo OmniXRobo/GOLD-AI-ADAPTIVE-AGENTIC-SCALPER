@@ -196,7 +196,7 @@ class RiskEngine:
 
     def evaluate(self, p: TradeProposal, tick: Tick, equity: float, open_positions: int,
                  now: datetime | None = None, *, market: dict | None = None, latency_ms: float | None = None,
-                 free_margin: float | None = None) -> RiskVerdict:
+                 free_margin: float | None = None, est_cost: float | None = None) -> RiskVerdict:
         """`market` may carry measured inputs (vol_ratio, spread_z) from the market agent; checks that need
         a measurement only apply when it is supplied."""
         now = now or tick.time
@@ -266,6 +266,11 @@ class RiskEngine:
             r.append(f"confidence {p.confidence:.2f} < {cfg.min_confidence}")
         if p.ev_after_cost_r is not None and not exploring and p.ev_after_cost_r < cfg.min_ev_after_cost_r:
             r.append(f"expected value after costs {p.ev_after_cost_r:.2f}R < {cfg.min_ev_after_cost_r}R")
+        if est_cost is not None and cfg.max_cost_to_risk_pct is not None and not exploring and p.lots > 0:
+            risk_money = abs(p.entry - p.stop_loss) * self.spec.money_per_price_unit(p.lots)
+            if risk_money > 0 and est_cost / risk_money * 100 > cfg.max_cost_to_risk_pct:
+                r.append(f"cost {est_cost / risk_money * 100:.0f}% of risk > {cfg.max_cost_to_risk_pct:g}% "
+                         "(stop too tight for the spread)")
         min_d = self.spec.min_stop_distance
         if abs(p.entry - p.stop_loss) < min_d or abs(p.take_profit - p.entry) < min_d:
             r.append("SL/TP inside broker stop level")
