@@ -59,6 +59,10 @@ class CalendarFileSource:
     path: str | Path
     name: str = "calendar_file"
     skipped_rows: int = 0
+    # The MT5 exporter (mql5/GoldAICalendar.mq5) rewrites the file every 15 minutes; an older file means the
+    # exporter is not running (e.g. removed from its chart after an account or profile change).
+    max_age_hours: float = 6.0
+    stale_reason: str | None = None
 
     def _records(self) -> list[dict]:
         p = Path(self.path)
@@ -70,6 +74,10 @@ class CalendarFileSource:
 
     def fetch(self, start: datetime, end: datetime) -> list[EconomicEvent]:
         out, self.skipped_rows = [], 0
+        import time as _time
+        age_h = (_time.time() - Path(self.path).stat().st_mtime) / 3600
+        self.stale_reason = (f"calendar file not updated for {age_h / 24:.1f} days (exporter not running?)"
+                             if age_h > self.max_age_hours else None)
         for rec in self._records():
             try:
                 ev = _event_from_record(rec, self.name)

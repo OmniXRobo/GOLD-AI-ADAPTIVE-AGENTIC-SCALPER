@@ -411,6 +411,9 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
         # Technical, news, intermarket and regime context recorded with every virtual and research trade.
         intermarket = IntermarketMonitor()
         context_agent = TradeContextAgent(news=news, intermarket=intermarket)
+        for lane in lanes:
+            if hasattr(lane.agent.setup, "set_events_provider"):
+                lane.agent.setup.set_events_provider(lambda: news.events)
         for engine in [*engines, *lanes]:
             engine.loop.context_provider = (lambda tick, st, e=engine: context_agent.snapshot(e.spec.symbol, tick, st))
 

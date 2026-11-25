@@ -64,6 +64,8 @@ class NewsAgent:
             try:
                 n += self.add_events(src.fetch(start, end))
                 self.source_errors.pop(name, None)
+                if getattr(src, "stale_reason", None):
+                    self.source_errors[name] = src.stale_reason
             except Exception as e:  # provider outages must not stop the agent
                 self.source_errors[name] = type(e).__name__
                 log.warning("news source %s failed: %s", name, type(e).__name__)

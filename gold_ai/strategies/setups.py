@@ -11,6 +11,7 @@ into a vote. All inputs are closed bars: decisions are taken when an M1 bar clos
 from __future__ import annotations
 
 import random
+from datetime import timedelta
 from dataclasses import dataclass, field
 
 from ..domain import Candle, Side, Tick
@@ -299,9 +300,85 @@ class RandomBaseline(Setup):
         return SetupSignal(self.name, side, stop, "random entry (baseline)", {})
 
 
+# USD direction of a beat (actual above forecast) per calendar category (news/classifier.py categories).
+USD_BEAT_SIGN = {"cpi": 1, "ppi": 1, "nfp": 1, "pce": 1, "gdp": 1, "unemployment": -1, "jobless_claims": -1}
+
+
+class NewsReaction(Setup):
+    """News-release agent: after a high-impact US data release with a clear surprise against forecast, trade gold
+    in the direction the surprise implies (USD beat -> gold down) once price has already moved that way.
+
+    It enters `min_minutes_after`..`max_minutes_after` after the release (the risk engine's news blackout covers
+    the first minutes, when spreads and slippage are worst), only if the move since the release is at least
+    `min_move_atr` M5 ATRs in the implied direction, with the stop beyond the post-release extreme. One trade per
+    release. Needs released events with actual and forecast: `events_provider` returns the news agent's events.
+    A hypothesis for forward research (simulation only) until its own results justify promotion.
+    """
+
+    name, family, regime = "news_reaction", "news", "event"
+
+    def __init__(self, min_minutes_after: float = 16.0, max_minutes_after: float = 60.0, min_surprise: float = 0.05,
+                 min_move_atr: float = 0.5, stop_buffer_atr: float = 0.2, currencies: tuple = ("USD",)):
+        self.min_minutes_after, self.max_minutes_after = min_minutes_after, max_minutes_after
+        self.min_surprise, self.min_move_atr, self.stop_buffer_atr = min_surprise, min_move_atr, stop_buffer_atr
+        self.currencies = tuple(currencies)
+        self._events_provider = None
+        self._used: set = set()
+
+    def params(self) -> dict:
+        return {k: v for k, v in vars(self).items() if not k.startswith("_")}
+
+    def set_events_provider(self, fn) -> None:
+        self._events_provider = fn
+
+    @staticmethod
+    def surprise(ev) -> float | None:
+        if ev.actual is None or ev.forecast is None:
+            return None
+        base = max(abs(ev.forecast), abs(ev.previous or 0.0), 1e-9)
+        return (ev.actual - ev.forecast) / base
+
+    def evaluate(self, ctx: SetupContext) -> SetupSignal | None:
+        if self._events_provider is None:
+            return None
+        now = ctx.tick.time
+        m5, a5 = ctx.tf("M5"), ctx.atr("M5")
+        if not m5 or a5 <= 0:
+            return None
+        for ev in reversed(self._events_provider() or []):
+            mins = (now - ev.time).total_seconds() / 60
+            if mins > self.max_minutes_after:
+                break
+            if mins < self.min_minutes_after or ev.impact != "high" or ev.currency not in self.currencies:
+                continue
+            sign = USD_BEAT_SIGN.get(ev.category)
+            s = self.surprise(ev)
+            if sign is None or s is None or abs(s) < self.min_surprise or ev.key in self._used:
+                continue
+            since = [b for b in m5 if b.time >= ev.time - timedelta(minutes=5)]
+            if not since:
+                continue
+            usd_up = s * sign > 0
+            side = Side.SELL if usd_up else Side.BUY
+            move = since[-1].close - since[0].open
+            if (side == Side.BUY and move < self.min_move_atr * a5) or (side == Side.SELL and -move < self.min_move_atr * a5):
+                continue
+            self._used.add(ev.key)
+            if side == Side.BUY:
+                stop = min(b.low for b in since) - self.stop_buffer_atr * a5
+            else:
+                stop = max(b.high for b in since) + self.stop_buffer_atr * a5
+            return SetupSignal(self.name, side, stop,
+                               f"{ev.title}: actual {ev.actual:g} vs forecast {ev.forecast:g} "
+                               f"(USD {'beat' if usd_up else 'miss'}), gold moved {move:+.2f} since release",
+                               {"event": ev.title, "surprise": round(s, 4), "minutes_after": round(mins, 1),
+                                "move_atr": round(move / a5, 2)})
+        return None
+
+
 SETUPS: dict[str, type[Setup]] = {c.name: c for c in (
     TrendPullback, Breakout, FailedBreakout, RangeReversion, LiquiditySweep, LegacyMomentum, LegacyRejection,
-    RandomBaseline)}
+    RandomBaseline, NewsReaction)}
 RESEARCH_SETUPS = ("trend_pullback", "breakout", "failed_breakout", "range_reversion", "liquidity_sweep",
                    "legacy_momentum", "legacy_rejection")
 

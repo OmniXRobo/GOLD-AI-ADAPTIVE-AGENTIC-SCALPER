@@ -133,6 +133,10 @@ class Settings(BaseModel):
         {"setup": "trend_pullback", "risk_reward": 1.5, "tf_scale": "intraday", "trigger_tf": "M5",
          "max_hold_seconds": 8 * 3600},
         {"setup": "breakout", "risk_reward": 2.0, "tf_scale": "intraday", "max_hold_seconds": 4 * 3600},
+        # News-release agent (setups.NewsReaction), added 2026-11-25 at the owner's request: no history of
+        # released actuals to test it on yet, so it starts as a forward research lane.
+        {"setup": "news_reaction", "risk_reward": 1.5, "trigger_tf": "M5", "max_hold_seconds": 4 * 3600,
+         "max_stop_atr": 4.0},
     ])
     # Per-symbol changes to gold_ai.instruments limits, e.g. {"BTCUSD": {"max_spread_pips": 40}}.
     instrument_overrides: dict[str, dict] = Field(default_factory=dict)
