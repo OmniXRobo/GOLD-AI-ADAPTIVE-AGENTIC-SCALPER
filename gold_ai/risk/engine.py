@@ -30,7 +30,8 @@ def measurement_risk(cfg: RiskConfig) -> RiskConfig:
     otherwise, keep the full rules.
     """
     return cfg.model_copy(update={"max_drawdown_pct": 1e9, "max_daily_loss_pct": 1e9, "max_weekly_loss_pct": 1e9,
-                                  "max_consecutive_losses": 10**9, "reentry_after_loss_minutes": 0.0})
+                                  "max_consecutive_losses": 10**9, "reentry_after_loss_minutes": 0.0,
+                                  "widen_stop_for_cost": False})   # research measures setups' own stops
 
 
 @dataclass(frozen=True)

@@ -122,6 +122,7 @@ class TradingLoop:
         verdict_info: dict = {}
         if d.side != Side.WAIT and d.proposal is not None:
             self.stats.proposals += 1
+            self._widen_for_cost(d.proposal, tick)
             market = {"vol_ratio": state.features.get("vol_ratio"), "spread_z": state.features.get("spread_z")}
             v = self.risk.evaluate(d.proposal, tick, self.equity, len(self.sim.positions), market=market,
                                    est_cost=self.costs.estimated_round_trip(d.proposal.lots, tick)
@@ -148,6 +149,39 @@ class TradingLoop:
                     self.stats.rejection_reasons[k] = self.stats.rejection_reasons.get(k, 0) + 1
         if self.on_decision:
             self.on_decision(d, verdict_info)
+
+    def _widen_for_cost(self, p: TradeProposal, tick: Tick) -> None:
+        """Owner choice (2026-11-25): when costs would exceed `max_cost_to_risk_pct` of the risk, widen the stop
+        (and target, keeping the reward:risk ratio and trailing in proportion) until they fit, and size the lot
+        down so the money at risk stays within risk_per_trade_pct. Not widened beyond `cost_widen_max_factor`; such a proposal is
+        then refused by the risk engine's cost rule as before."""
+        cfg = self.risk.cfg
+        if cfg.max_cost_to_risk_pct is None or not cfg.widen_stop_for_cost or p.lots <= 0:
+            return
+        dist = abs(p.entry - p.stop_loss)
+        mpu = self.spec.money_per_price_unit(p.lots)
+        if dist <= 0 or mpu <= 0:
+            return
+        cost = self.costs.estimated_round_trip(p.lots, tick)
+        need = cost / (cfg.max_cost_to_risk_pct / 100.0 * 0.95) / mpu     # stop distance with 5% headroom
+        if need <= dist:
+            return
+        f = need / dist
+        if f > cfg.cost_widen_max_factor:
+            return
+        sgn = 1.0 if p.side == Side.BUY else -1.0
+        rr = p.risk_reward
+        p.stop_loss = p.entry - sgn * need
+        p.take_profit = p.entry + sgn * need * rr
+        if p.trailing_start is not None:
+            p.trailing_start *= f
+        if p.trailing_distance is not None:
+            p.trailing_distance *= f
+        lots = self.spec.round_volume(min(p.lots, self.risk.position_size(self.equity, p.entry, p.stop_loss)))
+        if lots > 0:
+            p.lots = lots
+        p.meta = {**p.meta, "stop_widened_for_cost": round(f, 2)}
+        p.explanation += f" [stop widened x{f:.2f} so costs stay under {cfg.max_cost_to_risk_pct:g}% of risk]"
 
     def _after_close(self, t: SimTrade) -> None:
         self.equity += t.net_pnl

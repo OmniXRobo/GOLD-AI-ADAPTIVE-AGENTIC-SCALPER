@@ -29,3 +29,8 @@ and the filter first exempted exploration, so it would have changed nothing. It 
 Oct 1 - Nov 25, exploration trades with cost < 10% of risk: gold scalp 122 trades +0.09R, BTC scalp 61 +0.74R,
 forex scalp 36 +0.69R, forex swing 29 +0.36R, BTC swing 26 -0.15R, gold swing 18 -0.21R. The demo mirror now
 copies exploration entries too (`demo_execution_include_exploration`) and the VPS mirrors the scalp style only.
+
+## Owner choice 2026-11-25 (evening)
+Instead of skipping a trade whose costs exceed the limit, the stop (and target, same reward:risk) is widened up to 3x
+and the lot sized down within risk_per_trade_pct (`widen_stop_for_cost`). This is untested; compare widened trades
+(trade context `stop_widened_for_cost`) with the rest before keeping it. Research lanes do not widen.

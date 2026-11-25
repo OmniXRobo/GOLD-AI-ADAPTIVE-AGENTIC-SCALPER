@@ -49,6 +49,10 @@ class RiskConfig(BaseModel):
     # period on gold, BTC and forex; everything above lost (docs/COST_FILTER.md). 12% on the estimate ~ 10%
     # on recorded costs (the estimate adds exit slippage). None disables the check.
     max_cost_to_risk_pct: float | None = 12.0
+    # Owner choice 2026-11-25: widen a too-tight stop (lot sized down, same money at risk) instead of skipping the
+    # trade, up to this factor. Untested hypothesis: the evidence above is for naturally wide stops.
+    widen_stop_for_cost: bool = True
+    cost_widen_max_factor: float = 3.0
     max_margin_use_pct: float = 30.0           # required margin / free margin, when margin data is known
     duplicate_window_seconds: float = 60.0
     observation_minutes: float = 5.0           # after start, demo/real execution waits; virtual is allowed

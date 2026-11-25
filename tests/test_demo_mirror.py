@@ -125,3 +125,22 @@ def test_cost_filter_rejects_stops_too_tight_for_the_spread():
     assert r.evaluate(p, tick, 10_000.0, 0, est_cost=risk_money * 0.05).approved
     v = r.evaluate(p, tick, 10_000.0, 0, est_cost=risk_money * 0.30)
     assert not v.approved and any("stop too tight" in x for x in v.reasons)
+
+
+def test_tight_stop_is_widened_with_smaller_lot_and_same_rr():
+    from gold_ai.config import CostConfig, RiskConfig
+    from gold_ai.costs import CostModel
+    from gold_ai.engines.loop import TradingLoop
+    from gold_ai.risk.engine import RiskEngine
+    spec = synthetic_spec()
+    risk = RiskEngine.create(RiskConfig(), spec, 10_000.0)
+    costs = CostModel(spec, CostConfig())
+    tick = Tick(utcnow(), 2400.00, 2400.50)                 # wide spread vs a 2-dollar stop
+    p = prop(tick, sl_d=2.0)
+    p.lots = risk.position_size(10_000.0, p.entry, p.stop_loss)
+
+    fake = SimpleNamespace(risk=risk, spec=spec, costs=costs, equity=10_000.0)
+    TradingLoop._widen_for_cost(fake, p, tick)
+    assert abs(p.entry - p.stop_loss) > 2.0 and abs(p.risk_reward - 1.5) < 1e-9 and p.meta["stop_widened_for_cost"] > 1
+    assert abs(p.entry - p.stop_loss) * spec.money_per_price_unit(p.lots) <= 10_000.0 * risk.cfg.risk_per_trade_pct / 100 + 1e-6
+    assert risk.evaluate(p, tick, 10_000.0, 0, est_cost=costs.estimated_round_trip(p.lots, tick)).approved
