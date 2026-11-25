@@ -395,7 +395,8 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                     try:
                         m = DemoMirror(e, state.connectors[e.spec.broker], state.auth, store, settings,
                                        lots=settings.demo_execution_lots,
-                                       max_risk_per_trade_pct=settings.demo_execution_max_risk_pct)
+                                       max_risk_per_trade_pct=settings.demo_execution_max_risk_pct,
+                                       include_exploration=settings.demo_execution_include_exploration)
                         state.demo_mirrors[e.key] = m
                         rep = m.adapter.reconcile()
                         log.info("demo mirror on for %s (magic %s, %s lots); reconcile: %d matched, %d orphans",

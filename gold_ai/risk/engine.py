@@ -266,7 +266,7 @@ class RiskEngine:
             r.append(f"confidence {p.confidence:.2f} < {cfg.min_confidence}")
         if p.ev_after_cost_r is not None and not exploring and p.ev_after_cost_r < cfg.min_ev_after_cost_r:
             r.append(f"expected value after costs {p.ev_after_cost_r:.2f}R < {cfg.min_ev_after_cost_r}R")
-        if est_cost is not None and cfg.max_cost_to_risk_pct is not None and not exploring and p.lots > 0:
+        if est_cost is not None and cfg.max_cost_to_risk_pct is not None and p.lots > 0:
             risk_money = abs(p.entry - p.stop_loss) * self.spec.money_per_price_unit(p.lots)
             if risk_money > 0 and est_cost / risk_money * 100 > cfg.max_cost_to_risk_pct:
                 r.append(f"cost {est_cost / risk_money * 100:.0f}% of risk > {cfg.max_cost_to_risk_pct:g}% "

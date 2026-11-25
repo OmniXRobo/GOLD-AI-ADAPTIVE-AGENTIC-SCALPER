@@ -78,6 +78,10 @@ class Settings(BaseModel):
     demo_execution_symbols: list[str] = Field(default_factory=lambda: ["XAUUSD"])
     demo_execution_styles: list[str] = Field(default_factory=lambda: ["scalp", "swing"])
     demo_execution_lots: float = 0.01
+    # The adaptive model is still learning, so nearly every virtual entry is labelled exploration (Oct-Nov 2026:
+    # 1,400 of 1,412). Exploration entries that passed the cost filter were positive on gold and BTC scalping
+    # (docs/COST_FILTER.md), so they are mirrored too unless this is off.
+    demo_execution_include_exploration: bool = True
     demo_execution_max_risk_pct: float = 1.5
     account_allowlist: list[str] = Field(default_factory=list)
     risk: RiskConfig = Field(default_factory=RiskConfig)

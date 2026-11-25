@@ -78,7 +78,11 @@ def test_fill_is_mirrored_at_fixed_lot_and_closed_with_virtual(tmp_path):
 
 def test_exploration_disabled_and_real_accounts_never_sent(tmp_path):
     m, mt5, _, engine, tick = setup(tmp_path)
-    engine.loop.on_fill(prop(tick, expl="[EXPLORATION] x"), vtrade(prop(tick), tick), tick)
+    engine.loop.on_fill(prop(tick, expl="[EXPLORATION] x"), vtrade(prop(tick), tick), tick)   # not opted in
+    m.include_exploration = True
+    engine.loop.on_fill(prop(tick, expl="[EXPLORATION] x"), vtrade(prop(tick), tick, "v2"), tick)
+    assert len(mt5.sent) == 1
+    mt5.sent.clear()
     old = Tick(tick.time - timedelta(hours=1), 2400.0, 2400.2)
     engine.loop.on_fill(prop(old), vtrade(prop(old), old), old)        # warm-up replay
     assert mt5.sent == []

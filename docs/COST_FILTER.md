@@ -22,3 +22,10 @@ to the MT5 demo account at `demo_execution_lots` (0.01) through `MT5ExecutionAda
 Own magic per style (20260502 scalp, 20260512 swing); trailing stops follow; virtual exits close the demo position;
 broker results (profit + commission + swap) go to kv `demo_execution_log`; `GET /api/demo` and `/api/overview`
 report them. A stop that would risk more than `demo_execution_max_risk_pct` (1.5%) of demo equity at 0.01 is refused.
+
+## Update 2026-11-25 (afternoon)
+Almost every virtual entry was an exploration trade (the adaptive model has not passed its confidence gate yet),
+and the filter first exempted exploration, so it would have changed nothing. It now applies to every entry.
+Oct 1 - Nov 25, exploration trades with cost < 10% of risk: gold scalp 122 trades +0.09R, BTC scalp 61 +0.74R,
+forex scalp 36 +0.69R, forex swing 29 +0.36R, BTC swing 26 -0.15R, gold swing 18 -0.21R. The demo mirror now
+copies exploration entries too (`demo_execution_include_exploration`) and the VPS mirrors the scalp style only.

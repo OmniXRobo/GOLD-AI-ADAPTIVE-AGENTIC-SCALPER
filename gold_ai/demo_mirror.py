@@ -35,7 +35,7 @@ STYLE_MAGIC = {"scalp": 0, "swing": 1}
 
 class DemoMirror:
     def __init__(self, engine: Any, conn: Any, auth: AuthService, store: MemoryStore, settings: Settings, *,
-                 lots: float, max_risk_per_trade_pct: float):
+                 lots: float, max_risk_per_trade_pct: float, include_exploration: bool = False):
         self.engine, self.conn, self.store = engine, conn, store
         spec = engine.spec
         cfg = settings_for(settings, spec).risk.model_copy(
@@ -43,6 +43,7 @@ class DemoMirror:
         snap = conn.account()
         self.risk = RiskEngine.create(cfg, spec, snap.equity)
         self.lots = lots
+        self.include_exploration = include_exploration
         self.magic = DEFAULT_MAGIC + 10 * STYLE_MAGIC.get(engine.style, 9) + 1
         self.adapter = MT5ExecutionAdapter(conn.mt5, auth, self.risk, store, mode="demo", symbol=spec.symbol,
                                            magic=self.magic, actor=f"demo:{engine.key}")
@@ -76,7 +77,7 @@ class DemoMirror:
 
     # -- entry ----------------------------------------------------------------------
     def on_fill(self, prop: TradeProposal, trade: SimTrade, tick: Tick) -> None:
-        if "[EXPLORATION]" in prop.explanation:
+        if "[EXPLORATION]" in prop.explanation and not self.include_exploration:
             return
         if (datetime.now(timezone.utc) - tick.time).total_seconds() > 30:
             return   # warm-up replay of stored ticks: never trade history
