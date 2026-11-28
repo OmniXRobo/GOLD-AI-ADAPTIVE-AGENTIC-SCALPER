@@ -40,14 +40,6 @@ export function RiskPage() {
                   { key: "target", label: "Strategy", render: (x) => humanize(x.target.replace("family:", "")) },
                   { key: "status", label: "Status", render: (x) => <Pill tone={x.status === "open" ? "warn" : "ok"}>{x.status === "open" ? "locked" : "unlocked"}</Pill> },
                   { key: "reason", label: "Why", render: (x) => <span className="small">{x.status === "open" ? x.reason : x.close_reason}</span> },
-                  {
-                    key: "action",
-                    label: "",
-                    render: (x) =>
-                      x.status === "open" && role === "owner" ? (
-                        <button className="btn" onClick={() => setUnlock(x.target)}>Unlock</button>
-                      ) : null,
-                  },
                 ]}
               />
             ) : (
@@ -55,6 +47,14 @@ export function RiskPage() {
             )
           }
         </DataView>
+        {/* Buttons below the table so a narrow phone screen never scrolls them out of view. The server checks the
+            owner role; non-owners get a clear refusal. */}
+        {(inv.data ?? []).filter((x) => x.status === "open").map((x) => (
+          <button key={x.target} className="btn btn-primary" style={{ marginTop: 12, width: "100%" }} disabled={role !== null && role !== "" && role !== "owner"}
+            onClick={() => setUnlock(x.target)}>
+            Unlock {humanize(x.target.replace("family:", ""))}
+          </button>
+        ))}
       </Card>
       <DataView state={st}>
         {(r) => (
