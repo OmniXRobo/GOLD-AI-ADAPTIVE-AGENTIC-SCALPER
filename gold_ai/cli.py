@@ -254,6 +254,11 @@ def main(argv: list[str] | None = None) -> int:
     ar.add_argument("--older-than-days", type=int, default=None,
                     help="default: config tick_retention_days")
 
+    ul = sub.add_parser("unlock-strategy", help="owner only: close a strategy safety lock (asks the owner password)")
+    ul.add_argument("--owner", default="Owner")
+    ul.add_argument("--target", default="family:adaptive-v1")
+    ul.add_argument("--reason", default="owner unlocked for demo-account trading")
+
     sv = sub.add_parser("serve")
     sv.add_argument("--host", default="127.0.0.1")
     sv.add_argument("--port", type=int, default=8000)
@@ -280,6 +285,15 @@ def main(argv: list[str] | None = None) -> int:
         done = archive_old_ticks(store, store.tick_archive, datetime.now(timezone.utc) - _td(days=days))
         store.audit("cli", "ticks_archived", {"older_than_days": days, **done})
         print(json.dumps(done, indent=2))
+        return
+
+    if a.cmd == "unlock-strategy":
+        from .strategies import investigation
+        u = AuthService(settings, store).authenticate(a.owner, getpass.getpass(f"Password for {a.owner}: "))
+        if u is None or u.role != "owner":
+            raise SystemExit("owner login failed; nothing changed")
+        r = investigation.close_investigation(store, a.target, u, a.reason)
+        print(f"{a.target}: {r['status']} by {r['closed_by']} at {r['closed_at']}")
         return
 
     if a.cmd == "create-user":
