@@ -673,6 +673,17 @@ const enc = encodeURIComponent;
 
 // ---------------------------------------------------------------- endpoints
 
+export interface Investigation {
+  target: string;
+  status: string;
+  reason: string;
+  opened_at?: string;
+  closed_at?: string;
+  closed_by?: string;
+  close_reason?: string;
+  [k: string]: unknown;
+}
+
 export const api = {
   login: (username: string, password: string, remember = false) => post<LoginResponse>("/api/auth/login", { username, password, remember }),
   refreshSession: () => post<LoginResponse>("/api/auth/refresh"),
@@ -706,6 +717,9 @@ export const api = {
   institutional: () => get<Institutional>("/api/institutional"),
   risk: () => get<RiskResponse>("/api/risk"),
   emergencyStop: (active: boolean, reason: string) => post<unknown>("/api/emergency-stop", { active, reason }),
+  investigations: () => get<Investigation[]>("/api/strategies/investigations"),
+  closeInvestigation: (target: string, reason: string) =>
+    post<unknown>("/api/strategies/investigations/close", { target, reason }),
   authorization: () => get<Authorization>("/api/authorization"),
   grant: (req: GrantRequest) => post<unknown>("/api/authorization/grant", req),
   revoke: () => post<unknown>("/api/authorization/revoke"),

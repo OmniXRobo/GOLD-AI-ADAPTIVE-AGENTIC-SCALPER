@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { latestSignals, SignalCard, signalTime } from "../components/SignalCard";
 import { StyleChips, styleOf, StyleTag, type TradeStyle } from "../styles";
 import { canonical, instrumentChoices, priceDigits, SymbolChips, useInstruments } from "../instruments";
-import { api, type Signal, type SignalAction } from "../api";
+import { api, type Investigation, type Signal, type SignalAction } from "../api";
 import { Card, ConfirmDialog, DataView, ErrorState, JsonBlock, KVTable, PageHeader, Pill, Stat, Table, toneFor } from "../components/ui";
 import { fmtNum, fmtTime, humanize, useApi } from "../lib";
 import { useAuth, useLive } from "../state";
@@ -11,8 +11,11 @@ import { useAuth, useLive } from "../state";
 
 export function RiskPage() {
   const st = useApi(api.risk, [], 15000);
+  const inv = useApi(api.investigations, []);
+  const { role } = useAuth();
   const { overview, refresh } = useLive();
   const [dlg, setDlg] = useState(false);
+  const [unlock, setUnlock] = useState<string | null>(null);
   return (
     <>
       <PageHeader title="Risk Management" subtitle="Hard limits enforced by the risk engine before any order, virtual or real." />
@@ -21,6 +24,37 @@ export function RiskPage() {
         <button className="btn btn-danger" onClick={() => setDlg(true)}>
           Activate emergency stop
         </button>
+      </Card>
+      <Card title="Strategy safety locks">
+        <p className="small">
+          A locked strategy keeps trading virtually but cannot send orders to a broker (demo or real) or send signals. Only the owner can unlock one; real-money
+          trading has its own separate switch and stays off.
+        </p>
+        <DataView state={inv}>
+          {(list) =>
+            list.length ? (
+              <Table<Investigation>
+                rows={list}
+                rowKey={(x) => x.target}
+                columns={[
+                  { key: "target", label: "Strategy", render: (x) => humanize(x.target.replace("family:", "")) },
+                  { key: "status", label: "Status", render: (x) => <Pill tone={x.status === "open" ? "warn" : "ok"}>{x.status === "open" ? "locked" : "unlocked"}</Pill> },
+                  { key: "reason", label: "Why", render: (x) => <span className="small">{x.status === "open" ? x.reason : x.close_reason}</span> },
+                  {
+                    key: "action",
+                    label: "",
+                    render: (x) =>
+                      x.status === "open" && role === "owner" ? (
+                        <button className="btn" onClick={() => setUnlock(x.target)}>Unlock</button>
+                      ) : null,
+                  },
+                ]}
+              />
+            ) : (
+              <p className="muted small">No strategy is locked.</p>
+            )
+          }
+        </DataView>
       </Card>
       <DataView state={st}>
         {(r) => (
@@ -47,6 +81,18 @@ export function RiskPage() {
           st.reload();
         }}
         onClose={() => setDlg(false)}
+      />
+      <ConfirmDialog
+        open={unlock !== null}
+        title="Unlock this strategy?"
+        withReason
+        confirmLabel="Unlock"
+        body={<p>It will be allowed to send orders where execution is switched on (demo account). Real-money trading stays off. Audited with your name and reason.</p>}
+        onConfirm={async (reason) => {
+          if (unlock) await api.closeInvestigation(unlock, reason || "owner unlocked from the Risk page for demo trading");
+          inv.reload();
+        }}
+        onClose={() => setUnlock(null)}
       />
     </>
   );
