@@ -378,6 +378,8 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                     state.research_lanes[lane.key] = lane
                     lanes.append(lane)
                     name = f"research_lane:{lane.agent.params.setup}{tag}"
+                    if name in supervisor.status():   # second lane of the same setup (different variant)
+                        name = f"research_lane:{lane.agent.params.setup}:rr{lane.agent.params.risk_reward:g}{tag}"
                     supervisor.register(name, _engine_worker(lane, heartbeats, name))
 
     svc = register_services(state, heartbeats=heartbeats, supervisor=supervisor)
@@ -403,6 +405,20 @@ def build_runtime(settings: Settings, store: MemoryStore, *, use_mt5: bool = Fal
                                  e.key, m.magic, m.lots, len(rep.matched), len(rep.orphans))
                     except Exception:
                         log.exception("demo mirror for %s not started", e.key)
+            lane_keys = set(settings.demo_execution_lanes)
+            for ln in lanes:
+                p = ln.agent.params
+                if (f"{p.setup}:{float(p.risk_reward)}" in lane_keys
+                        and (_canon(ln.spec.symbol) or ln.spec.symbol) in wanted):
+                    try:
+                        m = DemoMirror(ln, state.connectors[ln.spec.broker], state.auth, store, settings,
+                                       lots=settings.demo_execution_lots,
+                                       max_risk_per_trade_pct=settings.demo_execution_max_risk_pct,
+                                       include_exploration=True)   # lanes label every entry exploration
+                        state.demo_mirrors[ln.key] = m
+                        log.info("demo mirror on for research lane %s (magic %s)", ln.key, m.magic)
+                    except Exception:
+                        log.exception("demo mirror for lane %s not started", ln.key)
 
         for engine in [*engines, *lanes]:   # lanes signal only while promoted to champion
             engine.signal_hook = (lambda p, tick, e=engine:

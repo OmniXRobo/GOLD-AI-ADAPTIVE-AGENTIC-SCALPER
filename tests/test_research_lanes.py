@@ -69,7 +69,8 @@ def test_runtime_starts_lanes_for_gold_only(settings, store):
                              connector_factory=lambda: MT5ReadOnlyConnector(fake, server_utc_offset_hours=0))
     lanes = app.state.gold.research_lanes
     assert sorted(lane.agent.params.setup for lane in lanes.values()) == ["breakout", "failed_breakout",
-                                                                        "news_reaction", "trend_pullback"]
+                                                                        "failed_breakout", "news_reaction",
+                                                                        "trend_pullback"]
     assert all(lane.spec.symbol == "XAUUSD.sd" for lane in lanes.values())
     assert all(lane.agent.params.tf_scale == "intraday" for lane in lanes.values()
                if lane.agent.params.setup != "news_reaction")      # news lane reads M5 bars after the release
@@ -77,5 +78,5 @@ def test_runtime_starts_lanes_for_gold_only(settings, store):
     c = TestClient(app)
     tok = c.post("/api/auth/login", json={"username": "owner", "password": "owner-pass-123"}).json()["token"]
     ov = c.get("/api/overview", headers={"Authorization": f"Bearer {tok}"}).json()
-    assert len(ov["research_lanes"]) == 4 and all(x["style"] == "research" for x in ov["research_lanes"])
+    assert len(ov["research_lanes"]) == 5 and all(x["style"] == "research" for x in ov["research_lanes"])
     assert fake.order_send_calls == 0

@@ -30,7 +30,7 @@ from .security.auth import AuthService
 
 log = logging.getLogger(__name__)
 
-STYLE_MAGIC = {"scalp": 0, "swing": 1}
+STYLE_MAGIC = {"scalp": 0, "swing": 1, "research": 2}
 
 
 class DemoMirror:

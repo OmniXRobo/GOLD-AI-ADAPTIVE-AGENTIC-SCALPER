@@ -86,6 +86,8 @@ class Settings(BaseModel):
     # 1,400 of 1,412). Exploration entries that passed the cost filter were positive on gold and BTC scalping
     # (docs/COST_FILTER.md), so they are mirrored too unless this is off.
     demo_execution_include_exploration: bool = True
+    # Research lanes also mirrored to the demo account, as "setup:risk_reward" (e.g. "failed_breakout:2.0").
+    demo_execution_lanes: list[str] = Field(default_factory=list)
     demo_execution_max_risk_pct: float = 1.5
     account_allowlist: list[str] = Field(default_factory=list)
     risk: RiskConfig = Field(default_factory=RiskConfig)
@@ -141,6 +143,11 @@ class Settings(BaseModel):
         {"setup": "trend_pullback", "risk_reward": 1.5, "tf_scale": "intraday", "trigger_tf": "M5",
          "max_hold_seconds": 8 * 3600},
         {"setup": "breakout", "risk_reward": 2.0, "tf_scale": "intraday", "max_hold_seconds": 4 * 3600},
+        # The most consistent lead so far: positive on research round 5's test split, round 7's test split
+        # (+0.11R, 94 trades) and round 8's untouched Oct 29 - Nov 27 holdout (+0.30R, 26 trades), interval still
+        # includes zero (docs/research/README.md, round 8).
+        {"setup": "failed_breakout", "risk_reward": 2.0, "tf_scale": "intraday", "trigger_tf": "M5",
+         "max_hold_seconds": 8 * 3600},
         # News-release agent (setups.NewsReaction), added 2026-11-25 at the owner's request: no history of
         # released actuals to test it on yet, so it starts as a forward research lane.
         {"setup": "news_reaction", "risk_reward": 1.5, "trigger_tf": "M5", "max_hold_seconds": 4 * 3600,

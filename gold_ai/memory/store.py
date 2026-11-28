@@ -174,6 +174,27 @@ def _aware(dt: datetime | None) -> datetime | None:
     return dt
 
 
+def _retry_locked(fn):
+    """SQLite allows one writer; the busy timeout (30 s) can still run out while a long write (tick backfill,
+    archive delete, checkpoint) holds the lock. A closed trade, decision or state write must not be lost to that
+    (2026-11-25: a virtual trade close crashed its engine), so these single-row writes retry for up to ~2 more
+    minutes. Only for methods whose arguments can be replayed (no generators)."""
+    import functools
+    import time as _time
+    from sqlalchemy.exc import OperationalError
+
+    @functools.wraps(fn)
+    def wrapper(*a, **kw):
+        for attempt in range(8):
+            try:
+                return fn(*a, **kw)
+            except OperationalError as e:
+                if "locked" not in str(e) or attempt == 7:
+                    raise
+                _time.sleep(min(2 ** attempt, 30) * 0.5)
+    return wrapper
+
+
 class MemoryStore:
     def __init__(self, url: str):
         if url.startswith("sqlite:///") and not url.startswith("sqlite:///:memory:"):
@@ -202,6 +223,7 @@ class MemoryStore:
         self.tick_archive = None
 
     # -- trades ------------------------------------------------------------------
+    @_retry_locked
     def save_trade(self, domain: MemoryDomain, t: SimTrade, run_id: str | None = None) -> None:
         if domain == MemoryDomain.REAL and t.is_estimated_fill:
             raise ValueError("real-trading memory accepts only actual broker fills")
@@ -319,6 +341,8 @@ class MemoryStore:
             q = q.where(TickRow.source == source)
         archived: list[Tick] = []
         if self.tick_archive is not None:
+            start = _aware(start) if start else None   # archive times are UTC-aware; callers may pass naive UTC
+            end = _aware(end) if end else None
             first_db = self.first_db_tick_time(broker, symbol)
             if first_db is None or start is None or start < first_db:
                 arch_end = end if first_db is None or (end is not None and end < first_db) else first_db
@@ -396,6 +420,8 @@ class MemoryStore:
             a, z = s.execute(q).one()
         a, z = (_aware(a), _aware(z)) if a else (None, None)
         if self.tick_archive is not None:
+            start = _aware(start) if start else None
+            end = _aware(end) if end else None
             arch = self.tick_archive.range(broker, symbol)
             if arch and (start is None or arch[1] >= start) and (end is None or arch[0] < end):
                 lo = arch[0] if start is None else max(arch[0], start)
@@ -425,6 +451,7 @@ class MemoryStore:
                     for b, sy, src, c, a, z in s.execute(q)]
 
     # -- decisions, runs, models, audit, kv ----------------------------------------
+    @_retry_locked
     def save_decision(self, domain: MemoryDomain, broker: str, d, risk: dict | None = None) -> None:
         with self.Session.begin() as s:
             s.add(DecisionRow(domain=domain.value, time=d.time, broker=broker, side=d.side.value,
@@ -445,6 +472,7 @@ class MemoryStore:
         with self.Session() as s:
             return [{c.name: getattr(r, c.name) for c in RunRow.__table__.columns} for r in s.scalars(q)]
 
+    @_retry_locked
     def register_model(self, version: str, strategy_version: str, params: dict, state: dict,
                        parent: str | None = None, stage: str = "candidate", notes: str = "") -> bool:
         """Insert-only. Returns False if the version already exists (immutability)."""
@@ -476,6 +504,7 @@ class MemoryStore:
                      "stage": m.stage, "created_at": _aware(m.created_at), "notes": m.notes}
                     for m in s.scalars(select(ModelVersion).order_by(ModelVersion.created_at))]
 
+    @_retry_locked
     def audit(self, actor: str, action: str, detail: dict | None = None) -> None:
         with self.Session.begin() as s:
             s.add(AuditRow(time=_now(), actor=actor, action=action,
@@ -492,6 +521,7 @@ class MemoryStore:
             r = s.get(KVRow, key)
             return default if r is None else r.value.get("v")
 
+    @_retry_locked
     def kv_set(self, key: str, value) -> None:
         with self.Session.begin() as s:
             r = s.get(KVRow, key)

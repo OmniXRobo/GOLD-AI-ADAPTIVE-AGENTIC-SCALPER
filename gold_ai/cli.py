@@ -98,7 +98,7 @@ def _research(a, settings, store: MemoryStore) -> int:
     (dest / f"research-{a.symbol}-{stamp}.json").write_text(json.dumps(out, indent=2, default=str), encoding="utf-8")
     store.audit("cli", "research", {"broker": a.broker, "symbol": a.symbol, "ticks": rep.ticks,
                                     "verdicts": {s.setup: s.verdict for s in rep.setups}})
-    print(md)
+    print(md.encode("ascii", "replace").decode())
     print(f"report written to {dest}")
     return 0
 
@@ -128,7 +128,7 @@ def _regime_eval(a, settings, store: MemoryStore) -> int:
     (dest / f"regime-{a.symbol}-{stamp}.json").write_text(json.dumps(rep, indent=2, default=str), encoding="utf-8")
     store.audit("cli", "regime_eval", {"broker": a.broker, "symbol": a.symbol, "bars": rep["bars"],
                                        "verdict": rep["verdict"]})
-    print(md)
+    print(md.encode("ascii", "replace").decode())
     print(f"report written to {dest}")
     return 0
 
@@ -162,7 +162,7 @@ def _audit_trades(a, settings, store: MemoryStore) -> int:
     (dest / f"{base}.md").write_text(md, encoding="utf-8")
     (dest / f"{base}.json").write_text(json.dumps(json_safe(rep), indent=2, default=str), encoding="utf-8")
     store.audit("cli", "audit_trades", {"domain": domain.value, "filters": filters, "trades": rep["closed_trades"]})
-    print(md)
+    print(md.encode("ascii", "replace").decode())
     print(f"report written to {dest}")
     return 0
 
